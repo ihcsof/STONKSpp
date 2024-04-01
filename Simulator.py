@@ -20,7 +20,7 @@ class Simulator:
         self.simulation_message = ""
         self.Stopped = False
 
-        self.MGraph = Graph.Load('graphs/examples/Connected_community_model.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
 
         self.verbose = True
         self.timeout = 3600  # in s
@@ -36,7 +36,7 @@ class Simulator:
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 5000
+        self.maximum_iteration = 100
         self.penaltyfactor = 0.01
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
@@ -103,7 +103,6 @@ class Simulator:
     
     #%% Optimization
     def Opti_LocDec_Init(self):
-        print("1: Initializing optimization variables...")
         nag = len(self.MGraph.vs)
         self.nag = nag
         self.Trades = np.zeros([nag,nag])
@@ -120,7 +119,6 @@ class Simulator:
         return
     
     def Opti_LocDec_InitModel(self):
-        print("2: Initializing optimization model...")
         self.Communities = {}
         for x in self.MGraph.vs.select(Type='Manager'):
             self.Communities[x.index] = []
@@ -149,7 +147,6 @@ class Simulator:
         return
     
     def Opti_LocDec_State(self, out=None):
-        print("Optimization state ...")
         if self.iteration_last < self.iteration:
             self.iteration_last = self.iteration # TOCHECK
             print(f"Iteration: {self.iteration}, SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}")
@@ -165,7 +162,7 @@ class Simulator:
             print(f"...Running time: {self.simulation_time:.1f} s")
 
     def Opti_LocDec_Start(self, click=1):
-        print("3: Starting optimization...")
+        print("Optimization...")
         if click is not None:
             if not self.optimizer_on:
                 self.optimizer_on = True
@@ -183,18 +180,19 @@ class Simulator:
                 self.prim = sum([self.players[i].Res_primal for i in range(self.nag)])
                 self.dual = sum([self.players[i].Res_dual for i in range(self.nag)])
                 lapsed = time.perf_counter() - start_time
-                self.simulation_time += lapsed
-                if(self.Prices[self.Prices!=0].size!=0):
-                    self.Price_avg = self.Prices[self.Prices!=0].mean()
-                else:
-                    self.Price_avg = 0
-                self.SW = sum([self.players[i].SW for i in range(self.nag)])
                 
-                if self.Opti_End_Test():
-                    self.Opti_LocDec_Stop()
-                    return self.Opti_LocDec_State(True)
-                else:
-                    return self.Opti_LocDec_State(False)
+            self.simulation_time += lapsed
+            if(self.Prices[self.Prices!=0].size!=0):
+                self.Price_avg = self.Prices[self.Prices!=0].mean()
+            else:
+                self.Price_avg = 0
+            self.SW = sum([self.players[i].SW for i in range(self.nag)])
+            
+            if self.Opti_End_Test():
+                self.Opti_LocDec_Stop()
+                return self.Opti_LocDec_State(True)
+            else:
+                return self.Opti_LocDec_State(False)
     
     def Opti_LocDec_Stop(self):
         self.optimizer_on = False
@@ -204,6 +202,7 @@ class Simulator:
     
     def Opti_End_Test(self):
         print("Checking end conditions...")
+        print(self.iteration)
         if self.prim<=self.residual_primal and self.dual<=self.residual_dual:
             self.simulation_message = 1
         elif self.iteration>=self.maximum_iteration:
@@ -319,7 +318,10 @@ def main():
     sim.Opti_LocDec_Init()
     sim.Opti_LocDec_InitModel()
     sim.Progress_Optimize()
-    sim.Opti_LocDec_Start()
+    while(True):
+        if sim.simulation_message:
+            break
+        sim.Opti_LocDec_Start()
     
     sim.ShowResults()
 
