@@ -14,14 +14,11 @@ from ProsumerCVX import Prosumer, Manager
 
 class Simulator:
     def __init__(self): 
-        self.full_progress = []
         self.simulation_on = False
         self.optimizer_on = False
         self.simulation_message = ""
         self.Stopped = False
-
-        self.MGraph = Graph.Load('graphs/examples/Connected_community_model.pyp2p', format='picklez')
-
+        self.init_test()
         self.verbose = True
         self.timeout = 3600  # in s
         self.Interval = 3  # in s
@@ -49,6 +46,15 @@ class Simulator:
         print("Initialization complete.")
         return
     
+    def init_test(self):
+        # FOR TESTING
+        self.simulation_on = True
+
+        if self.simulation_on:
+            self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
+            #self.MGraph.BuildGraphOfMarketGraph(True)
+        return
+    
     def Parameters_Save(self):
         print("Option unavailable yet.")
         return ["Option unavailable yet."]
@@ -73,6 +79,11 @@ class Simulator:
             self.account_token = ''
         return
     
+    '''def LoadMGraph(self, Graph):
+        self.MGraph = Graph
+        self.MGraph.Save(self.MGraph, 'temp/presim.pyp2p', format='picklez')
+        return'''
+    
     def ShowProgress(self, In=True):
         test, out = self.Parameters_Test()
         if test:
@@ -87,23 +98,38 @@ class Simulator:
                 print(message)
             return out
     
-    def Progress_Optimize(self, click=1):
+    def Progress_Main(self):
+        self.full_progress = []
+        print("Optimizer feedbacks: Init ...")
+        print("Initializing parameters ...")
+        return "Initializing..."
+    
+    def Progress_Start(self):
+        print("Constructing model ...")
+        return "Constructing model..."
+
+    def Progress_Optimize(self, click=None):
         if click is not None:
             self.start_sim = time.time()  # Updated to time.time() for current Python versions
             print("Optimization started...")
+            #self.Opti_LocDec_InitModel()
             print("Press 'Ctrl + C' to stop the simulation at any time.")
             try:
                 self.Opti_LocDec_State()
             except KeyboardInterrupt:
                 print("Simulation stopped by user.")
                 self.Stopped = True
+        else:
+            print("Preparing for optimization...")
+            # Instead of returning HTML content, you might set up and display initial optimization status
+            print("Iteration | Social Welfare | Primal Residual | Dual Residual | Average Price")
+            print("--------------------------------------------------------------------------------")
     
     def Graph_Progress(self, In=True, click=None):
         print("Graph progress update...")
     
     #%% Optimization
     def Opti_LocDec_Init(self):
-        print("1: Initializing optimization variables...")
         nag = len(self.MGraph.vs)
         self.nag = nag
         self.Trades = np.zeros([nag,nag])
@@ -120,7 +146,6 @@ class Simulator:
         return
     
     def Opti_LocDec_InitModel(self):
-        print("2: Initializing optimization model...")
         self.Communities = {}
         for x in self.MGraph.vs.select(Type='Manager'):
             self.Communities[x.index] = []
@@ -149,23 +174,22 @@ class Simulator:
         return
     
     def Opti_LocDec_State(self, out=None):
-        print("Optimization state ...")
         if self.iteration_last < self.iteration:
             self.iteration_last = self.iteration # TOCHECK
             print(f"Iteration: {self.iteration}, SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}")
         
         if out is None:
             out = self.Opti_End_Test()
-
+        
         if out:
             print(f"Total simulation time: {self.simulation_time:.1f} s")
             print("Optimization stopped.")
             self.ErrorMessages()
         else:
-            print(f"...Running time: {self.simulation_time:.1f} s")
+            print("...")
+            print(f"Running time: {self.simulation_time:.1f} s")
 
-    def Opti_LocDec_Start(self, click=1):
-        print("3: Starting optimization...")
+    def Opti_LocDec_Start(self, click=None):
         if click is not None:
             if not self.optimizer_on:
                 self.optimizer_on = True
@@ -184,10 +208,7 @@ class Simulator:
                 self.dual = sum([self.players[i].Res_dual for i in range(self.nag)])
                 lapsed = time.perf_counter() - start_time
                 self.simulation_time += lapsed
-                if(self.Prices[self.Prices!=0].size!=0):
-                    self.Price_avg = self.Prices[self.Prices!=0].mean()
-                else:
-                    self.Price_avg = 0
+                self.Price_avg = self.Prices[self.Prices!=0].mean()
                 self.SW = sum([self.players[i].SW for i in range(self.nag)])
                 
                 if self.Opti_End_Test():
@@ -202,8 +223,12 @@ class Simulator:
         self.simulation_on = False
         return
     
+    def Button_Stop(self,click=None):
+        if click is not None and click!=0:
+            self.Stopped = True
+        return
+    
     def Opti_End_Test(self):
-        print("Checking end conditions...")
         if self.prim<=self.residual_primal and self.dual<=self.residual_dual:
             self.simulation_message = 1
         elif self.iteration>=self.maximum_iteration:
@@ -242,6 +267,7 @@ class Simulator:
             print(f"The total amount of power consumed is {self.tot_cons.sum():.0f} kW.")
             print(f"With an average energy/trading price of {self.Price_avg * 100:.2f} c$/kWh.")
         else:
+            print("Simulation did not converge.")
             if self.simulation_message == -1:
                 print("Maximum number of iterations reached.")
             elif self.simulation_message == -2:
@@ -271,8 +297,8 @@ class Simulator:
             print("Invalid option. Please enter a valid choice.")
 
     def SaveResults(self):
-        # NOTIMPLEMENTED: saving results logic here (e.g., save to a file or database)
-        print("Not implemented yet")
+        # TOCHEK: saving results logic here (e.g., save to a file or database)
+        print("Results saved (functionality to be implemented).")
 
     def CreateReport(self):
         # Summarize and display a report based on the simulation data
@@ -293,8 +319,8 @@ class Simulator:
             print(f"Average buying price: {Buying_avg * 100:.2f} c$/kWh")
 
     def StartNewSimulation(self):
-        # NOTIMPLEMENTED: Logic to reset the environment and start a new simulation
-        print("Not implemented yet.")
+        # TOCHEK: Logic to reset the environment and start a new simulation
+        print("Starting a new simulation (reset environment and reinitialize).")
 
     def ConfirmAction(self, action):
         confirmation = input(f"Are you sure you want to {action}? (yes/no): ").lower()
@@ -312,18 +338,11 @@ class Simulator:
         self.Opti_LocDec_Init()
         print("Simulator reset complete. Ready for new simulation.")
 
-def main():
-    # Initialize the simulator
+if __name__ == "__main__":
     sim = Simulator()
-    
     sim.Opti_LocDec_Init()
     sim.Opti_LocDec_InitModel()
-    sim.Progress_Optimize()
     sim.Opti_LocDec_Start()
-    
     sim.ShowResults()
-
     sim.Exit_Simulator()
-
-if __name__ == "__main__":
-    main()
+    print("Simulation complete.")

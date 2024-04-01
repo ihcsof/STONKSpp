@@ -1,5 +1,5 @@
 # Import the Prosumer class from Prosumer.py
-from Prosumer import Prosumer
+from ProsumerGUROBI import Prosumer
 import numpy as np
 
 def main():
