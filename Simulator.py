@@ -170,6 +170,9 @@ class Simulator:
                 self.simulation_time = 0
             lapsed = 0
             start_time = time.perf_counter()
+            # check if self.prim is not Nan
+            if np.isnan(self.prim) or np.isnan(self.dual):
+                self.Stopped = True
             while (self.prim > self.residual_primal or self.dual > self.residual_dual) and self.iteration < self.maximum_iteration and lapsed <= self.Interval and not self.Stopped:
                 self.iteration += 1
                 temp = np.copy(self.Trades)
@@ -180,7 +183,7 @@ class Simulator:
                 self.prim = sum([self.players[i].Res_primal for i in range(self.nag)])
                 self.dual = sum([self.players[i].Res_dual for i in range(self.nag)])
                 lapsed = time.perf_counter() - start_time
-                
+
             self.simulation_time += lapsed
             if(self.Prices[self.Prices!=0].size!=0):
                 self.Price_avg = self.Prices[self.Prices!=0].mean()
