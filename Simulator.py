@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Sep 27 15:56:13 2018
-
-@author: Thomas
+@originalAuthor: Thomas
 """
 
 import copy
+import json
+import sys
 import time
 import pandas as pd
 import numpy as np
 from igraph import Graph
 from ProsumerCVX import Prosumer, Manager
 
+
 class Simulator:
     def __init__(self): 
-        self.full_progress = []
         self.simulation_on = False
         self.optimizer_on = False
         self.simulation_message = ""
@@ -22,10 +22,8 @@ class Simulator:
 
         self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
 
-        self.verbose = True
         self.timeout = 3600  # in s
         self.Interval = 3  # in s
-        self.full_progress = []
         # Default optimization parameters
         self.Add_Commission_Fees = 'Yes'
         self.Commission_Fees_P2P = 1  # in c$/kWh
@@ -41,51 +39,43 @@ class Simulator:
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
         self.communications = 'Synchronous'
-        self.show = True
-        self.progress = 'Partial'
         # Optimization model
         self.players = {}
         self.Trades = 0
-        print("Initialization complete.")
         return
     
-    def Parameters_Save(self):
-        print("Option unavailable yet.")
-        return ["Option unavailable yet."]
+    def load_config(self, config_file):
+        try:
+            with open(config_file, 'r') as f:
+                config_data = json.load(f)
+
+            for key, value in config_data.items():
+                if hasattr(self, key):
+                    setattr(self, key, value) 
+                else:
+                    print(f"Ignoring unknown parameter: {key}")
+            print("Parameters updated from config file successfully.")
+        except FileNotFoundError:
+            print("Config file not found.")
+        except json.JSONDecodeError:
+            print("Invalid JSON format in config file.")
     
     def Parameters_Test(self):
-        test_loc = self.location == 'local'
-        test_algo = self.algorithm == 'Decentralized'
-        test_target = self.target == 'CPU'
-        test = test_loc and test_algo and test_target
-        message = []
-        if not test_loc:
-            message.append("Simulation on an external server is not possible yet.")
-        if not test_algo:
-            message.append("Centralized simulation is not possible yet.")
-        if not test_target:
-            message.append("Simulation on GPU is not possible yet.")
-        return test, message
+        if not self.location == 'local':
+            print("Simulation on an external server is not possible yet. Using local")
+            self.location = 'local'
+        if not self.algorithm == 'Decentralized':
+            print("Centralized simulation is not possible yet. Using decentralized")
+            self.algorithm = 'Decentralized'
+        if not self.target == 'CPU':
+            print("Simulation on GPU is not possible yet. Using CPU")
+            self.target = 'CPU'
     
     def Registered_Token(self, account='AWS'):
         # Look into pre-registered tokens
         if self.account_token == '':
             self.account_token = ''
         return
-    
-    def ShowProgress(self, In=True):
-        test, out = self.Parameters_Test()
-        if test:
-            print("Simulation in progress...")
-            if self.progress == 'Full':
-                self.Graph_Progress(In)
-            else:
-                print("Market graph update...")
-            print("Main progress...")
-        else:
-            for message in out:
-                print(message)
-            return out
     
     def Progress_Optimize(self, click=1):
         if click is not None:
@@ -97,9 +87,6 @@ class Simulator:
             except KeyboardInterrupt:
                 print("Simulation stopped by user.")
                 self.Stopped = True
-    
-    def Graph_Progress(self, In=True, click=None):
-        print("Graph progress update...")
     
     #%% Optimization
     def Opti_LocDec_Init(self):
@@ -148,7 +135,7 @@ class Simulator:
     
     def Opti_LocDec_State(self, out=None):
         if self.iteration_last < self.iteration:
-            self.iteration_last = self.iteration # TOCHECK
+            self.iteration_last = self.iteration
             print(f"Iteration: {self.iteration}, SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}")
         
         if out is None:
@@ -162,7 +149,6 @@ class Simulator:
             print(f"...Running time: {self.simulation_time:.1f} s")
 
     def Opti_LocDec_Start(self, click=1):
-        print("Optimization...")
         if click is not None:
             if not self.optimizer_on:
                 self.optimizer_on = True
@@ -204,8 +190,6 @@ class Simulator:
         return
     
     def Opti_End_Test(self):
-        print("Checking end conditions...")
-        print(self.iteration)
         if self.prim<=self.residual_primal and self.dual<=self.residual_dual:
             self.simulation_message = 1
         elif self.iteration>=self.maximum_iteration:
@@ -317,6 +301,13 @@ class Simulator:
 def main():
     # Initialize the simulator
     sim = Simulator()
+    
+    if len(sys.argv) > 1:
+        config_file = sys.argv[1]
+        sim.load_config(config_file)
+        sim.Parameters_Test()
+    else:
+        print("No configuration file provided. Using default parameters.")
     
     sim.Opti_LocDec_Init()
     sim.Opti_LocDec_InitModel()

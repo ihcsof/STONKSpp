@@ -1,0 +1,7 @@
+{
+    "maximum_iteration": 5,
+    "penaltyfactor": 0.005,
+    "residual_primal": 1e-5,
+    "residual_dual": 1e-5,
+    "target": "GPU"
+}
