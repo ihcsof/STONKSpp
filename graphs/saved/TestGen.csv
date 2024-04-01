@@ -1,0 +1,57 @@
+,Case,Agent,Type,Name,Energy,Community,Pmin,Pmax,a,b
+0,0,0,Consumer,House 1,House,1,-5.76,-2.41,0.00597,0.1644
+1,0,0,Producer,House 1,Solar,1,1.89,1.89,0,0
+2,0,1,Consumer,House 2,House,1,-5.9,-3.11,0.01075,0.1834
+3,0,1,Producer,House 2,Solar,1,1.9,1.9,0,0
+4,0,2,Consumer,House 3,House,1,-6.46,-3.46,0.01,0.1846
+5,0,3,Consumer,House 4,House,1,-7.59,-2.36,0.00574,0.1735
+6,0,4,Consumer,House 5,House,1,-6.48,-3.3,0.00629,0.1708
+7,0,5,Consumer,House 6,House,1,-7.11,-3.61,0.01143,0.2013
+8,0,6,Consumer,House 7,House,1,-6.86,-2.76,0.00732,0.1702
+9,0,7,Consumer,House 8,House,1,-7.84,-2.07,0.00693,0.1844
+10,0,8,Consumer,House 9,House,1,-7.23,-2.53,0.00851,0.1915
+11,0,9,Consumer,House 10,House,1,-7.43,-2.05,0.00743,0.1752
+12,0,10,Consumer,House 11,House,1,-5.45,-3.17,0.02193,0.2295
+13,0,11,Consumer,House 12,House,1,-5.17,-3.16,0.0199,0.2329
+14,0,12,Consumer,House 13,House,1,-5.38,-2.47,0.01375,0.204
+15,0,13,Consumer,House 14,House,1,-7.07,-3.8,0.00917,0.1849
+16,0,14,Consumer,House 15,House,1,-5.4,-3.66,0.02874,0.2652
+17,0,15,Consumer,Store 1,Store,1,-27.98,-5.2,0.00307,0.206
+18,0,15,Producer,Store 1,Solar,1,10.63,10.63,0,0
+19,0,16,Consumer,Store 2,Store,1,-23.28,-8.87,0.00347,0.2008
+20,0,17,Consumer,Store 3,Store,1,-30.52,-6.12,0.00328,0.2001
+21,0,18,Consumer,Store 4,Store,1,-30.21,-6.97,0.00258,0.198
+22,0,19,Consumer,Store 5,Store,1,-32.76,-5.45,0.0022,0.172
+23,0,20,Consumer,Flat 1,Flat,1,-34.73,-16.97,0.00169,0.1887
+24,0,20,Producer,Flat 1,Solar,1,5.32,5.32,0,0
+25,0,21,Consumer,Flat 2,Flat,1,-28.01,-15.17,0.00312,0.1973
+26,0,21,Producer,Flat 2,Solar,1,7.99,7.99,0,0
+27,0,22,Consumer,Flat 3,Flat,1,-31.96,-14.76,0.00174,0.1757
+28,0,23,Consumer,Flat 4,Flat,1,-30.69,-16.73,0.00287,0.2079
+29,0,24,Consumer,Flat 5,Flat,1,-32.63,-13.62,0.0021,0.1887
+30,0,25,Consumer,Flat 6,Flat,1,-29.73,-12.33,0.00172,0.1813
+31,0,26,Consumer,Flat 7,Flat,1,-26.68,-13.33,0.00225,0.19
+32,0,27,Consumer,Flat 8,Flat,1,-31.67,-18.48,0.00227,0.202
+33,0,28,Consumer,Flat 9,Flat,1,-31.4,-12.61,0.0016,0.1701
+34,0,29,Consumer,Flat 10,Flat,1,-26.87,-13.12,0.00364,0.2077
+35,0,30,Consumer,Mall 1,Mall,1,-60.87,-31.37,0.00169,0.2232
+36,0,30,Producer,Mall 1,Solar,1,15.83,15.83,0,0
+37,0,31,Consumer,Mall 2,Mall,1,-68.79,-28.52,0.00149,0.2025
+38,0,32,Consumer,Mall 3,Mall,1,-58.85,-25.84,0.00121,0.1913
+39,0,33,Consumer,Factory 1,Factory,1,-62.08,-6.34,0.00126,0.178
+40,0,34,Consumer,Factory 2,Factory,1,-68.76,-7.11,0.00097,0.1669
+41,0,35,Consumer,Factory 3,Factory,1,-81.3,-8.11,0.00123,0.19
+42,0,36,Consumer,Factory 4,Factory,1,-92.53,-5.02,0.00091,0.1746
+43,0,37,Consumer,Factory 5,Factory,1,-81.48,-5.28,0.00131,0.1969
+44,0,38,Consumer,Factory 6,Factory,1,-67.78,-6.69,0.00147,0.1899
+45,0,39,Producer,Wind 1,Wind,1,12.61,12.61,0,0
+46,0,40,Producer,Wind 2,Wind,1,121.59,121.59,0,0
+47,0,41,Producer,Wind 3,Wind,1,2.55,2.55,0,0
+48,0,42,Producer,Wind 4,Wind,1,100.99,100.99,0,0
+49,0,43,Producer,Thermal plant 1,Thermal plant,1,0,60.53,0.00083,0.13
+50,0,44,Producer,Thermal plant 2,Thermal plant,1,0,30.4,0.00132,0.13
+51,0,45,Producer,Thermal plant 3,Thermal plant,1,0,192.81,0.00026,0.12
+52,0,46,Producer,Thermal plant 4,Thermal plant,1,0,199.13,0.00025,0.13
+53,0,47,Producer,Thermal plant 5,Thermal plant,1,0,70.59,0.00085,0.13
+54,0,48,Producer,Thermal plant 6,Thermal plant,1,0,215.16,0.00028,0.13
+55,0,49,Producer,Thermal plant 7,Thermal plant,1,0,182.33,0.00038,0.12
