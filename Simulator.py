@@ -77,16 +77,15 @@ class Simulator:
             self.account_token = ''
         return
     
-    def Progress_Optimize(self, click=1):
-        if click is not None:
-            self.start_sim = time.time()  # Updated to time.time() for current Python versions
-            print("Optimization started...")
-            print("Press 'Ctrl + C' to stop the simulation at any time.")
-            try:
-                self.Opti_LocDec_State()
-            except KeyboardInterrupt:
-                print("Simulation stopped by user.")
-                self.Stopped = True
+    def Progress_Optimize(self):
+        self.start_sim = time.time()  # Updated to time.time() for current Python versions
+        print("Optimization started...")
+        print("Press 'Ctrl + C' to stop the simulation at any time.")
+        try:
+            self.Opti_LocDec_State()
+        except KeyboardInterrupt:
+            print("Simulation stopped by user.")
+            self.Stopped = True
     
     #%% Optimization
     def Opti_LocDec_Init(self):
@@ -144,44 +143,42 @@ class Simulator:
         if out:
             print(f"Total simulation time: {self.simulation_time:.1f} s")
             print("Optimization stopped.")
-            self.ErrorMessages()
         else:
             print(f"...Running time: {self.simulation_time:.1f} s")
 
-    def Opti_LocDec_Start(self, click=1):
-        if click is not None:
-            if not self.optimizer_on:
-                self.optimizer_on = True
-                self.start_sim = time.perf_counter()
-                self.simulation_time = 0
-            lapsed = 0
-            start_time = time.perf_counter()
-            # check if self.prim is not Nan
-            if np.isnan(self.prim) or np.isnan(self.dual):
-                self.Stopped = True
-            while (self.prim > self.residual_primal or self.dual > self.residual_dual) and self.iteration < self.maximum_iteration and lapsed <= self.Interval and not self.Stopped:
-                self.iteration += 1
-                temp = np.copy(self.Trades)
-                for i in range(self.nag):
-                    temp[:, i] = self.players[i].optimize(self.Trades[i, :])
-                    self.Prices[:, i][self.part[i, :].nonzero()] = self.players[i].y
-                self.Trades = np.copy(temp)
-                self.prim = sum([self.players[i].Res_primal for i in range(self.nag)])
-                self.dual = sum([self.players[i].Res_dual for i in range(self.nag)])
-                lapsed = time.perf_counter() - start_time
+    def Opti_LocDec_Start(self):
+        if not self.optimizer_on:
+            self.optimizer_on = True
+            self.start_sim = time.perf_counter()
+            self.simulation_time = 0
+        lapsed = 0
+        start_time = time.perf_counter()
+        # check if self.prim is not Nan
+        if np.isnan(self.prim) or np.isnan(self.dual):
+            self.Stopped = True
+        while (self.prim > self.residual_primal or self.dual > self.residual_dual) and self.iteration < self.maximum_iteration and lapsed <= self.Interval and not self.Stopped:
+            self.iteration += 1
+            temp = np.copy(self.Trades)
+            for i in range(self.nag):
+                temp[:, i] = self.players[i].optimize(self.Trades[i, :])
+                self.Prices[:, i][self.part[i, :].nonzero()] = self.players[i].y
+            self.Trades = np.copy(temp)
+            self.prim = sum([self.players[i].Res_primal for i in range(self.nag)])
+            self.dual = sum([self.players[i].Res_dual for i in range(self.nag)])
+            lapsed = time.perf_counter() - start_time
 
-            self.simulation_time += lapsed
-            if(self.Prices[self.Prices!=0].size!=0):
-                self.Price_avg = self.Prices[self.Prices!=0].mean()
-            else:
-                self.Price_avg = 0
-            self.SW = sum([self.players[i].SW for i in range(self.nag)])
-            
-            if self.Opti_End_Test():
-                self.Opti_LocDec_Stop()
-                return self.Opti_LocDec_State(True)
-            else:
-                return self.Opti_LocDec_State(False)
+        self.simulation_time += lapsed
+        if(self.Prices[self.Prices!=0].size!=0):
+            self.Price_avg = self.Prices[self.Prices!=0].mean()
+        else:
+            self.Price_avg = 0
+        self.SW = sum([self.players[i].SW for i in range(self.nag)])
+        
+        if self.Opti_End_Test():
+            self.Opti_LocDec_Stop()
+            return self.Opti_LocDec_State(True)
+        else:
+            return self.Opti_LocDec_State(False)
     
     def Opti_LocDec_Stop(self):
         self.optimizer_on = False
@@ -202,7 +199,7 @@ class Simulator:
             self.simulation_message = 0
         return self.simulation_message
     
-    #%% Results display
+    #%% Results gathering
     def Infos(self):
         self.tot_trade = np.zeros(self.Trades.shape)
         for es in self.MGraph.es:
@@ -237,31 +234,32 @@ class Simulator:
             else:
                 print("Something went wrong.")
                 
-    def ShowResults(self, click=None):
+    def ShowResults(self):
         self.Infos()  # Ensure all totals are calculated for display
         self.ErrorMessages()  # Display results or errors
         
-        # Next steps options
-        print("What do you want to do next?")
-        print("1. Save results")
-        print("2. Create report")
-        print("3. Do another simulation")
-        choice = input("Enter your choice (1, 2, or 3): ")
-        if choice == "1":
-            self.SaveResults()
-        elif choice == "2":
-            self.CreateReport()
-        elif choice == "3":
-            self.StartNewSimulation()
-        else:
-            print("Invalid option. Please enter a valid choice.")
+        while(True):
+            print("What do you want to do next?")
+            print("1. Save results")
+            print("2. Create report")
+            print("3. Exit")
+            choice = input("Enter your choice (1, 2 or 3): ")
+            if choice == "1":
+                self.SaveResults()
+            elif choice == "2":
+                self.CreateReport()
+            elif choice == "3":
+                print("Exiting the simulator.")
+                return
+            else:
+                print("Invalid option. Please enter a valid choice.")
 
     def SaveResults(self):
         # NOTIMPLEMENTED: saving results logic here (e.g., save to a file or database)
-        print("Not implemented yet")
+        print("\tNot implemented yet")
 
     def CreateReport(self):
-        # Summarize and display a report based on the simulation data
+        # MOCK EXAMPLE: Displaying some report data
         Perceived = np.zeros([self.nag, self.nag])
         for i in range(self.nag):
             for j in range(self.players[i].data.num_partners):
@@ -273,14 +271,12 @@ class Simulator:
 
         if Perceived[self.Trades < 0].size > 0:
             Selling_avg = Perceived[self.Trades < 0].mean()
-            print(f"Average selling price: {Selling_avg * 100:.2f} c$/kWh")
+            print(f"\tAverage selling price: {Selling_avg * 100:.2f} c$/kWh")
         if Perceived[self.Trades > 0].size > 0:
             Buying_avg = Perceived[self.Trades > 0].mean()
-            print(f"Average buying price: {Buying_avg * 100:.2f} c$/kWh")
+            print(f"\tAverage buying price: {Buying_avg * 100:.2f} c$/kWh")
 
-    def StartNewSimulation(self):
-        # NOTIMPLEMENTED: Logic to reset the environment and start a new simulation
-        print("Not implemented yet.")
+        # TODO: Add more report data as needed
 
     def ConfirmAction(self, action):
         confirmation = input(f"Are you sure you want to {action}? (yes/no): ").lower()
@@ -291,12 +287,6 @@ class Simulator:
                 self.SaveResults()
         else:
             print("Action canceled.")
-    
-    def Exit_Simulator(self):
-        print("Exiting the simulator and resetting for a new simulation...")
-        self.simulation_message = False
-        self.Opti_LocDec_Init()
-        print("Simulator reset complete. Ready for new simulation.")
 
 def main():
     # Initialize the simulator
@@ -318,8 +308,6 @@ def main():
         sim.Opti_LocDec_Start()
     
     sim.ShowResults()
-
-    sim.Exit_Simulator()
 
 if __name__ == "__main__":
     main()
