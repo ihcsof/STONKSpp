@@ -20,7 +20,7 @@ class Simulator:
         self.Stopped = False
         self.force_stop = False
 
-        self.MGraph = Graph.Load('graphs/examples/Pool_model.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('graphs/examples/Connected_community_model.pyp2p', format='picklez')
 
         self.timeout = 3600  # in s
         self.Interval = 3  # in s

@@ -9,12 +9,8 @@ if __name__ == "__main__":
 
     sim = Simulator()
     
-    if len(sys.argv) > 1:
-        config_file = sys.argv[1]
-        sim.load_config(config_file)
-        sim.Parameters_Test()
-    else:
-        print("No configuration file provided. Using default parameters.")
+    sim.load_config("profilingConfig.json")
+    sim.Parameters_Test()
     
     sim.StartNewSimulation()
 
