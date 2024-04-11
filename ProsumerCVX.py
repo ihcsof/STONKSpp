@@ -67,7 +67,7 @@ class Prosumer:
     def optimize(self, trade):
         self._iter_update(trade)
         self._update_objective()
-        self.model.solve()
+        self.model.solve(cp.CVXOPT)
         self._opti_status(trade)
         trade[self.data.partners] = self.t_old
         return trade

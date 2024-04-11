@@ -20,7 +20,7 @@ class Simulator:
         self.simulation_message = ""
         self.Stopped = False
 
-        self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('graphs/examples/Pool_model.pyp2p', format='picklez')
 
         self.timeout = 3600  # in s
         self.Interval = 3  # in s
@@ -34,7 +34,7 @@ class Simulator:
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 100
+        self.maximum_iteration = 5000
         self.penaltyfactor = 0.01
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
