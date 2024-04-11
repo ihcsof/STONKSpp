@@ -10,7 +10,7 @@ import time
 import pandas as pd
 import numpy as np
 from igraph import Graph
-from ProsumerCVX import Prosumer, Manager
+from ProsumerGUROBI import Prosumer, Manager
 
 
 class Simulator:
@@ -20,7 +20,7 @@ class Simulator:
         self.simulation_message = ""
         self.Stopped = False
 
-        self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('graphs\examples\Connected_community_model.pyp2p', format='picklez')
 
         self.timeout = 3600  # in s
         self.Interval = 3  # in s
