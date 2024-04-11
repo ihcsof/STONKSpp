@@ -10,7 +10,7 @@ import time
 import pandas as pd
 import numpy as np
 from igraph import Graph
-from ProsumerGUROBI import Prosumer, Manager
+from ProsumerCVX import Prosumer, Manager
 
 
 class Simulator:
@@ -19,8 +19,9 @@ class Simulator:
         self.optimizer_on = False
         self.simulation_message = ""
         self.Stopped = False
+        self.force_stop = False
 
-        self.MGraph = Graph.Load('graphs\examples\Connected_community_model.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
 
         self.timeout = 3600  # in s
         self.Interval = 3  # in s
@@ -34,7 +35,7 @@ class Simulator:
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 100
+        self.maximum_iteration = 5000
         self.penaltyfactor = 0.01
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
@@ -237,6 +238,10 @@ class Simulator:
     def ShowResults(self):
         self.Infos()  # Ensure all totals are calculated for display
         self.ErrorMessages()  # Display results or errors
+
+        if self.force_stop:
+            print("Simulation stopped by parameter change.")
+            return
         
         while(True):
             print("What do you want to do next?")
@@ -288,6 +293,17 @@ class Simulator:
         else:
             print("Action canceled.")
 
+    def StartNewSimulation(self):
+        self.Opti_LocDec_Init()
+        self.Opti_LocDec_InitModel()
+        self.Progress_Optimize()
+        while(True):
+            if self.simulation_message:
+                break
+            self.Opti_LocDec_Start()
+
+        self.ShowResults()
+
 def main():
     # Initialize the simulator
     sim = Simulator()
@@ -299,15 +315,7 @@ def main():
     else:
         print("No configuration file provided. Using default parameters.")
     
-    sim.Opti_LocDec_Init()
-    sim.Opti_LocDec_InitModel()
-    sim.Progress_Optimize()
-    while(True):
-        if sim.simulation_message:
-            break
-        sim.Opti_LocDec_Start()
-    
-    sim.ShowResults()
+    sim.StartNewSimulation()
 
 if __name__ == "__main__":
     main()
