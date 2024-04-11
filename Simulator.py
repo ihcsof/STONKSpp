@@ -18,6 +18,7 @@ class Simulator:
         self.optimizer_on = False
         self.simulation_message = ""
         self.Stopped = False
+        self.force_stop = False
 
         self.MGraph = Graph.Load('graphs/examples/Pool_model.pyp2p', format='picklez')
 
@@ -236,6 +237,10 @@ class Simulator:
     def ShowResults(self):
         self.Infos()  # Ensure all totals are calculated for display
         self.ErrorMessages()  # Display results or errors
+
+        if self.force_stop:
+            print("Simulation stopped by parameter change.")
+            return
         
         while(True):
             print("What do you want to do next?")
