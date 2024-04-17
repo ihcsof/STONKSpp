@@ -67,7 +67,7 @@ class Prosumer:
     def optimize(self, trade):
         self._iter_update(trade)
         self._update_objective()
-        self.model.solve()
+        self.model.solve(cp.CVXOPT)
         self._opti_status(trade)
         trade[self.data.partners] = self.t_old
         return trade
@@ -88,8 +88,12 @@ class Prosumer:
 
     def _build_variables(self):
         self.variables.p = [cp.Variable(name='p{}'.format(i)) for i in range(self.data.num_assets)]
+        #-------------------------------
+        # HERE    
+        #-------------------------------
         #self.variables.t = [cp.Variable(name='t{}'.format(i)) for i in range(self.data.num_partners)]
         self.variables.t = cp.Variable((self.data.num_partners,), name='t')
+
         self.variables.t_pos = [cp.Variable(name='t_pos{}'.format(i)) for i in range(self.data.num_partners)]
         self.t_old = np.zeros(self.data.num_partners)
         self.t_new = np.zeros(self.data.num_partners)
@@ -106,19 +110,17 @@ class Prosumer:
         return
             
     def _build_objective(self):
-        # Quadratic term for assets' operation cost
+
+        #-------------------------------
+        # HERE    
+        #-------------------------------
+
         quad_form_assets = sum(cp.square(self.variables.p[i]) * self.data.a[i] for i in range(self.data.num_assets))
 
-        # Linear term for trading costs/preference
-        # RROBLEM: Ensure self.data.pref is compatible in dimension and formulated correctly????
         trading_costs = cp.sum(self.variables.t @ self.data.pref)
 
-        # Augmented Lagrangian terms
-        # Assuming y is the dual variable, and t_average?
-        # Does rho parameter should ensure convexity;??
         aug_lag = cp.sum(self.y @ (self.variables.t - self.t_average)) + (self.data.rho / 2) * cp.sum_squares(self.variables.t - self.t_average)
 
-        # Combine all parts into the objective
         self.model = cp.Problem(cp.Minimize(quad_form_assets + trading_costs + aug_lag), self.constraints.pow_bal)
 
 
@@ -126,7 +128,12 @@ class Prosumer:
     #   Model Updating
     ###    
     def _update_objective(self):
-        self._build_objective()
+
+        #-------------------------------
+        # HERE    
+        #-------------------------------
+            
+        #self._build_objective()
         return
         
     ###
