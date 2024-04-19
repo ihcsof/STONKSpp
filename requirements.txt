@@ -1,0 +1,4 @@
+cvxpy~=1.4
+numpy~=1.26
+igraph~=0.11
+pandas~=2.2

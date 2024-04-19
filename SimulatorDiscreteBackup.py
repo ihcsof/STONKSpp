@@ -9,13 +9,14 @@ import sys
 import time
 import pandas as pd
 import numpy as np
-
 from igraph import Graph
+from ProsumerGUROBI_FIX import Prosumer, Manager
+from discrete_event_sim import Simulation, Event
 
-from ProsumerCVX import Prosumer, Manager
 
-class Simulator:
+class Simulator(Simulation):
     def __init__(self): 
+        super().__init__()
         self.simulation_on = False
         self.optimizer_on = False
         self.simulation_message = ""
@@ -44,6 +45,9 @@ class Simulator:
         # Optimization model
         self.players = {}
         self.Trades = 0
+
+        self.StartNewSimulation()
+
         return
     
     def load_config(self, config_file):
@@ -316,7 +320,7 @@ def main():
     else:
         print("No configuration file provided. Using default parameters.")
     
-    sim.StartNewSimulation()
+    sim.run()
 
 if __name__ == "__main__":
     main()

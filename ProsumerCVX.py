@@ -5,12 +5,15 @@ Created on Mon Jan 15 10:11:54 2018
 @author: fmoret
 """
 
+import re
+
+from typing import Any, Optional
+
 import numpy as np
 import cvxpy as cp
 
 # Class which can have attributes set.
-class expando(object):
-    pass
+class expando(object): pass
 
 # Subproblem
 class Prosumer:
@@ -67,7 +70,10 @@ class Prosumer:
     def optimize(self, trade):
         self._iter_update(trade)
         self._update_objective()
-        self.model.solve(cp.CVXOPT)
+
+        problem = cp.Problem(cp.Minimize(self.obj), self.constraints_repo)
+        self.optimization_result = problem.solve(verbose = False)
+
         self._opti_status(trade)
         trade[self.data.partners] = self.t_old
         return trade
@@ -80,14 +86,72 @@ class Prosumer:
     ###
     #   Model Building
     ###
+    def _add_model_constraint(self, constraint: cp.Constraint) -> cp.Constraint:
+        # print('Added constraint', constraint)
+        self.constraints_repo.append(constraint)
+        return constraint
+
+    _variable_family_re = re.compile(r'(?P<family>[^0-9]+)([0-9]+)$')
+
+    def _add_model_variable(self, variable: cp.Variable, lb: Optional[float] = None, ub: Optional[float] = None) -> cp.Variable:
+        # print('Added variable', variable.name())
+        self.variables_repo.append(variable)
+        # eventually add to family
+        if (m := self._variable_family_re.match(variable.name())) is not None:
+            family_name = m.group('family')
+            if family_name in self.variables_families:
+                self.variables_families[family_name].append(variable)
+            else:
+                self.variables_families[family_name] = [ variable ]
+        # handle variable constraints
+        if lb is not None:
+            self._add_model_constraint(variable >= lb)
+        if ub is not None:
+            self._add_model_constraint(variable <= ub)
+        return variable
+
     def _build_model(self):
-        self._build_variables()
-        self._build_constraints()
-        self._build_objective()
+        # prepare storage
+        self.constraints_repo: list[cp.Constraint] = []
+        self.variables_repo: list[cp.Variable] = []
+        self.variables_families: dict[str, list[cp.Variable]] = {}
+        #
+        # Variables
+        #
+        for i in range(self.data.num_assets):
+            self._add_model_variable(cp.Variable(name = f'p{i}'), lb = self.data.Pmin[i], ub = self.data.Pmax[i])
+        for i in range(self.data.num_partners):
+            self._add_model_variable(cp.Variable(name = f't{i}'))
+            self._add_model_variable(cp.Variable(name = f't_pos{i}'))
+        self.t_old = np.zeros(self.data.num_partners)
+        self.t_new = np.zeros(self.data.num_partners)
+        self.y = np.zeros(self.data.num_partners)
+        self.y0 = np.zeros(self.data.num_partners)
+        #
+        # Constraints
+        #
+        self._add_model_constraint(cp.sum(self.variables_families['p']) == cp.sum(self.variables_families['t']))
+        for t, t_pos in zip(self.variables_families['t'], self.variables_families['t_pos']):
+            self._add_model_constraint(t <= t_pos)
+            self._add_model_constraint(t >= -t_pos)
+        #
+        # Objectives
+        #
+        self.obj_assets = cp.sum([
+            cp.sum([ self.data.b[i] * self.variables_families['p'][i] for i in range(len(self.data.b)) ]),
+            cp.sum([ self.data.a[i] * cp.square(self.variables_families['p'][i]) / 2. for i in range(len(self.data.a)) ]),
+            cp.sum([ self.data.pref[i] * self.variables_families['t_pos'][i] for i in range(len(self.data.pref)) ]),
+        ])
+        # self._build_variables()
+        # self._build_constraints()
+        # self._build_objective()
         return
 
     def _build_variables(self):
-        self.variables.p = [cp.Variable(name='p{}'.format(i)) for i in range(self.data.num_assets)]
+        #
+        # P
+        #
+        self.variables.p = [cp.Variable(name=f'p{i}') for i in range(self.data.num_assets)]
         #-------------------------------
         # HERE    
         #-------------------------------
@@ -110,6 +174,7 @@ class Prosumer:
         return
             
     def _build_objective(self):
+        return
 
         #-------------------------------
         # HERE    
@@ -128,12 +193,14 @@ class Prosumer:
     #   Model Updating
     ###    
     def _update_objective(self):
-
-        #-------------------------------
-        # HERE    
-        #-------------------------------
-            
-        #self._build_objective()
+        augm_lag = cp.sum([
+            -cp.sum([self.y[i] * (self.variables_families['t'][i] - self.t_average[i]) for i in range(len(self.t_average))]),
+            self.data.rho / 2. * cp.sum([
+                cp.square(self.variables_families['t'][i] - self.t_average[i])
+                for i in range(len(self.variables_families['t']))
+            ])
+        ])
+        self.obj = self.obj_assets + augm_lag
         return
         
     ###
@@ -149,8 +216,8 @@ class Prosumer:
     ###    
     def _opti_status(self,trade):
         for i in range(self.data.num_partners):
-            self.t_new[i] = self.variables.t[i].value
-        self.SW = self.model.value
+            self.t_new[i] = self.variables_families['t'][i].value
+        self.SW = self.optimization_result
         self.Res_primal = sum( (self.t_new + trade[self.data.partners])*(self.t_new + trade[self.data.partners]) )
         self.Res_dual = sum( (self.t_new-self.t_old)*(self.t_new-self.t_old) )
         self.t_old = np.copy(self.t_new)
