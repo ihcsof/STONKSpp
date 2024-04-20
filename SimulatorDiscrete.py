@@ -131,8 +131,6 @@ class Simulator(Simulation):
     
     def Opti_LocDec_State(self, out):
         self.iteration += 1
-        self.prim = sum([self.players[i].Res_primal for i in range(self.nag)])
-        self.dual = sum([self.players[i].Res_dual for i in range(self.nag)])
         
         if(self.Prices[self.Prices!=0].size!=0):
             self.Price_avg = self.Prices[self.Prices!=0].mean()
@@ -147,13 +145,6 @@ class Simulator(Simulation):
         # In the last version there was the time calculation
         if out:
             print("Optimization stopped.")
-
-    def Opti_LocDec_Start(self):
-        temp = np.copy(self.Trades)
-        for i in range(self.nag):
-            temp[:, i] = self.players[i].optimize(self.Trades[i, :])
-            self.Prices[:, i][self.part[i, :].nonzero()] = self.players[i].y
-        self.Trades = np.copy(temp)
 
     def Opti_LocDec_Stop(self):
         self.simulation_on_tab = False
@@ -254,9 +245,25 @@ class PerformSimulation(Event):
         super().__init__()
     
     def process(self, sim: Simulator):
+        for i in range(sim.nag):
+            sim.schedule(0, PlayerOptimizationEvent(i))
+
+
+class PlayerOptimizationEvent(Event):
+    def __init__(self, player_i):
+        super().__init__()
+        self.i = player_i
+    
+    def process(self, sim: Simulator):
         if (sim.prim > sim.residual_primal or sim.dual > sim.residual_dual) and sim.iteration < sim.maximum_iteration and not (np.isnan(sim.prim) or np.isnan(sim.dual)):
-            sim.Opti_LocDec_Start()
-        sim.schedule(10, PerformSimulation())
+            temp_trades = np.copy(sim.Trades)
+            temp_trades[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
+            sim.Prices[:, self.i][sim.part[self.i, :].nonzero()] = sim.players[self.i].y
+            self.Trades = np.copy(temp_trades)
+            # TEMP: when to update them?
+            sim.prim = sum([sim.players[i].Res_primal for i in range(sim.nag)])
+            sim.dual = sum([sim.players[i].Res_dual for i in range(sim.nag)])
+        sim.schedule(10, PlayerOptimizationEvent(self.i))
 
 class CheckStateEvent(Event):
     def __init__(self):
