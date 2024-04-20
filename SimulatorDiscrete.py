@@ -43,6 +43,7 @@ class Simulator(Simulation):
         # Optimization model
         self.players = {}
         self.Trades = 0
+        self.temp_trades = 0
 
         self.Opti_LocDec_Init()
         self.Opti_LocDec_InitModel()
@@ -245,6 +246,7 @@ class PerformSimulation(Event):
         super().__init__()
     
     def process(self, sim: Simulator):
+        sim.temp_trades = np.copy(sim.Trades)
         for i in range(sim.nag):
             sim.schedule(0, PlayerOptimizationEvent(i))
 
@@ -256,20 +258,25 @@ class PlayerOptimizationEvent(Event):
     
     def process(self, sim: Simulator):
         if (sim.prim > sim.residual_primal or sim.dual > sim.residual_dual) and sim.iteration < sim.maximum_iteration and not (np.isnan(sim.prim) or np.isnan(sim.dual)):
-            temp_trades = np.copy(sim.Trades)
-            temp_trades[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
+            sim.temp_trades[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
             sim.Prices[:, self.i][sim.part[self.i, :].nonzero()] = sim.players[self.i].y
-            self.Trades = np.copy(temp_trades)
-            # TEMP: when to update them?
-            sim.prim = sum([sim.players[i].Res_primal for i in range(sim.nag)])
-            sim.dual = sum([sim.players[i].Res_dual for i in range(sim.nag)])
-        sim.schedule(10, PlayerOptimizationEvent(self.i))
+        sim.schedule(20, PlayerOptimizationEvent(self.i))
+        # TODO: when to optimize "globally"?
+        sim.schedule(30, GlobalOptimizationEvent())
+
+class GlobalOptimizationEvent(Event):
+    def process(self, sim: Simulator):
+        sim.Trades = np.copy(sim.temp_trades)
+        sim.prim = sum([sim.players[i].Res_primal for i in range(sim.nag)])
+        sim.dual = sum([sim.players[i].Res_dual for i in range(sim.nag)])
 
 class CheckStateEvent(Event):
     def __init__(self):
         super().__init__()
     
     def process(self, sim: Simulator):
+        sim.temp_trades = np.copy(sim.Trades)
+         
         if sim.prim<=sim.residual_primal and sim.dual<=sim.residual_dual:
             sim.simulation_message = 1
         elif sim.iteration>=sim.maximum_iteration:
