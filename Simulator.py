@@ -12,7 +12,7 @@ import numpy as np
 
 from igraph import Graph
 
-from ProsumerGUROBI_FIX import Prosumer, Manager
+from ProsumerCVX import Prosumer, Manager
 
 class Simulator:
     def __init__(self): 
