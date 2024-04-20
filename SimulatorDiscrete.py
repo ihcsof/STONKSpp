@@ -46,7 +46,11 @@ class Simulator(Simulation):
         self.players = {}
         self.Trades = 0
 
-        self.StartNewSimulation()
+        self.Opti_LocDec_Init()
+        self.Opti_LocDec_InitModel()
+
+        self.schedule(10, CheckStateEvent())
+        self.schedule(0, PerformSimulation())
 
         return
     
@@ -82,16 +86,6 @@ class Simulator(Simulation):
         if self.account_token == '':
             self.account_token = ''
         return
-    
-    def Progress_Optimize(self):
-        self.start_sim = time.time()  # Updated to time.time() for current Python versions
-        print("Optimization started...")
-        print("Press 'Ctrl + C' to stop the simulation at any time.")
-        try:
-            self.Opti_LocDec_State()
-        except KeyboardInterrupt:
-            print("Simulation stopped by user.")
-            self.Stopped = True
     
     #%% Optimization
     def Opti_LocDec_Init(self):
@@ -138,13 +132,10 @@ class Simulator(Simulation):
         self.pref = pref
         return
     
-    def Opti_LocDec_State(self, out=None):
+    def Opti_LocDec_State(self, out):
         if self.iteration_last < self.iteration:
             self.iteration_last = self.iteration
             print(f"Iteration: {self.iteration}, SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}")
-        
-        if out is None:
-            out = self.Opti_End_Test()
 
         if out:
             print(f"Total simulation time: {self.simulation_time:.1f} s")
@@ -179,31 +170,13 @@ class Simulator(Simulation):
         else:
             self.Price_avg = 0
         self.SW = sum([self.players[i].SW for i in range(self.nag)])
-        
-        if self.Opti_End_Test():
-            self.Opti_LocDec_Stop()
-            return self.Opti_LocDec_State(True)
-        else:
-            return self.Opti_LocDec_State(False)
+
     
     def Opti_LocDec_Stop(self):
         self.optimizer_on = False
         self.simulation_on_tab = False
         self.simulation_on = False
         return
-    
-    def Opti_End_Test(self):
-        if self.prim<=self.residual_primal and self.dual<=self.residual_dual:
-            self.simulation_message = 1
-        elif self.iteration>=self.maximum_iteration:
-            self.simulation_message = -1
-        elif self.simulation_time>=self.timeout:
-            self.simulation_message = -2
-        elif self.Stopped:
-            self.simulation_message = -3
-        else:
-            self.simulation_message = 0
-        return self.simulation_message
     
     #%% Results gathering
     def Infos(self):
@@ -298,16 +271,50 @@ class Simulator(Simulation):
         else:
             print("Action canceled.")
 
-    def StartNewSimulation(self):
-        self.Opti_LocDec_Init()
-        self.Opti_LocDec_InitModel()
-        self.Progress_Optimize()
-        while(True):
-            if self.simulation_message:
-                break
-            self.Opti_LocDec_Start()
+class PerformSimulation(Event):
+    def __init__(self):
+        super().__init__()
+    
+    def process(self, sim: Simulator):
+        sim.Opti_LocDec_Start()
+        sim.schedule(10, PerformSimulation())
 
-        self.ShowResults()
+class PlayerOptimizationEvent(Event):
+    def __init__(self, player_i, temp_trades):
+        super().__init__()
+        self.i = player_i
+        self.temp_trades = temp_trades
+    
+    def process(self, sim: Simulator):
+        self.temp_trades[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
+        sim.Prices[:, self.i][sim.part[self.i, :].nonzero()] = sim.players[self.i].y
+        sim.processed_prosumers += 1
+
+class CheckStateEvent(Event):
+    def __init__(self):
+        super().__init__()
+    
+    def process(self, sim: Simulator):
+        if sim.prim<=sim.residual_primal and sim.dual<=sim.residual_dual:
+            sim.simulation_message = 1
+        elif sim.iteration>=sim.maximum_iteration:
+            sim.simulation_message = -1
+        elif sim.simulation_time>=sim.timeout:
+            sim.simulation_message = -2
+        elif sim.Stopped:
+            sim.simulation_message = -3
+        else:
+            sim.simulation_message = 0
+
+        if sim.simulation_message:
+            sim.Opti_LocDec_Stop()
+            sim.Opti_LocDec_State(True)
+            sim.ShowResults()
+            # TODO: maybe there are still event to be processed?
+            exit()
+        else:
+            sim.Opti_LocDec_State(False)
+            sim.schedule(10, CheckStateEvent())
 
 def main():
     # Initialize the simulator
