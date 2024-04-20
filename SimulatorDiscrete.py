@@ -23,7 +23,7 @@ class Simulator(Simulation):
 
         self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
 
-        self.timeout = 3600  # in s
+        self.timeout = 3600  # UNUSED
         self.Interval = 3  # in s
         # Default optimization parameters
         self.Add_Commission_Fees = 'Yes'
@@ -97,7 +97,7 @@ class Simulator(Simulation):
         self.prim = float("inf")
         self.dual = float("inf")
         self.Price_avg = 0
-        self.simulation_time = 0
+        self.simulation_time = 0 # NOW UNUSED
         self.opti_progress = []
         return
     
@@ -134,18 +134,13 @@ class Simulator(Simulation):
             self.iteration_last = self.iteration
             print(f"Iteration: {self.iteration}, SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}")
 
+        # In the last version there was the time calculation
         if out:
-            print(f"Total simulation time: {self.simulation_time:.1f} s")
             print("Optimization stopped.")
-        else:
-            print(f"...Running time: {self.simulation_time:.1f} s")
 
     def Opti_LocDec_Start(self):
-        self.simulation_time = 0
-        lapsed = 0
-        start_time = time.perf_counter()
 
-        while (self.prim > self.residual_primal or self.dual > self.residual_dual) and self.iteration < self.maximum_iteration and lapsed <= self.Interval and not (np.isnan(self.prim) or np.isnan(self.dual)):
+        while (self.prim > self.residual_primal or self.dual > self.residual_dual) and self.iteration < self.maximum_iteration and not (np.isnan(self.prim) or np.isnan(self.dual)):
             self.iteration += 1
             temp = np.copy(self.Trades)
             for i in range(self.nag):
@@ -154,9 +149,7 @@ class Simulator(Simulation):
             self.Trades = np.copy(temp)
             self.prim = sum([self.players[i].Res_primal for i in range(self.nag)])
             self.dual = sum([self.players[i].Res_dual for i in range(self.nag)])
-            lapsed = time.perf_counter() - start_time
 
-        self.simulation_time += lapsed
         if(self.Prices[self.Prices!=0].size!=0):
             self.Price_avg = self.Prices[self.Prices!=0].mean()
         else:
@@ -188,7 +181,7 @@ class Simulator(Simulation):
     def ErrorMessages(self):
         if self.simulation_message == 1:
             self.Infos()
-            print(f"Simulation converged after {self.iteration} iterations in {self.simulation_time:.1f} seconds.")
+            print(f"Simulation converged after {self.iteration} iterations")
             print(f"The total social welfare is {self.SW:.0f} $.")
             print(f"The total amount of power exchanged is {self.tot_trade.sum():.0f} kW.")
             print(f"The total amount of power produced is {self.tot_prod.sum():.0f} kW.")
@@ -197,8 +190,6 @@ class Simulator(Simulation):
         else:
             if self.simulation_message == -1:
                 print("Maximum number of iterations reached.")
-            elif self.simulation_message == -2:
-                print("Simulation time exceeded timeout.")
             else:
                 print("Something went wrong.")
                 
@@ -288,8 +279,6 @@ class CheckStateEvent(Event):
             sim.simulation_message = 1
         elif sim.iteration>=sim.maximum_iteration:
             sim.simulation_message = -1
-        elif sim.simulation_time>=sim.timeout:
-            sim.simulation_message = -2
         else:
             sim.simulation_message = 0
 
