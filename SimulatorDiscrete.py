@@ -18,9 +18,7 @@ class Simulator(Simulation):
     def __init__(self): 
         super().__init__()
         self.simulation_on = False
-        self.optimizer_on = False
         self.simulation_message = ""
-        self.Stopped = False
         self.force_stop = False
 
         self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
@@ -101,7 +99,6 @@ class Simulator(Simulation):
         self.Price_avg = 0
         self.simulation_time = 0
         self.opti_progress = []
-        self.Stopped = False
         return
     
     def Opti_LocDec_InitModel(self):
@@ -144,16 +141,11 @@ class Simulator(Simulation):
             print(f"...Running time: {self.simulation_time:.1f} s")
 
     def Opti_LocDec_Start(self):
-        if not self.optimizer_on:
-            self.optimizer_on = True
-            self.start_sim = time.perf_counter()
-            self.simulation_time = 0
+        self.simulation_time = 0
         lapsed = 0
         start_time = time.perf_counter()
-        # check if self.prim is not Nan
-        if np.isnan(self.prim) or np.isnan(self.dual):
-            self.Stopped = True
-        while (self.prim > self.residual_primal or self.dual > self.residual_dual) and self.iteration < self.maximum_iteration and lapsed <= self.Interval and not self.Stopped:
+
+        while (self.prim > self.residual_primal or self.dual > self.residual_dual) and self.iteration < self.maximum_iteration and lapsed <= self.Interval and not (np.isnan(self.prim) or np.isnan(self.dual)):
             self.iteration += 1
             temp = np.copy(self.Trades)
             for i in range(self.nag):
@@ -173,7 +165,6 @@ class Simulator(Simulation):
 
     
     def Opti_LocDec_Stop(self):
-        self.optimizer_on = False
         self.simulation_on_tab = False
         self.simulation_on = False
         return
@@ -208,8 +199,6 @@ class Simulator(Simulation):
                 print("Maximum number of iterations reached.")
             elif self.simulation_message == -2:
                 print("Simulation time exceeded timeout.")
-            elif self.simulation_message == -3:
-                print("Simulation stopped by user.")
             else:
                 print("Something went wrong.")
                 
@@ -301,8 +290,6 @@ class CheckStateEvent(Event):
             sim.simulation_message = -1
         elif sim.simulation_time>=sim.timeout:
             sim.simulation_message = -2
-        elif sim.Stopped:
-            sim.simulation_message = -3
         else:
             sim.simulation_message = 0
 
