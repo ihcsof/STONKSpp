@@ -21,7 +21,7 @@ class Simulator(Simulation):
         self.simulation_message = ""
         self.force_stop = False
 
-        self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('graphs/examples/Connected_community_model.pyp2p', format='picklez')
 
         self.timeout = 3600  # UNUSED
         self.Interval = 3  # in s
@@ -35,7 +35,7 @@ class Simulator(Simulation):
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 5000
+        self.maximum_iteration = 2000
         self.penaltyfactor = 0.01
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
@@ -145,16 +145,15 @@ class Simulator(Simulation):
             print("Optimization stopped.")
 
     def Opti_LocDec_Start(self):
-        while (self.prim > self.residual_primal or self.dual > self.residual_dual) and self.iteration < self.maximum_iteration and not (np.isnan(self.prim) or np.isnan(self.dual)):
-            self.iteration += 1
-            temp = np.copy(self.Trades)
-            for i in range(self.nag):
-                temp[:, i] = self.players[i].optimize(self.Trades[i, :])
-                self.Prices[:, i][self.part[i, :].nonzero()] = self.players[i].y
-            self.Trades = np.copy(temp)
-            self.prim = sum([self.players[i].Res_primal for i in range(self.nag)])
-            self.dual = sum([self.players[i].Res_dual for i in range(self.nag)])
-    
+        self.iteration += 1
+        temp = np.copy(self.Trades)
+        for i in range(self.nag):
+            temp[:, i] = self.players[i].optimize(self.Trades[i, :])
+            self.Prices[:, i][self.part[i, :].nonzero()] = self.players[i].y
+        self.Trades = np.copy(temp)
+        self.prim = sum([self.players[i].Res_primal for i in range(self.nag)])
+        self.dual = sum([self.players[i].Res_dual for i in range(self.nag)])
+
     def Opti_LocDec_Stop(self):
         self.simulation_on_tab = False
         self.simulation_on = False
@@ -254,19 +253,9 @@ class PerformSimulation(Event):
         super().__init__()
     
     def process(self, sim: Simulator):
-        sim.Opti_LocDec_Start()
+        if (sim.prim > sim.residual_primal or sim.dual > sim.residual_dual) and sim.iteration < sim.maximum_iteration and not (np.isnan(sim.prim) or np.isnan(sim.dual)):
+            sim.Opti_LocDec_Start()
         sim.schedule(10, PerformSimulation())
-
-class PlayerOptimizationEvent(Event):
-    def __init__(self, player_i, temp_trades):
-        super().__init__()
-        self.i = player_i
-        self.temp_trades = temp_trades
-    
-    def process(self, sim: Simulator):
-        self.temp_trades[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
-        sim.Prices[:, self.i][sim.part[self.i, :].nonzero()] = sim.players[self.i].y
-        sim.processed_prosumers += 1
 
 class CheckStateEvent(Event):
     def __init__(self):
