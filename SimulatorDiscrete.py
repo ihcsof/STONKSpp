@@ -130,6 +130,12 @@ class Simulator(Simulation):
         return
     
     def Opti_LocDec_State(self, out):
+        if(self.Prices[self.Prices!=0].size!=0):
+            self.Price_avg = self.Prices[self.Prices!=0].mean()
+        else:
+            self.Price_avg = 0
+        self.SW = sum([self.players[i].SW for i in range(self.nag)])
+
         if self.iteration_last < self.iteration:
             self.iteration_last = self.iteration
             print(f"Iteration: {self.iteration}, SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}")
@@ -139,7 +145,6 @@ class Simulator(Simulation):
             print("Optimization stopped.")
 
     def Opti_LocDec_Start(self):
-
         while (self.prim > self.residual_primal or self.dual > self.residual_dual) and self.iteration < self.maximum_iteration and not (np.isnan(self.prim) or np.isnan(self.dual)):
             self.iteration += 1
             temp = np.copy(self.Trades)
@@ -149,13 +154,6 @@ class Simulator(Simulation):
             self.Trades = np.copy(temp)
             self.prim = sum([self.players[i].Res_primal for i in range(self.nag)])
             self.dual = sum([self.players[i].Res_dual for i in range(self.nag)])
-
-        if(self.Prices[self.Prices!=0].size!=0):
-            self.Price_avg = self.Prices[self.Prices!=0].mean()
-        else:
-            self.Price_avg = 0
-        self.SW = sum([self.players[i].SW for i in range(self.nag)])
-
     
     def Opti_LocDec_Stop(self):
         self.simulation_on_tab = False
