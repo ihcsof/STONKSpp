@@ -143,9 +143,8 @@ class Simulator(Simulation):
             self.partners[edge.source].append(edge.target)
     
     def Opti_LocDec_Start(self):
-        self.temp_trades = np.copy(self.Trades)
         for i in range(self.nag):
-            self.schedule(0, PlayerOptimizationEvent(i))
+            self.schedule(0, PlayerOptimizationMsg(i))
 
         self.schedule(10, CheckStateEvent())
     
@@ -260,32 +259,25 @@ class Simulator(Simulation):
         else:
             print("Action canceled.")
 
-class PlayerOptimizationEvent(Event):
+class PlayerOptimizationMsg(Event):
     def __init__(self, player_i):
         super().__init__()
         self.i = player_i
     
     def process(self, sim: Simulator):
-        if (sim.prim > sim.residual_primal or sim.dual > sim.residual_dual) and sim.iteration < sim.maximum_iteration and not (np.isnan(sim.prim) or np.isnan(sim.dual)):
-            sim.temp_trades[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
-            sim.Prices[:, self.i][sim.part[self.i, :].nonzero()] = sim.players[self.i].y
-        sim.schedule(20, PlayerOptimizationEvent(self.i))
-        # TODO: when to optimize "globally"?
-        sim.schedule(30, GlobalOptimizationEvent())
-
-class GlobalOptimizationEvent(Event):
-    def process(self, sim: Simulator):
-        sim.Trades = np.copy(sim.temp_trades)
-        sim.prim = sum([sim.players[i].Res_primal for i in range(sim.nag)])
-        sim.dual = sum([sim.players[i].Res_dual for i in range(sim.nag)])
+        #if (sim.prim > sim.residual_primal or sim.dual > sim.residual_dual) and sim.iteration < sim.maximum_iteration and not (np.isnan(sim.prim) or np.isnan(sim.dual)):
+        sim.Trades[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
+        sim.Prices[:, self.i][sim.part[self.i, :].nonzero()] = sim.players[self.i].y
+        sim.prim = sum([sim.players[i].Res_primal for i in sim.partners[self.i]])
+        sim.dual = sum([sim.players[i].Res_dual for i in sim.partners[self.i]])
+        for j in sim.partners[self.i]:
+            sim.schedule(100, PlayerOptimizationMsg(j))
 
 class CheckStateEvent(Event):
     def __init__(self):
         super().__init__()
     
     def process(self, sim: Simulator):
-        sim.temp_trades = np.copy(sim.Trades)
-         
         if sim.prim<=sim.residual_primal and sim.dual<=sim.residual_dual:
             sim.simulation_message = 1
         elif sim.iteration>=sim.maximum_iteration:
