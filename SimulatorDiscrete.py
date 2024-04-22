@@ -47,6 +47,11 @@ class Simulator(Simulation):
         self.temp_trades = 0
         self.initialize_partners()
 
+        # print all the partners for each player
+        print("Neigbors debugging: ")
+        for vertex in self.MGraph.vs:
+            print(f"Player {vertex.index} has partners {self.partners[vertex.index]}")
+
         self.Opti_LocDec_Init()
         self.Opti_LocDec_InitModel()
         self.Opti_LocDec_Start()
@@ -136,7 +141,6 @@ class Simulator(Simulation):
 
         for edge in self.MGraph.es:
             self.partners[edge.source].append(edge.target)
-            self.partners[edge.target].append(edge.source)
     
     def Opti_LocDec_Start(self):
         self.temp_trades = np.copy(self.Trades)
