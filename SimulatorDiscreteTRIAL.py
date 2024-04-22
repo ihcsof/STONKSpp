@@ -42,14 +42,14 @@ class Simulator(Simulation):
         self.communications = 'Synchronous'
         # Optimization model
         self.players = {}
-        self.partners = {}
         self.Trades = 0
         self.temp_trades = 0
-        self.initialize_partners()
 
         self.Opti_LocDec_Init()
         self.Opti_LocDec_InitModel()
-        self.Opti_LocDec_Start()
+
+        self.schedule(10, CheckStateEvent())
+        self.schedule(0, PerformSimulation())
 
         return
     
@@ -92,6 +92,10 @@ class Simulator(Simulation):
         self.nag = nag
         self.Trades = np.zeros([nag,nag])
         self.Prices = np.zeros([nag,nag])
+
+        self.nOpt = np.zeros(nag) # TRIAL
+        self.globlast = 0
+
         self.iteration = 0
         self.iteration_last = -1
         self.SW = 0
@@ -129,21 +133,6 @@ class Simulator(Simulation):
         self.part = part
         self.pref = pref
         return
-    
-    def initialize_partners(self):
-        for vertex in self.MGraph.vs:
-            self.partners[vertex.index] = []
-
-        for edge in self.MGraph.es:
-            self.partners[edge.source].append(edge.target)
-            self.partners[edge.target].append(edge.source)
-    
-    def Opti_LocDec_Start(self):
-        self.temp_trades = np.copy(self.Trades)
-        for i in range(self.nag):
-            self.schedule(0, PlayerOptimizationEvent(i))
-
-        self.schedule(10, CheckStateEvent())
     
     def Opti_LocDec_State(self, out):
         self.iteration += 1
@@ -256,6 +245,16 @@ class Simulator(Simulation):
         else:
             print("Action canceled.")
 
+class PerformSimulation(Event):
+    def __init__(self):
+        super().__init__()
+    
+    def process(self, sim: Simulator):
+        sim.temp_trades = np.copy(sim.Trades)
+        for i in range(sim.nag):
+            sim.schedule(0, PlayerOptimizationEvent(i))
+
+
 class PlayerOptimizationEvent(Event):
     def __init__(self, player_i):
         super().__init__()
@@ -265,15 +264,18 @@ class PlayerOptimizationEvent(Event):
         if (sim.prim > sim.residual_primal or sim.dual > sim.residual_dual) and sim.iteration < sim.maximum_iteration and not (np.isnan(sim.prim) or np.isnan(sim.dual)):
             sim.temp_trades[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
             sim.Prices[:, self.i][sim.part[self.i, :].nonzero()] = sim.players[self.i].y
+            sim.nOpt[self.i] += 1
         sim.schedule(20, PlayerOptimizationEvent(self.i))
         # TODO: when to optimize "globally"?
         sim.schedule(30, GlobalOptimizationEvent())
 
 class GlobalOptimizationEvent(Event):
     def process(self, sim: Simulator):
-        sim.Trades = np.copy(sim.temp_trades)
-        sim.prim = sum([sim.players[i].Res_primal for i in range(sim.nag)])
-        sim.dual = sum([sim.players[i].Res_dual for i in range(sim.nag)])
+        if all([sim.nOpt[i] >= sim.globlast for i in range(sim.nag)]):
+            sim.globlast += 1
+            sim.Trades = np.copy(sim.temp_trades)
+            sim.prim = sum([sim.players[i].Res_primal for i in range(sim.nag)])
+            sim.dual = sum([sim.players[i].Res_dual for i in range(sim.nag)])
 
 class CheckStateEvent(Event):
     def __init__(self):
