@@ -287,8 +287,8 @@ class PlayerOptimizationMsg(Event):
         sim.Trades[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
         sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
 
-        local_primal = sum(sim.players[j].Res_primal for j in sim.partners[self.i] if j != self.i)
-        local_dual = sum(sim.players[j].Res_dual for j in sim.partners[self.i] if j != self.i)
+        local_primal = sum([sim.players[j].Res_primal for j in sim.partners[self.i]])
+        local_dual = sum([sim.players[j].Res_dual for j in sim.partners[self.i]])
 
         sim.prim = min(sim.prim, local_primal)
         sim.dual = min(sim.dual, local_dual)
