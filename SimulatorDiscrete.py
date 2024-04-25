@@ -9,7 +9,7 @@ import sys
 import time
 import pandas as pd
 import numpy as np
-from igraph import Graph
+from igraph import Graph, plot
 from ProsumerGUROBI_FIX import Prosumer, Manager
 from discrete_event_sim import Simulation, Event
 
@@ -35,7 +35,7 @@ class Simulator(Simulation):
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 2000
+        self.maximum_iteration = 10
         self.penaltyfactor = 0.01
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
@@ -51,6 +51,8 @@ class Simulator(Simulation):
         print("Neigbors debugging: ")
         for vertex in self.MGraph.vs:
             print(f"Player {vertex.index} has partners {self.partners[vertex.index]}")
+
+        plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
 
         self.Opti_LocDec_Init()
         self.Opti_LocDec_InitModel()
@@ -146,7 +148,7 @@ class Simulator(Simulation):
         for i in range(self.nag):
             self.schedule(0, PlayerOptimizationMsg(i))
 
-        self.schedule(10, CheckStateEvent())
+        self.schedule(0, CheckStateEvent())
     
     def Opti_LocDec_State(self, out):
         self.iteration += 1
@@ -265,13 +267,19 @@ class PlayerOptimizationMsg(Event):
         self.i = player_i
     
     def process(self, sim: Simulator):
+        #print(f"Player {self.i} is optimizing...")
         #if (sim.prim > sim.residual_primal or sim.dual > sim.residual_dual) and sim.iteration < sim.maximum_iteration and not (np.isnan(sim.prim) or np.isnan(sim.dual)):
         sim.Trades[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
-        sim.Prices[:, self.i][sim.part[self.i, :].nonzero()] = sim.players[self.i].y
-        sim.prim = sum([sim.players[i].Res_primal for i in sim.partners[self.i]])
-        sim.dual = sum([sim.players[i].Res_dual for i in sim.partners[self.i]])
+        sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
+
+        local_primal = sum(sim.players[j].Res_primal for j in sim.partners[self.i] if j != self.i)
+        local_dual = sum(sim.players[j].Res_dual for j in sim.partners[self.i] if j != self.i)
+
+        sim.prim = min(sim.prim, local_primal)
+        sim.dual = min(sim.dual, local_dual)
+
         for j in sim.partners[self.i]:
-            sim.schedule(100, PlayerOptimizationMsg(j))
+            sim.schedule(8, PlayerOptimizationMsg(j))
 
 class CheckStateEvent(Event):
     def __init__(self):
@@ -285,6 +293,8 @@ class CheckStateEvent(Event):
         else:
             sim.simulation_message = 0
 
+        print(f"Checking state... {sim.simulation_message}")
+
         if sim.simulation_message:
             sim.Opti_LocDec_Stop()
             sim.Opti_LocDec_State(True)
@@ -293,7 +303,7 @@ class CheckStateEvent(Event):
             exit()
         else:
             sim.Opti_LocDec_State(False)
-            sim.schedule(10, CheckStateEvent())
+            sim.schedule(5, CheckStateEvent())
 
 def main():
     # Initialize the simulator
