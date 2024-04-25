@@ -44,6 +44,13 @@ class Simulator(Simulation):
         self.players = {}
         self.Trades = 0
 
+        self.Opti_LocDec_Init()
+        self.Opti_LocDec_InitModel()
+
+        self.temps = np.zeros([self.MGraph.vcount(), self.MGraph.vcount()])
+        self.is_temps_updated = [False for _ in range(self.MGraph.vcount())]
+        self.is_updated = [True for _ in range(self.MGraph.vcount())]
+    
         self.partners = {}
         self.npart = {} # Number of partners for each player
         self.npartopt = {} # Number of partners that has optimized for each player
@@ -56,8 +63,7 @@ class Simulator(Simulation):
 
         plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
 
-        self.Opti_LocDec_Init()
-        self.Opti_LocDec_InitModel()
+
         self.Opti_LocDec_Start()
 
         return
@@ -149,7 +155,7 @@ class Simulator(Simulation):
         for vertex in self.MGraph.vs:
             self.npart[vertex.index] = len(self.partners[vertex.index])
             # the very first time, all partners have optimized (otherwise nothing happens)
-            self.npartopt[vertex.index] = len(self.partners[vertex.index])
+            self.npartopt[vertex.index] = 0
     
     def Opti_LocDec_Start(self):
         for i in range(self.nag):
@@ -277,25 +283,40 @@ class PlayerOptimizationMsg(Event):
         #print(f"Player {self.i} is optimizing...")
         #if (sim.prim > sim.residual_primal or sim.dual > sim.residual_dual) and sim.iteration < sim.maximum_iteration and not (np.isnan(sim.prim) or np.isnan(sim.dual)):
         
+        if all(sim.is_updated) and not sim.is_temps_updated[self.i]:
+            sim.temps[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
+            sim.Prices[:, self.i][sim.part[self.i, :].nonzero()] = sim.players[self.i].y
+            sim.is_temps_updated[self.i] = True
+
+            for j in range(sim.nag):
+                sim.npartopt[j] += 1
+                '''if j != self.i:
+                    for f, e in sim.events:
+                        if isinstance(e, PlayerOptimizationMsg) and e.i == j:
+                            #print("Player", j, "already scheduled")
+                            break
+                    else:
+                        #print("Scheduling new event for player", j)
+                        sim.schedule(8, PlayerOptimizationMsg(j))'''
+
         # SYNC: if not all partners have optimized, skip the turn
-        if sim.npartopt[self.i] < sim.npart[self.i]:
+        if sim.npartopt[self.i] < sim.nag:
             sim.schedule(8, PlayerOptimizationMsg(self.i))
             return
         
+        if all(sim.is_updated):
+            sim.is_updated = [False for _ in range(sim.nag)]
+
         sim.npartopt[self.i] = 0 # Reset the number of partners that have optimized
+        sim.is_temps_updated[self.i] = False
 
-        sim.Trades[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
-        sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
+        sim.Trades = np.copy(sim.temps) 
+        
+        sim.prim = sum([sim.players[j].Res_primal for j in range(sim.nag)])
+        sim.dual = sum([sim.players[j].Res_dual for j in range(sim.nag)])
 
-        local_primal = sum(sim.players[j].Res_primal for j in sim.partners[self.i] if j != self.i)
-        local_dual = sum(sim.players[j].Res_dual for j in sim.partners[self.i] if j != self.i)
-
-        sim.prim = min(sim.prim, local_primal)
-        sim.dual = min(sim.dual, local_dual)
-
-        for j in sim.partners[self.i]:
-            sim.npartopt[j] += 1
-            sim.schedule(8, PlayerOptimizationMsg(j))
+        sim.is_updated[self.i] = True
+        sim.schedule(8, PlayerOptimizationMsg(self.i))
 
 class CheckStateEvent(Event):
     def __init__(self):
@@ -317,7 +338,7 @@ class CheckStateEvent(Event):
             exit()
         else:
             sim.Opti_LocDec_State(False)
-            sim.schedule(5, CheckStateEvent())
+            sim.schedule(1000, CheckStateEvent())
 
 def main():
     # Initialize the simulator
