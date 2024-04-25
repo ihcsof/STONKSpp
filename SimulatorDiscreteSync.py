@@ -21,7 +21,7 @@ class Simulator(Simulation):
         self.simulation_message = ""
         self.force_stop = False
 
-        self.MGraph = Graph.Load('graphs/examples/Connected_community_model.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
 
         self.timeout = 3600  # UNUSED
         self.Interval = 3  # in s
@@ -35,7 +35,7 @@ class Simulator(Simulation):
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 10
+        self.maximum_iteration = 2000
         self.penaltyfactor = 0.01
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
@@ -45,11 +45,14 @@ class Simulator(Simulation):
         self.Trades = 0
 
         self.partners = {}
+        self.npart = {} # Number of partners for each player
+        self.npartopt = {} # Number of partners that has optimized for each player
         self.initialize_partners()
         # print all the partners for each player
         print("Neigbors debugging: ")
         for vertex in self.MGraph.vs:
             print(f"Player {vertex.index} has partners {self.partners[vertex.index]}")
+            print(f"\t it has {self.npart[vertex.index]} partners")
 
         plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
 
@@ -142,6 +145,11 @@ class Simulator(Simulation):
 
         for edge in self.MGraph.es:
             self.partners[edge.source].append(edge.target)
+
+        for vertex in self.MGraph.vs:
+            self.npart[vertex.index] = len(self.partners[vertex.index])
+            # the very first time, all partners have optimized (otherwise nothing happens)
+            self.npartopt[vertex.index] = len(self.partners[vertex.index])
     
     def Opti_LocDec_Start(self):
         for i in range(self.nag):
@@ -268,6 +276,14 @@ class PlayerOptimizationMsg(Event):
     def process(self, sim: Simulator):
         #print(f"Player {self.i} is optimizing...")
         #if (sim.prim > sim.residual_primal or sim.dual > sim.residual_dual) and sim.iteration < sim.maximum_iteration and not (np.isnan(sim.prim) or np.isnan(sim.dual)):
+        
+        # SYNC: if not all partners have optimized, skip the turn
+        if sim.npartopt[self.i] < sim.npart[self.i]:
+            sim.schedule(8, PlayerOptimizationMsg(self.i))
+            return
+        
+        sim.npartopt[self.i] = 0 # Reset the number of partners that have optimized
+
         sim.Trades[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
         sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
 
@@ -278,6 +294,7 @@ class PlayerOptimizationMsg(Event):
         sim.dual = min(sim.dual, local_dual)
 
         for j in sim.partners[self.i]:
+            sim.npartopt[j] += 1
             sim.schedule(8, PlayerOptimizationMsg(j))
 
 class CheckStateEvent(Event):
@@ -291,8 +308,6 @@ class CheckStateEvent(Event):
             sim.simulation_message = -1
         else:
             sim.simulation_message = 0
-
-        print(f"Checking state... {sim.simulation_message}")
 
         if sim.simulation_message:
             sim.Opti_LocDec_Stop()
