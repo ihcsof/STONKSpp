@@ -266,8 +266,6 @@ class PlayerOptimizationMsg(Event):
         self.i = player_i
     
     def process(self, sim: Simulator):
-        #print(f"Player {self.i} is optimizing...")
-        #if (sim.prim > sim.residual_primal or sim.dual > sim.residual_dual) and sim.iteration < sim.maximum_iteration and not (np.isnan(sim.prim) or np.isnan(sim.dual)):
         sim.Trades[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
         sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
 
