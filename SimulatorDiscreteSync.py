@@ -21,7 +21,7 @@ class Simulator(Simulation):
         self.simulation_message = ""
         self.force_stop = False
 
-        self.MGraph = Graph.Load('graphs/examples/Connected_community_model.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
 
         self.timeout = 3600  # UNUSED
         self.Interval = 3  # in s
@@ -293,7 +293,9 @@ class PlayerOptimizationMsg(Event):
         # schedule optimization for partners
         for j in sim.partners[self.i]:
             sim.n_updated_partners[j] += 1
-            sim.schedule(8, PlayerUpdateMsg(j))
+            ratio = sim.n_updated_partners[j] / sim.npartners[j]
+            delay = 10 - (ratio * (10- 6))
+            sim.schedule(int(delay), PlayerUpdateMsg(j))
 
 class PlayerUpdateMsg(Event):
     def __init__(self, player_i):
@@ -314,7 +316,9 @@ class PlayerUpdateMsg(Event):
         # schedule optimization for partners
         for j in sim.partners[self.i]:
             sim.n_optimized_partners[j] += 1
-            sim.schedule(8, PlayerOptimizationMsg(j))
+            ratio = sim.n_optimized_partners[j] / sim.npartners[j]
+            delay = 10 - (ratio * (10 - 6))
+            sim.schedule(int(delay), PlayerOptimizationMsg(j))
 
 class CheckStateEvent(Event):
     def __init__(self):
@@ -332,7 +336,8 @@ class CheckStateEvent(Event):
             sim.Opti_LocDec_Stop()
             sim.Opti_LocDec_State(True)
             sim.ShowResults()
-            exit()
+            sim.events = [] # like doing exit() but allowing the profiler
+            return
         else:
             sim.Opti_LocDec_State(False)
             sim.schedule(1000, CheckStateEvent())
