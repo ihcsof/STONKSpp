@@ -9,22 +9,21 @@ import sys
 import time
 import pandas as pd
 import numpy as np
-
-from igraph import Graph
-
+from igraph import Graph, plot
 from ProsumerGUROBI_FIX import Prosumer, Manager
+from discrete_event_sim import Simulation, Event
 
-class Simulator:
+
+class Simulator(Simulation):
     def __init__(self): 
+        super().__init__()
         self.simulation_on = False
-        self.optimizer_on = False
         self.simulation_message = ""
-        self.Stopped = False
         self.force_stop = False
 
-        self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('graphs/examples/Connected_community_model.pyp2p', format='picklez')
 
-        self.timeout = 3600  # in s
+        self.timeout = 3600  # UNUSED
         self.Interval = 3  # in s
         # Default optimization parameters
         self.Add_Commission_Fees = 'Yes'
@@ -36,14 +35,29 @@ class Simulator:
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 5000
+        self.maximum_iteration = 2000
         self.penaltyfactor = 0.01
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
         self.communications = 'Synchronous'
+        
         # Optimization model
         self.players = {}
         self.Trades = 0
+        self.Opti_LocDec_Init()
+        self.Opti_LocDec_InitModel()
+        self.temps = np.zeros([self.nag, self.nag]) # Temporary trades matrix
+    
+        self.partners = {}
+        self.npartners = {} # Number of partners for each player
+        self.n_optimized_partners = {} # Number of partners that has optimized for each player
+        self.n_updated_partners = {} # Number of partners that has updated for each player
+        self.initialize_partners()
+
+        plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
+
+        self.Opti_LocDec_Start()
+
         return
     
     def load_config(self, config_file):
@@ -79,16 +93,6 @@ class Simulator:
             self.account_token = ''
         return
     
-    def Progress_Optimize(self):
-        self.start_sim = time.time()  # Updated to time.time() for current Python versions
-        print("Optimization started...")
-        print("Press 'Ctrl + C' to stop the simulation at any time.")
-        try:
-            self.Opti_LocDec_State()
-        except KeyboardInterrupt:
-            print("Simulation stopped by user.")
-            self.Stopped = True
-    
     #%% Optimization
     def Opti_LocDec_Init(self):
         nag = len(self.MGraph.vs)
@@ -101,9 +105,8 @@ class Simulator:
         self.prim = float("inf")
         self.dual = float("inf")
         self.Price_avg = 0
-        self.simulation_time = 0
+        self.simulation_time = 0 # NOW UNUSED
         self.opti_progress = []
-        self.Stopped = False
         return
     
     def Opti_LocDec_InitModel(self):
@@ -134,72 +137,45 @@ class Simulator:
         self.pref = pref
         return
     
-    def Opti_LocDec_State(self, out=None):
-        if self.iteration_last < self.iteration:
-            self.iteration_last = self.iteration
-            print(f"Iteration: {self.iteration}, SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}")
-        
-        if out is None:
-            out = self.Opti_End_Test()
+    def initialize_partners(self):
+        for vertex in self.MGraph.vs:
+            self.partners[vertex.index] = []
 
-        if out:
-            print(f"Total simulation time: {self.simulation_time:.1f} s")
-            print("Optimization stopped.")
-        else:
-            print(f"...Running time: {self.simulation_time:.1f} s")
+        for edge in self.MGraph.es:
+            self.partners[edge.source].append(edge.target)
 
+        for vertex in self.MGraph.vs:
+            self.npartners[vertex.index] = len(self.partners[vertex.index])
+            self.n_optimized_partners[vertex.index] = 0
+            self.n_updated_partners[vertex.index] = len(self.partners[vertex.index])
+    
     def Opti_LocDec_Start(self):
-        if not self.optimizer_on:
-            self.optimizer_on = True
-            self.start_sim = time.perf_counter()
-            self.simulation_time = 0
-        lapsed = 0
-        start_time = time.perf_counter()
-        # check if self.prim is not Nan
-        if np.isnan(self.prim) or np.isnan(self.dual):
-            self.Stopped = True
-        while (self.prim > self.residual_primal or self.dual > self.residual_dual) and self.iteration < self.maximum_iteration and lapsed <= self.Interval and not self.Stopped:
-            self.iteration += 1
-            temp = np.copy(self.Trades)
-            for i in range(self.nag):
-                temp[:, i] = self.players[i].optimize(self.Trades[i, :])
-                self.Prices[:, i][self.part[i, :].nonzero()] = self.players[i].y
-            self.Trades = np.copy(temp)
-            self.prim = sum([self.players[i].Res_primal for i in range(self.nag)])
-            self.dual = sum([self.players[i].Res_dual for i in range(self.nag)])
-            lapsed = time.perf_counter() - start_time
+        for i in range(self.nag):
+            self.schedule(0, PlayerUpdateMsg(i))
 
-        self.simulation_time += lapsed
+        self.schedule(0, CheckStateEvent())
+    
+    def Opti_LocDec_State(self, out):
+        self.iteration += 1
+        
         if(self.Prices[self.Prices!=0].size!=0):
             self.Price_avg = self.Prices[self.Prices!=0].mean()
         else:
             self.Price_avg = 0
         self.SW = sum([self.players[i].SW for i in range(self.nag)])
-        
-        if self.Opti_End_Test():
-            self.Opti_LocDec_Stop()
-            return self.Opti_LocDec_State(True)
-        else:
-            return self.Opti_LocDec_State(False)
-    
+
+        if self.iteration_last < self.iteration:
+            self.iteration_last = self.iteration
+            print(f"Iteration: {self.iteration}, SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}")
+
+        # In the last version there was the time calculation
+        if out:
+            print("Optimization stopped.")
+
     def Opti_LocDec_Stop(self):
-        self.optimizer_on = False
         self.simulation_on_tab = False
         self.simulation_on = False
         return
-    
-    def Opti_End_Test(self):
-        if self.prim<=self.residual_primal and self.dual<=self.residual_dual:
-            self.simulation_message = 1
-        elif self.iteration>=self.maximum_iteration:
-            self.simulation_message = -1
-        elif self.simulation_time>=self.timeout:
-            self.simulation_message = -2
-        elif self.Stopped:
-            self.simulation_message = -3
-        else:
-            self.simulation_message = 0
-        return self.simulation_message
     
     #%% Results gathering
     def Infos(self):
@@ -220,7 +196,7 @@ class Simulator:
     def ErrorMessages(self):
         if self.simulation_message == 1:
             self.Infos()
-            print(f"Simulation converged after {self.iteration} iterations in {self.simulation_time:.1f} seconds.")
+            print(f"Simulation converged after {self.iteration} iterations")
             print(f"The total social welfare is {self.SW:.0f} $.")
             print(f"The total amount of power exchanged is {self.tot_trade.sum():.0f} kW.")
             print(f"The total amount of power produced is {self.tot_prod.sum():.0f} kW.")
@@ -229,10 +205,6 @@ class Simulator:
         else:
             if self.simulation_message == -1:
                 print("Maximum number of iterations reached.")
-            elif self.simulation_message == -2:
-                print("Simulation time exceeded timeout.")
-            elif self.simulation_message == -3:
-                print("Simulation stopped by user.")
             else:
                 print("Something went wrong.")
                 
@@ -294,16 +266,63 @@ class Simulator:
         else:
             print("Action canceled.")
 
-    def StartNewSimulation(self):
-        self.Opti_LocDec_Init()
-        self.Opti_LocDec_InitModel()
-        self.Progress_Optimize()
-        while(True):
-            if self.simulation_message:
-                break
-            self.Opti_LocDec_Start()
+class PlayerOptimizationMsg(Event):
+    def __init__(self, player_i):
+        super().__init__()
+        self.i = player_i
+    
+    def process(self, sim: Simulator):
+        original_values = np.copy(sim.Trades)
+        sim.Trades = np.copy(sim.temps) 
+        # Restore original values for players that are not partners of the current player
+        for j in range(len(sim.Trades)):
+            if j not in sim.partners[self.i]:
+                sim.Trades[j] = original_values[j]
 
-        self.ShowResults()
+        sim.Trades[:, sim.partners[self.i]] = sim.temps[:, sim.partners[self.i]]
+
+        sim.prim = sum([sim.players[j].Res_primal for j in sim.partners[self.i]])
+        sim.dual = sum([sim.players[j].Res_dual for j in sim.partners[self.i]])
+        
+        # schedule optimization for partners
+        for j in sim.partners[self.i]:
+            sim.n_updated_partners[j] += 1
+            sim.schedule(8, PlayerUpdateMsg(j))
+
+class PlayerUpdateMsg(Event):
+    def __init__(self, player_i):
+        super().__init__()
+        self.i = player_i
+    
+    def process(self, sim: Simulator):
+        sim.temps[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
+        sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
+
+        # schedule optimization for partners
+        for j in sim.partners[self.i]:
+            sim.n_optimized_partners[j] += 1
+            sim.schedule(8, PlayerOptimizationMsg(j))
+
+class CheckStateEvent(Event):
+    def __init__(self):
+        super().__init__()
+    
+    def process(self, sim: Simulator):
+        if sim.prim<=sim.residual_primal and sim.dual<=sim.residual_dual:
+            sim.simulation_message = 1
+        elif sim.iteration>=sim.maximum_iteration:
+            sim.simulation_message = -1
+        else:
+            sim.simulation_message = 0
+
+        if sim.simulation_message:
+            sim.Opti_LocDec_Stop()
+            sim.Opti_LocDec_State(True)
+            sim.ShowResults()
+            exit()
+        else:
+            sim.Opti_LocDec_State(False)
+            sim.schedule(1000, CheckStateEvent())
 
 def main():
     # Initialize the simulator
@@ -316,7 +335,7 @@ def main():
     else:
         print("No configuration file provided. Using default parameters.")
     
-    sim.StartNewSimulation()
+    sim.run()
 
 if __name__ == "__main__":
     main()
