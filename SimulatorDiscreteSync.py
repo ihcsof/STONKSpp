@@ -21,7 +21,7 @@ class Simulator(Simulation):
         self.simulation_message = ""
         self.force_stop = False
 
-        self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('graphs/examples/Connected_community_model.pyp2p', format='picklez')
 
         self.timeout = 3600  # UNUSED
         self.Interval = 3  # in s
@@ -40,31 +40,19 @@ class Simulator(Simulation):
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
         self.communications = 'Synchronous'
+        
         # Optimization model
         self.players = {}
         self.Trades = 0
-
         self.Opti_LocDec_Init()
         self.Opti_LocDec_InitModel()
-
         self.temps = np.zeros([self.nag, self.nag]) # Temporary trades matrix
-        self.is_temps_updated = [False for _ in range(self.nag)] # Flag to check if the player has already updated its temporary trades
-        self.is_updated = [True for _ in range(self.nag)] # Flag to check if the player has already updated its (permanent) trades
-        
-        #self.local_primal = [0 for _ in range(self.nag)]
-        #self.local_dual = [0 for _ in range(self.nag)]
     
         self.partners = {}
-        self.npart = {} # Number of partners for each player
-        self.npartopt = {} # Number of partners that has optimized for each player
-        self.npartupd = {} # Number of partners that has updated for each player
+        self.npartners = {} # Number of partners for each player
+        self.n_optimized_partners = {} # Number of partners that has optimized for each player
+        self.n_updated_partners = {} # Number of partners that has updated for each player
         self.initialize_partners()
-
-        # print all the partners for each player
-        print("Neigbors debugging: ")
-        for vertex in self.MGraph.vs:
-            print(f"Player {vertex.index} has partners {self.partners[vertex.index]}")
-            print(f"\t it has {self.npart[vertex.index]} partners")
 
         plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
 
@@ -157,9 +145,9 @@ class Simulator(Simulation):
             self.partners[edge.source].append(edge.target)
 
         for vertex in self.MGraph.vs:
-            self.npart[vertex.index] = len(self.partners[vertex.index])
-            self.npartopt[vertex.index] = 0
-            self.npartupd[vertex.index] = len(self.partners[vertex.index])
+            self.npartners[vertex.index] = len(self.partners[vertex.index])
+            self.n_optimized_partners[vertex.index] = 0
+            self.n_updated_partners[vertex.index] = len(self.partners[vertex.index])
     
     def Opti_LocDec_Start(self):
         for i in range(self.nag):
@@ -285,28 +273,26 @@ class PlayerOptimizationMsg(Event):
     
     def process(self, sim: Simulator):
         # if not all partners have optimized, skip the turn
-        if sim.npartopt[self.i] < sim.npart[self.i]:
+        if sim.n_optimized_partners[self.i] < sim.npartners[self.i]:
             return
 
-        sim.npartopt[self.i] = 0 # Reset the number of partners that have optimized
-        print("A")
-        # TEMP TO BE SURE
+        sim.n_optimized_partners[self.i] = 0 # Reset the number of partners that have optimized
+
         original_values = np.copy(sim.Trades)
         sim.Trades = np.copy(sim.temps) 
         # Restore original values for players that are not partners of the current player
         for j in range(len(sim.Trades)):
             if j not in sim.partners[self.i]:
                 sim.Trades[j] = original_values[j]
-        
-        #sim.prim = sum(sim.local_primal) + sum(sim.players[j].Res_primal for j in range(sim.nag) if j not in sim.partners[self.i])
-        #sim.dual = sum(sim.local_dual) + sum(sim.players[j].Res_dual for j in range(sim.nag) if j not in sim.partners[self.i])
+
+        sim.Trades[:, sim.partners[self.i]] = sim.temps[:, sim.partners[self.i]]
 
         sim.prim = sum([sim.players[j].Res_primal for j in sim.partners[self.i]])
         sim.dual = sum([sim.players[j].Res_dual for j in sim.partners[self.i]])
         
         # schedule optimization for partners
         for j in sim.partners[self.i]:
-            sim.npartupd[j] += 1
+            sim.n_updated_partners[j] += 1
             sim.schedule(8, PlayerUpdateMsg(j))
 
 class PlayerUpdateMsg(Event):
@@ -316,20 +302,18 @@ class PlayerUpdateMsg(Event):
     
     def process(self, sim: Simulator):
         # if not all partners have updated, skip the turn
-        if sim.npartupd[self.i] < sim.npart[self.i]:
+        if sim.n_updated_partners[self.i] < sim.npartners[self.i]:
             return
         
         # reset the number of partners that have updated
-        sim.npartupd[self.i] = 0
+        sim.n_updated_partners[self.i] = 0
 
         sim.temps[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
         sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
-        #sim.local_primal[self.i] = sum([sim.players[j].Res_primal for j in sim.partners[self.i]])
-        #sim.local_dual[self.i] = sum([sim.players[j].Res_dual for j in sim.partners[self.i]])
 
         # schedule optimization for partners
         for j in sim.partners[self.i]:
-            sim.npartopt[j] += 1
+            sim.n_optimized_partners[j] += 1
             sim.schedule(8, PlayerOptimizationMsg(j))
 
 class CheckStateEvent(Event):

@@ -35,26 +35,27 @@ class Simulator(Simulation):
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 10
+        self.maximum_iteration = 2000
         self.penaltyfactor = 0.01
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
         self.communications = 'Synchronous'
+        
         # Optimization model
         self.players = {}
         self.Trades = 0
-
+        self.Opti_LocDec_Init()
+        self.Opti_LocDec_InitModel()
+        self.temps = np.zeros([self.nag, self.nag]) # Temporary trades matrix
+    
         self.partners = {}
+        self.npartners = {} # Number of partners for each player
+        self.n_optimized_partners = {} # Number of partners that has optimized for each player
+        self.n_updated_partners = {} # Number of partners that has updated for each player
         self.initialize_partners()
-        # print all the partners for each player
-        print("Neigbors debugging: ")
-        for vertex in self.MGraph.vs:
-            print(f"Player {vertex.index} has partners {self.partners[vertex.index]}")
 
         plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
 
-        self.Opti_LocDec_Init()
-        self.Opti_LocDec_InitModel()
         self.Opti_LocDec_Start()
 
         return
@@ -142,10 +143,15 @@ class Simulator(Simulation):
 
         for edge in self.MGraph.es:
             self.partners[edge.source].append(edge.target)
+
+        for vertex in self.MGraph.vs:
+            self.npartners[vertex.index] = len(self.partners[vertex.index])
+            self.n_optimized_partners[vertex.index] = 0
+            self.n_updated_partners[vertex.index] = len(self.partners[vertex.index])
     
     def Opti_LocDec_Start(self):
         for i in range(self.nag):
-            self.schedule(0, PlayerOptimizationMsg(i))
+            self.schedule(0, PlayerUpdateMsg(i))
 
         self.schedule(0, CheckStateEvent())
     
@@ -266,16 +272,35 @@ class PlayerOptimizationMsg(Event):
         self.i = player_i
     
     def process(self, sim: Simulator):
-        sim.Trades[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
+        original_values = np.copy(sim.Trades)
+        sim.Trades = np.copy(sim.temps) 
+        # Restore original values for players that are not partners of the current player
+        for j in range(len(sim.Trades)):
+            if j not in sim.partners[self.i]:
+                sim.Trades[j] = original_values[j]
+
+        sim.Trades[:, sim.partners[self.i]] = sim.temps[:, sim.partners[self.i]]
+
+        sim.prim = sum([sim.players[j].Res_primal for j in sim.partners[self.i]])
+        sim.dual = sum([sim.players[j].Res_dual for j in sim.partners[self.i]])
+        
+        # schedule optimization for partners
+        for j in sim.partners[self.i]:
+            sim.n_updated_partners[j] += 1
+            sim.schedule(8, PlayerUpdateMsg(j))
+
+class PlayerUpdateMsg(Event):
+    def __init__(self, player_i):
+        super().__init__()
+        self.i = player_i
+    
+    def process(self, sim: Simulator):
+        sim.temps[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
         sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
 
-        local_primal = sum(sim.players[j].Res_primal for j in sim.partners[self.i] if j != self.i)
-        local_dual = sum(sim.players[j].Res_dual for j in sim.partners[self.i] if j != self.i)
-
-        sim.prim = min(sim.prim, local_primal)
-        sim.dual = min(sim.dual, local_dual)
-
+        # schedule optimization for partners
         for j in sim.partners[self.i]:
+            sim.n_optimized_partners[j] += 1
             sim.schedule(8, PlayerOptimizationMsg(j))
 
 class CheckStateEvent(Event):
@@ -290,17 +315,14 @@ class CheckStateEvent(Event):
         else:
             sim.simulation_message = 0
 
-        print(f"Checking state... {sim.simulation_message}")
-
         if sim.simulation_message:
             sim.Opti_LocDec_Stop()
             sim.Opti_LocDec_State(True)
             sim.ShowResults()
-            # TODO: maybe there are still event to be processed?
             exit()
         else:
             sim.Opti_LocDec_State(False)
-            sim.schedule(5, CheckStateEvent())
+            sim.schedule(1000, CheckStateEvent())
 
 def main():
     # Initialize the simulator

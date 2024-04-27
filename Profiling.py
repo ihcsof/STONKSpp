@@ -1,7 +1,7 @@
 import cProfile
 import pstats
 import sys
-from Simulator import Simulator
+from SimulatorDiscreteSync import Simulator
 
 if __name__ == "__main__":
     profiler = cProfile.Profile()
