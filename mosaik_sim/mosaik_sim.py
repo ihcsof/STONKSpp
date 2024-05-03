@@ -3,14 +3,19 @@ import heapq
 import mosaik_api_v3 as mosaik
 
 META = {
+    'type': 'event-based',
     'models': {
-        'ExampleModel': {
+        'Prosumer': {
             'public': True,
-            'params': ['boh'],
-            'attrs': ['boh'],
-            'trigger': ['boh'],
+            'params': ['agent', 'partners', 'preferences', 'rho'],
+            'attrs': ['SW', 'Res_primal', 'Res_dual'],
         },
-    },
+        'Manager': {
+            'public': True,
+            'params': ['agent', 'partners', 'preferences', 'rho'],
+            'attrs': ['SW', 'Res_primal', 'Res_dual'],
+        },
+    }
 }
 
 class Simulation(mosaik.Simulator):
@@ -27,15 +32,19 @@ class Simulation(mosaik.Simulator):
         self.events: list[tuple[float, "Event"]] = []
 
     def init(self, sid, time_resolution, eid_prefix=None):
-        print('init')
-        if float(time_resolution) != 1.:
-            raise ValueError('ExampleSim only supports time_resolution=1., but'
-                             ' %s was set.' % time_resolution)
+        # TEMP
+        self.sid = sid
+        self.time_resolution = time_resolution
         if eid_prefix is not None:
             self.eid_prefix = eid_prefix
         return self.meta
     
     # create and get_data has to be implemented in the subclass
+    def create(self, num, model, init_val):
+        pass
+
+    def get_data(self, outputs):
+        pass
 
     def schedule(self, delay, event):
         """Add an event to the event queue after the required delay."""
@@ -52,6 +61,7 @@ class Simulation(mosaik.Simulator):
             event.process(self)
 
     def step(self, time, inputs, max_advance):
+        # TEMP: Heap will be substituted with the mosaik event queue
         print('step')
         self.run()
 
