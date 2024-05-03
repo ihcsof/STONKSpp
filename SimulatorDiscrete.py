@@ -9,6 +9,8 @@ import sys
 import time
 import pandas as pd
 import numpy as np
+import random
+import matplotlib.pyplot as plt
 from igraph import Graph, plot
 from ProsumerGUROBI_FIX import Prosumer, Manager
 from discrete_event_sim import Simulation, Event
@@ -21,7 +23,7 @@ class Simulator(Simulation):
         self.simulation_message = ""
         self.force_stop = False
 
-        self.MGraph = Graph.Load('graphs/examples/Connected_community_model.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
 
         self.timeout = 3600  # UNUSED
         self.Interval = 3  # in s
@@ -40,7 +42,11 @@ class Simulator(Simulation):
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
         self.communications = 'Synchronous'
-        
+
+        # Latency
+        self.isLatency = False
+        self.latency_times = []
+
         # Optimization model
         self.players = {}
         self.Trades = 0
@@ -272,6 +278,12 @@ class PlayerOptimizationMsg(Event):
         self.i = player_i
     
     def process(self, sim: Simulator):
+        # if not all partners have optimized, skip the turn
+        if sim.n_optimized_partners[self.i] < sim.npartners[self.i]:
+            return
+
+        sim.n_optimized_partners[self.i] = 0 # Reset the number of partners that have optimized
+
         original_values = np.copy(sim.Trades)
         sim.Trades = np.copy(sim.temps) 
         # Restore original values for players that are not partners of the current player
@@ -285,9 +297,13 @@ class PlayerOptimizationMsg(Event):
         sim.dual = sum([sim.players[j].Res_dual for j in sim.partners[self.i]])
         
         # schedule optimization for partners
+        max = 10 + random.randint(0, 2) if sim.isLatency else 10
         for j in sim.partners[self.i]:
             sim.n_updated_partners[j] += 1
-            sim.schedule(8, PlayerUpdateMsg(j))
+            ratio = sim.n_updated_partners[j] / sim.npartners[j]
+            delay = max - (ratio * (max - 6))
+            sim.latency_times.append(delay)
+            sim.schedule(int(delay), PlayerUpdateMsg(j))
 
 class PlayerUpdateMsg(Event):
     def __init__(self, player_i):
@@ -295,13 +311,24 @@ class PlayerUpdateMsg(Event):
         self.i = player_i
     
     def process(self, sim: Simulator):
+        # if not all partners have updated, skip the turn
+        if sim.n_updated_partners[self.i] < sim.npartners[self.i]:
+            return
+        
+        # reset the number of partners that have updated
+        sim.n_updated_partners[self.i] = 0
+
         sim.temps[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
         sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
 
         # schedule optimization for partners
+        max = 10 + random.randint(0, 2) if sim.isLatency else 10
         for j in sim.partners[self.i]:
             sim.n_optimized_partners[j] += 1
-            sim.schedule(8, PlayerOptimizationMsg(j))
+            ratio = sim.n_optimized_partners[j] / sim.npartners[j]
+            delay = max - (ratio * (max - 6))
+            sim.latency_times.append(delay)
+            sim.schedule(int(delay), PlayerOptimizationMsg(j))
 
 class CheckStateEvent(Event):
     def __init__(self):
@@ -319,7 +346,8 @@ class CheckStateEvent(Event):
             sim.Opti_LocDec_Stop()
             sim.Opti_LocDec_State(True)
             sim.ShowResults()
-            exit()
+            sim.events = [] # like doing exit() but allowing the profiler
+            return
         else:
             sim.Opti_LocDec_State(False)
             sim.schedule(1000, CheckStateEvent())
@@ -336,6 +364,12 @@ def main():
         print("No configuration file provided. Using default parameters.")
     
     sim.run()
+
+    plt.hist(sim.latency_times, bins=20, color='skyblue', edgecolor='black')
+    plt.title('Latency Distribution')
+    plt.xlabel('Latency Time (s)')
+    plt.ylabel('Frequency')
+    plt.show()
 
 if __name__ == "__main__":
     main()

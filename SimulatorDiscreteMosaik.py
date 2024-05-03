@@ -11,7 +11,8 @@ import pandas as pd
 import numpy as np
 from igraph import Graph, plot
 from ProsumerGUROBI_FIX import Prosumer, Manager
-from discrete_event_sim import Simulation, Event
+from mosaik_sim import Simulation, Event
+import mosaik_api_v3 as mosaik
 
 
 class Simulator(Simulation):
@@ -149,6 +150,13 @@ class Simulator(Simulation):
             self.n_optimized_partners[vertex.index] = 0
             self.n_updated_partners[vertex.index] = len(self.partners[vertex.index])
     
+
+    def create(self, num, model, init_val):
+        print("Creating entities")
+
+    def get_data(self, outputs):
+        print("Getting data")
+
     def Opti_LocDec_Start(self):
         for i in range(self.nag):
             self.schedule(0, PlayerUpdateMsg(i))
@@ -353,7 +361,7 @@ def main():
     else:
         print("No configuration file provided. Using default parameters.")
     
-    sim.run()
+    return mosaik.start_simulation(sim)
 
 if __name__ == "__main__":
     main()
