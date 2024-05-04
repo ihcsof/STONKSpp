@@ -11,7 +11,7 @@ SIM_CONFIG = {
     'Simulator': { 'python': 'SimulatorDiscreteMosaik:Simulator' },
     #'NS3Simulator': {'python': 'ns3_simulator_module.NS3SimulatorClass'}
 }
-END = 10000 #  10000seconds
+END = 900000
 
 # Create World
 world = World(SIM_CONFIG)
@@ -27,10 +27,10 @@ sim = world.start('Simulator', eid_prefix='Model_') # ...
 #world.connect(model, monitor, 'val', 'delta')
 
 # Create more entities
-more_models = sim.Prosumer.create(-1, init_val=-1)
-mosaik.util.connect_many_to_one(world, more_models, 'src', 'dest', 'formatted_msg')
+#more_models = sim.Prosumer.create(-1, -1)
+#mosaik.util.connect_many_to_one(world, more_models, 'src', 'dest', 'formatted_msg')
 # OR
 #world.connect(entities_your_sim, entities_ns3_sim, ('data_to_share',))
 
 # Run the simulation
-world.run(until=1000)  # Run simulation for 1000 seconds
+world.run(until=END)

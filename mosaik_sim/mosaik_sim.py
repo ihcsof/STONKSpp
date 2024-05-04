@@ -67,7 +67,6 @@ class Simulation(mosaik.Simulator):
         # FOR NOW TIME IS IGNORED
         self.temp_time = time
         # INPUTS WILL RECEIVE INPUTS FROM NS3
-        print('step')
         self.run(max_advance)
         return time + 1
 
