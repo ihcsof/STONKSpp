@@ -55,7 +55,7 @@ class Simulator(Simulation):
         self.n_updated_partners = {} # Number of partners that has updated for each player
         self.initialize_partners()
 
-        plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
+        #plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
 
         self.Opti_LocDec_Start()
 

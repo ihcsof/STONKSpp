@@ -1,22 +1,26 @@
-import mosaik
+from mosaik.scenario import SimConfig as SimConfig
+from mosaik.scenario import World as World
+from mosaik._version import __version__ as __version__
 import mosaik.util
+
+__all__ = ['World']
 # End: Imports
 
 
 # Sim config
-SIM_CONFIG: mosaik.SimConfig = {
+SIM_CONFIG = {
     'ExampleSim': {
         'python': 'simulator_mosaik:ExampleSim',
     },
     'Collector': {
-        'cmd': '%(python)s collector.py %(addr)s',
+        'cmd': '%(python)s Collector.py %(addr)s',
     },
 }
 END = 10  # 10 seconds
 # End: Sim config
 
 # Create World
-world = mosaik.World(SIM_CONFIG)
+world = World(SIM_CONFIG)
 # End: Create World
 
 # Start simulators

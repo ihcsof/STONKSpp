@@ -1,16 +1,20 @@
-# demo_1.py
-import mosaik
+from mosaik.scenario import SimConfig as SimConfig
+from mosaik.scenario import World as World
+from mosaik._version import __version__ as __version__
 import mosaik.util
 
+__all__ = ['World']
+# End: Imports
+
 # Sim config
-SIM_CONFIG: mosaik.SimConfig = {
-    'Simulator': { 'python3': 'SimulatorDiscreteMosaik.Simulator' },
+SIM_CONFIG = {
+    'Simulator': { 'python': 'SimulatorDiscreteMosaik:Simulator' },
     #'NS3Simulator': {'python': 'ns3_simulator_module.NS3SimulatorClass'}
 }
-END = 1000  # 1000 seconds
+END = 10000 #  10000seconds
 
 # Create World
-world = mosaik.World(SIM_CONFIG)
+world = World(SIM_CONFIG)
 
 # Start simulators
 sim = world.start('Simulator', eid_prefix='Model_') # ...
@@ -23,8 +27,8 @@ sim = world.start('Simulator', eid_prefix='Model_') # ...
 #world.connect(model, monitor, 'val', 'delta')
 
 # Create more entities
-#more_models = examplesim.ExampleModel.create(2, init_val=3)
-#mosaik.util.connect_many_to_one(world, more_models, monitor, 'val', 'delta')
+more_models = sim.Prosumer.create(-1, init_val=-1)
+mosaik.util.connect_many_to_one(world, more_models, 'src', 'dest', 'formatted_msg')
 # OR
 #world.connect(entities_your_sim, entities_ns3_sim, ('data_to_share',))
 
