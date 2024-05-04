@@ -10,7 +10,7 @@ import time
 import pandas as pd
 import numpy as np
 from igraph import Graph, plot
-from ProsumerGUROBI_FIX import Prosumer, Manager
+from ProsumerMosaik import Prosumer, Manager
 from mosaik_sim import Simulation, Event
 import mosaik_api_v3 as mosaik
 
@@ -22,7 +22,7 @@ class Simulator(Simulation):
         self.simulation_message = ""
         self.force_stop = False
 
-        self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('../graphs/examples/P2P_model.pyp2p', format='picklez')
 
         self.timeout = 3600  # UNUSED
         self.Interval = 3  # in s
@@ -152,10 +152,29 @@ class Simulator(Simulation):
     
 
     def create(self, num, model, init_val):
+        # NUM e INIT VAL are not used
         print("Creating entities")
+        entities = []
+        for i in range(self.nag):
+            self.entities[i] = self.players[i]
+            entities.append({'eid': i, 'type': model})
+        return entities
 
     def get_data(self, outputs):
         print("Getting data")
+        data = {}
+        for eid, attrs in outputs.items():
+            model = self.entities[eid]
+            data['time'] = self.time
+            data[eid] = {}
+            for attr in attrs:
+                if attr not in self.meta['models']['Prosumer']['attrs']:
+                    raise ValueError('Unknown output attribute: %s' % attr)
+
+                # Get model.val or model.delta:
+                data[eid][attr] = getattr(model, attr)
+
+        return data
 
     def Opti_LocDec_Start(self):
         for i in range(self.nag):
@@ -351,17 +370,15 @@ class CheckStateEvent(Event):
             sim.schedule(1000, CheckStateEvent())
 
 def main():
-    # Initialize the simulator
-    sim = Simulator()
     
-    if len(sys.argv) > 1:
+    '''if len(sys.argv) > 1:
         config_file = sys.argv[1]
         sim.load_config(config_file)
         sim.Parameters_Test()
     else:
-        print("No configuration file provided. Using default parameters.")
+        print("No configuration file provided. Using default parameters.")'''
     
-    return mosaik.start_simulation(sim)
+    return mosaik.start_simulation(Simulator())
 
 if __name__ == "__main__":
     main()

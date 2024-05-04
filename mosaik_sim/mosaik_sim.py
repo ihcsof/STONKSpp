@@ -3,17 +3,17 @@ import heapq
 import mosaik_api_v3 as mosaik
 
 META = {
-    'type': 'event-based',
+    'type': 'hybrid',
     'models': {
         'Prosumer': {
             'public': True,
             'params': ['agent', 'partners', 'preferences', 'rho'],
-            'attrs': ['SW', 'Res_primal', 'Res_dual'],
+            'attrs': ['src', 'dest', 'formatted_msg'],
         },
         'Manager': {
             'public': True,
             'params': ['agent', 'partners', 'preferences', 'rho'],
-            'attrs': ['SW', 'Res_primal', 'Res_dual'],
+            'attrs': ['src', 'dest', 'formatted_msg'],
         },
     }
 }
@@ -27,8 +27,10 @@ class Simulation(mosaik.Simulator):
     def __init__(self):
         super().__init__(META)
 
+        self.eid_prefix = 'Prosumer_'
         self.entities = {}  # Maps EIDs to model instances/entities
-        self.t: float = 0  # simulated time
+        self.t: float = 0
+        self.temp_time: float = 0 
         self.events: list[tuple[float, "Event"]] = []
 
     def init(self, sid, time_resolution, eid_prefix=None):
@@ -52,18 +54,22 @@ class Simulation(mosaik.Simulator):
         heapq.heappush(self.events, (self.t + delay, event))
 
     def run(self, max_t=float('inf')):
-      
-        while self.events:
-            t, event = item = heapq.heappop(self.events) 
-            if t > max_t:
-                break
-            self.t = t
-            event.process(self)
+        # while self.events:
+        if not self.events:
+            return
+        t, event = item = heapq.heappop(self.events) # MAYBE HERE NOT HEAPPOP
+        if t > max_t:
+            return
+        self.t = t
+        event.process(self)
 
     def step(self, time, inputs, max_advance):
-        # TEMP: Heap will be substituted with the mosaik event queue
+        # FOR NOW TIME IS IGNORED
+        self.temp_time = time
+        # INPUTS WILL RECEIVE INPUTS FROM NS3
         print('step')
-        self.run()
+        self.run(max_advance)
+        return time + 1
 
     def log_info(self, msg):
         logging.info(f'{self.t:.2f}: {msg}')
