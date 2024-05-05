@@ -152,7 +152,7 @@ class Prosumer:
     #   Optimization status
     ###    
     def _opti_status(self,trade):
-        for i, partner_idx in enumerate(self.data.partners):
+        for i, partner_idx in enumerate(self.data.partners): # CHANGED: it was for i in range(self.data.num_partners)
             self.t_new[i] = self.variables.t[i].X
             self.formatted_msg['Trades'][int(partner_idx)] = self.variables.t[i].X
 

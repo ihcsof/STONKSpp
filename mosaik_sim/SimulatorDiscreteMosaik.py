@@ -152,8 +152,7 @@ class Simulator(Simulation):
     
 
     def create(self, num, model, init_val):
-        # NUM e INIT VAL are not used
-        print("Creating entities")
+        # NUM e INIT VAL are not used (for now it's a fixed creation)
         entities = []
         for i in range(self.nag):
             self.entities[i] = self.players[i]
@@ -170,7 +169,6 @@ class Simulator(Simulation):
                 if attr not in self.meta['models']['Prosumer']['attrs']:
                     raise ValueError('Unknown output attribute: %s' % attr)
 
-                # Get model.val or model.delta:
                 data[eid][attr] = getattr(model, attr)
 
         return data

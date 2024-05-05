@@ -11,7 +11,7 @@ SIM_CONFIG = {
     'Simulator': { 'python': 'SimulatorDiscreteMosaik:Simulator' },
     #'NS3Simulator': {'python': 'ns3_simulator_module:NS3SimulatorClass'}
 }
-END = 900000
+END = 260000
 
 # Create World
 world = World(SIM_CONFIG, debug=False)

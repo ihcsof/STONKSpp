@@ -17,7 +17,6 @@ META = {
     },
 }
 
-
 class Collector(mosaik_api_v3.Simulator):
     def __init__(self):
         super().__init__(META)
@@ -43,12 +42,12 @@ class Collector(mosaik_api_v3.Simulator):
 
         return None
 
-    def finalize(self):
+    '''def finalize(self):
         print('Collected data:')
         for sim, sim_data in sorted(self.data.items()):
             print('- %s:' % sim)
             for attr, values in sorted(sim_data.items()):
-                print('  - %s: %s' % (attr, values))
+                print('  - %s: %s' % (attr, values))'''
 
 
 if __name__ == '__main__':
