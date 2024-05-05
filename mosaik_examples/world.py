@@ -6,7 +6,6 @@ import mosaik.util
 __all__ = ['World']
 # End: Imports
 
-
 # Sim config
 SIM_CONFIG = {
     'ExampleSim': {
@@ -38,7 +37,7 @@ world.connect(model, monitor, 'val', 'delta')
 # End: Connect entities
 
 # Create more entities
-more_models = examplesim.ExampleModel.create(2, init_val=3)
+more_models = examplesim.ExampleModel.create(2, init_val=5)
 mosaik.util.connect_many_to_one(world, more_models, monitor, 'val', 'delta')
 # End: Create more entities
 

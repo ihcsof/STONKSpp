@@ -13,7 +13,6 @@ META = {
     },
 }
 
-
 class ExampleSim(mosaik_api_v3.Simulator):
     def __init__(self):
         super().__init__(META)

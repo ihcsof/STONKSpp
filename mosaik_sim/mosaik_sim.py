@@ -56,6 +56,7 @@ class Simulation(mosaik.Simulator):
     def run(self, max_t=float('inf')):
         # while self.events:
         if not self.events:
+            self.finalize()
             return
         t, event = item = heapq.heappop(self.events) # MAYBE HERE NOT HEAPPOP
         if t > max_t:
