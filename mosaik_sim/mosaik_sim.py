@@ -9,7 +9,6 @@ META = {
             'public': True,
             'params': ['init_val'], # input (unused for now)
             'attrs': ['src', 'dest', 'formatted_msg'],
-            'trigger': ['src']
         }
     }
 }
