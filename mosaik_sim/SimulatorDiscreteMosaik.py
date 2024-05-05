@@ -131,9 +131,9 @@ class Simulator(Simulation):
                 pref[es.source][es.target] = es['weight']
         for x in self.MGraph.vs:
             if x['Type']=='Manager':
-                self.players[x.index] = Manager(agent=x, partners=part[x.index], preferences=pref[x.index], rho=self.penaltyfactor)
+                self.players[x.index] = Manager(agent=x, partners=part[x.index], preferences=pref[x.index], rho=self.penaltyfactor, idx=x.index)
             else:
-                self.players[x.index] = Prosumer(agent=x, partners=part[x.index], preferences=pref[x.index], rho=self.penaltyfactor)
+                self.players[x.index] = Prosumer(agent=x, partners=part[x.index], preferences=pref[x.index], rho=self.penaltyfactor, idx=x.index)
         self.part = part
         self.pref = pref
         return

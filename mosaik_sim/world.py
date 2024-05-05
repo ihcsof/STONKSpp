@@ -9,7 +9,7 @@ __all__ = ['World']
 # Sim config
 SIM_CONFIG = {
     'Simulator': { 'python': 'SimulatorDiscreteMosaik:Simulator' },
-    #'NS3Simulator': {'python': 'ns3_simulator_module.NS3SimulatorClass'}
+    #'NS3Simulator': {'python': 'ns3_simulator_module:NS3SimulatorClass'}
 }
 END = 900000
 

@@ -4,7 +4,6 @@ from mosaik._version import __version__ as __version__
 import mosaik.util
 
 __all__ = ['World']
-# End: Imports
 
 # Sim config
 SIM_CONFIG = {
@@ -30,7 +29,7 @@ monitor = collector.Monitor()
 #world.connect(model, monitor, 'src', 'dest', 'formatted_msg')
 
 # Create more entities
-models = sim.Prosumer.create(51, init_val=-1)
+models = sim.Prosumer.create(51, init_val=-1) # TEMP (FIXED PARAMS)
 mosaik.util.connect_many_to_one(world, models, monitor, 'src', 'dest', 'formatted_msg')
 # OR
 #world.connect(entities_your_sim, entities_ns3_sim, ('data_to_share',))

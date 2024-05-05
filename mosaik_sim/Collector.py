@@ -10,6 +10,7 @@ META = {
     'models': {
         'Monitor': {
             'public': True,
+            'any_inputs': True,
             'params': [],
             'attrs': [],
         },

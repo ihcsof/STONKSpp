@@ -15,14 +15,14 @@ class expando(object):
 
 # Subproblem
 class Prosumer:
-    def __init__(self,agent=None,partners=None,preferences=None,rho=1):
+    def __init__(self,agent=None,partners=None,preferences=None,rho=1,idx=-1):
         self.data = expando()
         self.Who()
 
         # TEMPORARY
-        self.src = 1
-        self.dest = 2
-        self.formatted_msg = 3
+        self.src = idx
+        self.dest = np.nonzero(partners)[0].tolist()
+        self.formatted_msg = {'Trades': {}, 'SW': 0}
 
         # Data -- Agent and its assets
         if agent is not None:
@@ -152,9 +152,13 @@ class Prosumer:
     #   Optimization status
     ###    
     def _opti_status(self,trade):
-        for i in range(self.data.num_partners):
+        for i, partner_idx in enumerate(self.data.partners):
             self.t_new[i] = self.variables.t[i].X
+            self.formatted_msg['Trades'][int(partner_idx)] = self.variables.t[i].X
+
         self.SW = -self.model.objVal
+        self.formatted_msg['SW'] = self.SW
+
         self.Res_primal = sum( (self.t_new + trade[self.data.partners])*(self.t_new + trade[self.data.partners]) )
         self.Res_dual = sum( (self.t_new-self.t_old)*(self.t_new-self.t_old) )
         self.t_old = np.copy(self.t_new)
