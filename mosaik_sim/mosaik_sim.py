@@ -7,14 +7,9 @@ META = {
     'models': {
         'Prosumer': {
             'public': True,
-            'params': ['agent', 'partners', 'preferences', 'rho'],
+            'params': ['init_val'], # input (unused for now)
             'attrs': ['src', 'dest', 'formatted_msg'],
-        },
-        'Manager': {
-            'public': True,
-            'params': ['agent', 'partners', 'preferences', 'rho'],
-            'attrs': ['src', 'dest', 'formatted_msg'],
-        },
+        }
     }
 }
 
@@ -56,7 +51,6 @@ class Simulation(mosaik.Simulator):
     def run(self, max_t=float('inf')):
         # while self.events:
         if not self.events:
-            self.finalize()
             return
         t, event = item = heapq.heappop(self.events) # MAYBE HERE NOT HEAPPOP
         if t > max_t:

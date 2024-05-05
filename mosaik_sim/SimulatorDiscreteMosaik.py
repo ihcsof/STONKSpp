@@ -161,11 +161,10 @@ class Simulator(Simulation):
         return entities
 
     def get_data(self, outputs):
-        print("Getting data")
         data = {}
         for eid, attrs in outputs.items():
             model = self.entities[eid]
-            data['time'] = self.time
+            data['time'] = self.temp_time
             data[eid] = {}
             for attr in attrs:
                 if attr not in self.meta['models']['Prosumer']['attrs']:

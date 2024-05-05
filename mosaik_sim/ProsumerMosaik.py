@@ -18,6 +18,12 @@ class Prosumer:
     def __init__(self,agent=None,partners=None,preferences=None,rho=1):
         self.data = expando()
         self.Who()
+
+        # TEMPORARY
+        self.src = 1
+        self.dest = 2
+        self.formatted_msg = 3
+
         # Data -- Agent and its assets
         if agent is not None:
             self.data.type = agent['Type']

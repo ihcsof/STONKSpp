@@ -9,16 +9,31 @@ __all__ = ['World']
 # Sim config
 SIM_CONFIG = {
     'Simulator': { 'python': 'SimulatorDiscreteMosaik:Simulator' },
+    'Collector': {
+        'cmd': '%(python)s Collector.py %(addr)s',
+    },
     #'NS3Simulator': {'python': 'ns3_simulator_module.NS3SimulatorClass'}
 }
-END = 900000
+END = 90000
 
 # Create World
 world = World(SIM_CONFIG, debug=False)
 
 # Start simulators
 sim = world.start('Simulator', eid_prefix='Model_') # ...
+collector = world.start('Collector')
 # ns3_sim = world.start('NS3Simulator') # ...
+
+# Instantiate models
+monitor = collector.Monitor()
+#model = sim.Prosumer(init_val=2)
+#world.connect(model, monitor, 'src', 'dest', 'formatted_msg')
+
+# Create more entities
+models = sim.Prosumer.create(51, init_val=-1)
+mosaik.util.connect_many_to_one(world, models, monitor, 'src', 'dest', 'formatted_msg')
+# OR
+#world.connect(entities_your_sim, entities_ns3_sim, ('data_to_share',))
 
 # Run the simulation
 world.run(until=END)
