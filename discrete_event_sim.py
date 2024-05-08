@@ -1,7 +1,7 @@
 import logging
 import heapq
 
-class Simulation:
+class Simulation():
     """Subclass this to represent the simulation state.
 
     Here, self.t is the simulated time and self.events is the event queue.
