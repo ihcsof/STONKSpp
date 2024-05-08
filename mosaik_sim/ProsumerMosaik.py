@@ -97,7 +97,6 @@ class Prosumer:
     ###
     def _build_model(self):
         self.model = gb.Model()
-        self.model.setParam( 'OutputFlag', False )
         self._build_variables()
         self._build_constraints()
         self._build_objective()

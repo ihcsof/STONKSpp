@@ -1,6 +1,7 @@
-from mosaik.scenario import SimConfig as SimConfig
-from mosaik.scenario import World as World
-from mosaik._version import __version__ as __version__
+#from mosaik.scenario import SimConfig as SimConfig
+#from mosaik.scenario import World as World
+#from mosaik._version import __version__ as __version__
+import mosaik
 import mosaik.util
 
 __all__ = ['World']
@@ -16,7 +17,7 @@ SIM_CONFIG = {
 END = 260000
 
 # Create World
-world = World(SIM_CONFIG, debug=False)
+world = mosaik.World(SIM_CONFIG, debug=False)
 
 # Start simulators
 sim = world.start('Simulator', eid_prefix='Model_') # ...
