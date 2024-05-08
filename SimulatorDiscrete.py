@@ -9,6 +9,8 @@ import sys
 import time
 import pandas as pd
 import numpy as np
+import random
+import matplotlib.pyplot as plt
 from igraph import Graph, plot
 from ProsumerGUROBI_FIX import Prosumer, Manager
 from discrete_event_sim import Simulation, Event
@@ -40,7 +42,11 @@ class Simulator(Simulation):
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
         self.communications = 'Synchronous'
-        
+
+        # Latency
+        self.isLatency = False
+        self.latency_times = []
+
         # Optimization model
         self.players = {}
         self.Trades = 0
@@ -291,10 +297,12 @@ class PlayerOptimizationMsg(Event):
         sim.dual = sum([sim.players[j].Res_dual for j in sim.partners[self.i]])
         
         # schedule optimization for partners
+        max = 10 + random.randint(0, 2) if sim.isLatency else 10
         for j in sim.partners[self.i]:
             sim.n_updated_partners[j] += 1
             ratio = sim.n_updated_partners[j] / sim.npartners[j]
-            delay = 10 - (ratio * (10- 6))
+            delay = max - (ratio * (max - 6))
+            sim.latency_times.append(delay)
             sim.schedule(int(delay), PlayerUpdateMsg(j))
 
 class PlayerUpdateMsg(Event):
@@ -314,10 +322,12 @@ class PlayerUpdateMsg(Event):
         sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
 
         # schedule optimization for partners
+        max = 10 + random.randint(0, 2) if sim.isLatency else 10
         for j in sim.partners[self.i]:
             sim.n_optimized_partners[j] += 1
             ratio = sim.n_optimized_partners[j] / sim.npartners[j]
-            delay = 10 - (ratio * (10 - 6))
+            delay = max - (ratio * (max - 6))
+            sim.latency_times.append(delay)
             sim.schedule(int(delay), PlayerOptimizationMsg(j))
 
 class CheckStateEvent(Event):
@@ -354,6 +364,12 @@ def main():
         print("No configuration file provided. Using default parameters.")
     
     sim.run()
+
+    plt.hist(sim.latency_times, bins=20, color='skyblue', edgecolor='black')
+    plt.title('Latency Distribution')
+    plt.xlabel('Latency Time (s)')
+    plt.ylabel('Frequency')
+    plt.show()
 
 if __name__ == "__main__":
     main()
