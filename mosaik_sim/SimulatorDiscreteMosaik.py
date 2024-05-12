@@ -13,6 +13,7 @@ from igraph import Graph, plot
 from ProsumerMosaik import Prosumer, Manager
 from mosaik_sim import Simulation, Event
 import mosaik_api_v3 as mosaik
+from cosima_core.util.general_config import CONNECT_ATTR
 
 
 class Simulator(Simulation):
@@ -149,8 +150,17 @@ class Simulator(Simulation):
             self.npartners[vertex.index] = len(self.partners[vertex.index])
             self.n_optimized_partners[vertex.index] = 0
             self.n_updated_partners[vertex.index] = len(self.partners[vertex.index])
-    
 
+    def init(self, sid, time_resolution, eid_prefix=None):
+        # TEMP
+        self.sid = sid
+        self.time_resolution = time_resolution
+        if eid_prefix is not None:
+            self.eid_prefix = eid_prefix
+        for i in range(self.nag):
+            self.meta['models']['Prosumer']['attrs'].append(f'{CONNECT_ATTR}client{i}')
+        return self.meta
+    
     def create(self, num, model, init_val):
         # NUM e INIT VAL are not used (for now it's a fixed creation)
         entities = []

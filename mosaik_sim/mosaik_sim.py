@@ -3,7 +3,7 @@ import heapq
 import mosaik_api_v3 as mosaik
 
 META = {
-    'type': 'hybrid',
+    'type': 'event-based', # OR HYBRID!
     'models': {
         'Prosumer': {
             'public': True,
@@ -29,14 +29,8 @@ class Simulation(mosaik.Simulator):
         self.events: list[tuple[float, "Event"]] = []
 
     def init(self, sid, time_resolution, eid_prefix=None):
-        # TEMP
-        self.sid = sid
-        self.time_resolution = time_resolution
-        if eid_prefix is not None:
-            self.eid_prefix = eid_prefix
-        return self.meta
-    
-    # create and get_data has to be implemented in the subclass
+        pass
+
     def create(self, num, model, init_val):
         pass
 
