@@ -8,7 +8,7 @@ META = {
         'Prosumer': {
             'public': True,
             'params': ['init_val'], # input (unused for now)
-            'attrs': ['src', 'dest', 'formatted_msg'],
+            'attrs': ['message'],
         }
     }
 }

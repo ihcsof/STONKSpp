@@ -20,9 +20,9 @@ class Prosumer:
         self.Who()
 
         # TEMPORARY
-        self.src = idx
-        self.dest = np.nonzero(partners)[0].tolist()
-        self.formatted_msg = {'Trades': {}, 'SW': 0}
+        #self.src = idx
+        #self.dest = np.nonzero(partners)[0].tolist()
+        self.message = {'Trades': {}, 'SW': 0}
 
         # Data -- Agent and its assets
         if agent is not None:
@@ -75,6 +75,7 @@ class Prosumer:
     def optimize(self, trade):
         self._iter_update(trade)
         self._update_objective()
+        self.model.setParam( 'OutputFlag', False )
         self.model.optimize()
         if self.model.Status == gb.GRB.Status.OPTIMAL:
             self._opti_status(trade)
@@ -97,6 +98,7 @@ class Prosumer:
     ###
     def _build_model(self):
         self.model = gb.Model()
+        self.model.setParam('OutputFlag', 0 )
         self._build_variables()
         self._build_constraints()
         self._build_objective()

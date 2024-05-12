@@ -31,7 +31,7 @@ monitor = collector.Monitor()
 
 # Create more entities
 models = sim.Prosumer.create(51, init_val=-1) # TEMP (FIXED PARAMS)
-mosaik.util.connect_many_to_one(world, models, monitor, 'src', 'dest', 'formatted_msg')
+mosaik.util.connect_many_to_one(world, models, monitor, 'prosumer_msg')
 # OR
 #world.connect(entities_your_sim, entities_ns3_sim, ('data_to_share',))
 
