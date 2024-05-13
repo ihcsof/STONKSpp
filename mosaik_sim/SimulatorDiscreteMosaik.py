@@ -15,7 +15,6 @@ from mosaik_sim import Simulation, Event
 import mosaik_api_v3 as mosaik
 from cosima_core.util.general_config import CONNECT_ATTR
 
-
 class Simulator(Simulation):
     def __init__(self): 
         super().__init__()
@@ -173,13 +172,15 @@ class Simulator(Simulation):
         data = {}
         for eid, attrs in outputs.items():
             model = self.entities[eid]
-            data['time'] = self.temp_time
-            data[eid] = {}
+            #data['time'] = self.temp_time
+            #data[eid] = {}
+            # THE FOR NOW IS USELESS
             for attr in attrs:
                 if attr not in self.meta['models']['Prosumer']['attrs']:
                     raise ValueError('Unknown output attribute: %s' % attr)
 
-                data[eid][attr] = getattr(model, attr)
+                data = {str(eid): {f'message': getattr(model, attr)}, 'time': self.temp_time}
+                # data[eid][attr] = getattr(model, attr)
 
         return data
 

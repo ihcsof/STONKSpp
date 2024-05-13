@@ -22,8 +22,7 @@ class Prosumer:
         # TEMPORARY
         #self.src = idx
         #self.dest = np.nonzero(partners)[0].tolist()
-        self.message: list[tuple[list[float], float]] = []
-        #self.message = {'Trades': {}, 'SW': 0}
+        self.message = [ [0] * len(partners), 0 ]
 
         # Data -- Agent and its assets
         if agent is not None:
@@ -155,10 +154,10 @@ class Prosumer:
     def _opti_status(self,trade):
         for i, partner_idx in enumerate(self.data.partners): # CHANGED: it was for i in range(self.data.num_partners)
             self.t_new[i] = self.variables.t[i].X
-            self.message['Trades'][int(partner_idx)] = self.variables.t[i].X
+            self.message[0][int(partner_idx)] = self.variables.t[i].X
 
         self.SW = -self.model.objVal
-        self.message['SW'] = self.SW
+        self.message[1] = self.SW
 
         self.Res_primal = sum( (self.t_new + trade[self.data.partners])*(self.t_new + trade[self.data.partners]) )
         self.Res_dual = sum( (self.t_new-self.t_old)*(self.t_new-self.t_old) )

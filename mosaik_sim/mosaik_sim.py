@@ -3,7 +3,7 @@ import heapq
 import mosaik_api_v3 as mosaik
 
 META = {
-    'type': 'event-based', # OR HYBRID!
+    'type': 'event-based',
     'models': {
         'Prosumer': {
             'public': True,

@@ -1,5 +1,7 @@
 from pathlib import Path
 import sys
+import tempfile
+
 from time import sleep
 
 base_path = Path(__file__).resolve().parent.parent.parent
@@ -9,13 +11,13 @@ from cosima_core.util.util_functions import start_omnet, \
     check_omnet_connection, stop_omnet, \
     log
 import cosima_core.util.general_config as cfg
-from scenario_config import NETWORK
+#from scenario_config import NETWORK
 import mosaik
 import mosaik.util
 
 SIMULATION_END = 260000
 START_MODE = 'cmd'
-NETWORK = 'SimpleNetworkTCP'
+NETWORK = 'MyNetwork'
 
 # Simulation configuration -> tells mosaik where to find the simulators
 SIM_CONFIG = {
@@ -48,7 +50,7 @@ comm_sim = world.start('CommunicationSimulator',
 
 i = 0
 for model in models:
-   world.connect(model, comm_sim, f'message', weak=True)
+   world.connect(model, comm_sim, f'message', weak=True) #initial_data={"message": "hi"}
    world.connect(comm_sim, model, client_attribute_mapping[f'client{i}'])
    i += 1
 
