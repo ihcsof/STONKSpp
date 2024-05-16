@@ -6,7 +6,7 @@ META = {
     'models': {
         'ProsumerSim': {
             'public': True,
-            'params': ['init_val'], # input (unused for now)
+            'params': [],
             'attrs': ['message'], # 'stats'
         }
     }
@@ -181,7 +181,7 @@ class Simulator(Simulation):
 
     def step(self, time, inputs, max_advance):
         #log(f'Received input {inputs}')
-        for i in range(100):
+        for i in range(2000):
             self.run()
         content = f"SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}"
         self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',

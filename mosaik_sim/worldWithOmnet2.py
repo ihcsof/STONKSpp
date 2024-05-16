@@ -16,7 +16,7 @@ CONTENT_PATH = cfg.ROOT_PATH / 'simulators' / 'tic_toc_example' / 'content.csv'
 import mosaik
 import mosaik.util
 
-SIMULATION_END = 260000
+SIMULATION_END = 2000
 START_MODE = 'cmd'
 NETWORK = 'SimpleNetworkTCP'
 
