@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-@originalAuthor: Thomas
-"""
 
 META = {
     'api_version': '3.0',
     'type': 'event-based',
     'models': {
-        'Prosumer': {
+        'ProsumerSim': {
             'public': True,
             'params': ['init_val'], # input (unused for now)
             'attrs': ['message'], # 'stats'
@@ -55,11 +52,12 @@ class Simulator(Simulation):
         self.residual_dual = 1e-4
         self.communications = 'Synchronous'
 
-        self._outbox = []
+        self._sid = None
         self._client_name = None
-        self.eid_prefix = 'Prosumer_'
-        self.entities = {}  # Maps EIDs to model instances/entities
-        self.mosaik_time: float = 0 
+        self._msg_counter = 0
+        self._outbox = []
+        self._output_time = 0
+        self._neighbor = None 
         
         # Optimization model
         self.players = {}
@@ -169,64 +167,41 @@ class Simulator(Simulation):
             self.n_optimized_partners[vertex.index] = 0
             self.n_updated_partners[vertex.index] = len(self.partners[vertex.index])
 
-    def init(self, sid, time_resolution, eid_prefix=None):
-        self.sid = sid
-        self.time_resolution = time_resolution
-        if eid_prefix is not None:
-            self.eid_prefix = eid_prefix
-        for i in range(self.nag):
-            self.meta['models']['Prosumer']['attrs'].append(f'{CONNECT_ATTR}client{i}')
-        return self.meta
-    
-    def create(self, num, model, init_val):
-        # NUM e INIT VAL are not used (for now it's a fixed creation)
-        entities = []
-        for i in range(self.nag):
-            self.entities[i] = self.players[i]
-            entities.append({'eid': i, 'type': model})
-        return entities
+    def init(self, sid, **sim_params):
+        self._sid = sid
+        if 'client_name' in sim_params.keys():
+            self.meta['models']['ProsumerSim']['attrs'].append(f'{CONNECT_ATTR}{sim_params["client_name"]}')
+            self._client_name = sim_params['client_name']
+        if 'neighbor' in sim_params.keys():
+            self._neighbor = sim_params['neighbor']
+        return META
 
-    '''def step(self, time, inputs, max_advance):
-        #log(f'Received input {inputs}')
-        self.mosaik_time = time + 1
-        self.run(max_advance)
-        return self.mosaik_time'''
+    def create(self, num, model, **model_conf):
+        return [{'eid': self._sid, 'type': model}]
 
     def step(self, time, inputs, max_advance):
         #log(f'Received input {inputs}')
-        self.run()
-        content = 'Hi neighbor!'
-        self._outbox.append({'msg_id': 'unused',
+        for i in range(100):
+            self.run()
+        content = f"SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}"
+        self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
                              'max_advance': max_advance,
                              'sim_time': time + 1,
-                             'sender': 'unused',
-                             'receiver': 'unused',
+                             'sender': self._client_name,
+                             'receiver': self._neighbor,
                              'content': content,
                              'creation_time': time,
                              })
-        self.mosaik_time = time + 1
-        return self.mosaik_time
+        self._msg_counter += 1
+        self._output_time = time + 1
+        return None
 
     def get_data(self, outputs):
         data = {}
         if self._outbox:
-            data = {self.sid: {f'message': self._outbox}, 'time': self.mosaik_time}
+            data = {self._sid: {f'message': self._outbox}, 'time': self._output_time}
             self._outbox = []
         return data
-
-    '''def get_data(self, outputs):
-        data = {}
-
-        #log(f"Getting data for outputs: {outputs}")
-        for eid, attrs in outputs.items():
-            model = self.entities[eid]
-            for attr in attrs:
-                if attr not in self.meta['models']['Prosumer']['attrs']:
-                    raise ValueError('Unknown output attribute: %s' % attr)
-
-                data = {'message': getattr(model, attr), 'time': self.mosaik_time}
-
-        return data'''
 
     def Opti_LocDec_Start(self):
         for i in range(self.nag):

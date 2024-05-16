@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Jan 15 10:11:54 2018
-
-@author: fmoret
-"""
 
 # Import Gurobi Library
 import gurobipy as gb
