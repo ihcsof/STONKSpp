@@ -1,7 +1,9 @@
 import mosaik_api
-
+import logging
 from cosima_core.util.general_config import CONNECT_ATTR
 from cosima_core.util.util_functions import log
+
+logging.basicConfig(filename='collector.log', level=logging.INFO, format='%(asctime)s %(message)s')
 
 # The simulator meta data that we return in "init()":
 META = {
@@ -40,6 +42,7 @@ class Collector(mosaik_api.Simulator):
         return [{'eid': self._sid, 'type': model}]
 
     def step(self, time, inputs, max_advance):
+        logging.info(f'Message: {inputs}')
         content = 'Hi simulator!'
         self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
                              'max_advance': max_advance,
@@ -58,6 +61,7 @@ class Collector(mosaik_api.Simulator):
         if self._outbox:
             data = {self._sid: {f'message': self._outbox}, 'time': self._output_time}
             self._outbox = []
+
         return data
 
     def finalize(self):
