@@ -186,7 +186,9 @@ class Simulator(Simulation):
 
     def step(self, time, inputs, max_advance):
         content = 'Simulation has finished.'
-        if not self.has_finished:
+        if self.has_finished:
+            time = float('inf')
+        else:
             for i in range(self.step_Size):
                 self.run()
             content = f"SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}"
@@ -398,7 +400,7 @@ class CheckStateEvent(Event):
             sim.Opti_LocDec_State(True)
             sim.ShowResults()
             sim.events = [] # like doing exit() but allowing the profiler
-            sim._has_finished = True
+            sim.has_finished = True
         else:
             sim.Opti_LocDec_State(False)
             sim.schedule(1000, CheckStateEvent())

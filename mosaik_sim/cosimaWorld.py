@@ -1,3 +1,5 @@
+# alias sium='sudo kill -9 $(sudo lsof -t -i :4242)'
+
 from pathlib import Path
 import sys
 import tempfile
@@ -42,18 +44,17 @@ check_omnet_connection(cfg.PORT)
 world = mosaik.World(SIM_CONFIG, time_resolution=0.001, cache=False)
 
 client_attribute_mapping = {
-    'prosumer_sim': 'message_with_delay_for_prosumer_sim',
-    'collector': 'message_with_delay_for_collector'
+    'client0': 'message_with_delay_for_client0',
+    'client1': 'message_with_delay_for_client1'
 }
 
-
 prosumer_sim = world.start('Simulator',
-                            client_name='prosumer_sim',
-                            collector='collector',
-                            step_size=5000).ProsumerSim()
+                            client_name='client0',
+                            collector='client1',
+                            step_size=115000).ProsumerSim()
 collector = world.start('Collector',
-                             client_name='collector',
-                             simulator='prosumer_sim').Collector()
+                             client_name='client1',
+                             simulator='client0').Collector()
 
 comm_sim = world.start('CommunicationSimulator',
                        step_size=1,
@@ -63,10 +64,10 @@ comm_sim = world.start('CommunicationSimulator',
 #stat_sim = world.start('StatisticsSimulator', network=NETWORK, save_plots=True).Statistics()  # , step_time=200
 
 world.connect(prosumer_sim, comm_sim, f'message', weak=True)
-world.connect(comm_sim, prosumer_sim, client_attribute_mapping['prosumer_sim'])
+world.connect(comm_sim, prosumer_sim, client_attribute_mapping['client0'])
 
 world.connect(collector, comm_sim, f'message', weak=True)
-world.connect(comm_sim, collector, client_attribute_mapping['collector'])
+world.connect(comm_sim, collector, client_attribute_mapping['client1'])
 #world.connect(prosumer_sim, stat_sim, 'message', time_shifted=True, initial_data={'message': None})
 #world.connect(stat_sim, prosumer_sim, 'stats')
 #world.connect(stat_sim, simple_agent, 'stats')
