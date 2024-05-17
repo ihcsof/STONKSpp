@@ -52,13 +52,17 @@ class Simulator(Simulation):
         self.residual_dual = 1e-4
         self.communications = 'Synchronous'
 
+        # Mosaik and Cosima parameters
         self._sid = None
         self._client_name = None
         self._msg_counter = 0
+        self._msg_outbox = []
         self._outbox = []
         self._output_time = 0
         self._collector = None
         self.has_finished = False 
+        self.step_Size = 1000
+        
         
         # Optimization model
         self.players = {}
@@ -67,13 +71,11 @@ class Simulator(Simulation):
         self.Opti_LocDec_InitModel()
         self.temps = np.zeros([self.nag, self.nag]) # Temporary trades matrix
     
-        # Mosaik and Cosima parameters
         self.partners = {}
         self.npartners = {} # Number of partners for each player
         self.n_optimized_partners = {} # Number of partners that has optimized for each player
         self.n_updated_partners = {} # Number of partners that has updated for each player
         self.initialize_partners()
-        self.step_Size = 1000
 
         #plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
 
@@ -191,7 +193,9 @@ class Simulator(Simulation):
         else:
             for i in range(self.step_Size):
                 self.run()
-            content = f"SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}"
+            content = json.dumps(self._msg_outbox)
+            self._msg_outbox = []
+            #content = f"SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}"
 
         self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
                              'max_advance': max_advance,
@@ -359,6 +363,12 @@ class PlayerOptimizationMsg(Event):
             ratio = sim.n_updated_partners[j] / sim.npartners[j]
             delay = 10 - (ratio * (10- 6))
             sim.schedule(int(delay), PlayerUpdateMsg(j))
+        
+        # Store the message to be sent to the collector
+        sim._msg_outbox.append({'prosumer': self.i,
+                             'local_prim': sim.prim,
+                             'local_dual': sim.dual,
+                             })
 
 class PlayerUpdateMsg(Event):
     def __init__(self, player_i):
