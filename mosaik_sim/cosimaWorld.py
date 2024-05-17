@@ -2,7 +2,7 @@
 
 from pathlib import Path
 import sys
-import tempfile
+import argparse
 
 from time import sleep
 
@@ -37,6 +37,11 @@ SIM_CONFIG = {
     #}
 }
 
+parser = argparse.ArgumentParser(description='Run simulation with specified prosumer step size.')
+parser.add_argument('--step-size', type=int, default=5000, help='Step size for the prosumer simulator')
+
+args = parser.parse_args()
+
 omnet_process = start_omnet(START_MODE, NETWORK)
 check_omnet_connection(cfg.PORT)
 
@@ -51,7 +56,7 @@ client_attribute_mapping = {
 prosumer_sim = world.start('Simulator',
                             client_name='client0',
                             collector='client1',
-                            step_size=115000).ProsumerSim()
+                            step_size=args.step_size).ProsumerSim()
 collector = world.start('Collector',
                              client_name='client1',
                              simulator='client0').Collector()
