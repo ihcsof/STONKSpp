@@ -19,7 +19,7 @@ import time
 import pandas as pd
 import numpy as np
 from igraph import Graph, plot
-from ProsumerMosaik import Prosumer, Manager
+from ProsumerGUROBI_FIX import Prosumer, Manager
 from cosimaSim import Simulation, Event
 import mosaik_api_v3 as mosaik
 from cosima_core.util.general_config import CONNECT_ATTR
@@ -57,7 +57,8 @@ class Simulator(Simulation):
         self._msg_counter = 0
         self._outbox = []
         self._output_time = 0
-        self._collector = None 
+        self._collector = None
+        self.has_finished = False 
         
         # Optimization model
         self.players = {}
@@ -150,9 +151,9 @@ class Simulator(Simulation):
                 pref[es.source][es.target] = es['weight']
         for x in self.MGraph.vs:
             if x['Type']=='Manager':
-                self.players[x.index] = Manager(agent=x, partners=part[x.index], preferences=pref[x.index], rho=self.penaltyfactor, idx=x.index)
+                self.players[x.index] = Manager(agent=x, partners=part[x.index], preferences=pref[x.index], rho=self.penaltyfactor)
             else:
-                self.players[x.index] = Prosumer(agent=x, partners=part[x.index], preferences=pref[x.index], rho=self.penaltyfactor, idx=x.index)
+                self.players[x.index] = Prosumer(agent=x, partners=part[x.index], preferences=pref[x.index], rho=self.penaltyfactor)
         self.part = part
         self.pref = pref
         return
@@ -184,9 +185,12 @@ class Simulator(Simulation):
         return [{'eid': self._sid, 'type': model}]
 
     def step(self, time, inputs, max_advance):
-        for i in range(self.step_Size):
-            self.run()
-        content = f"SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}"
+        content = 'Simulation has finished.'
+        if not self.has_finished:
+            for i in range(self.step_Size):
+                self.run()
+            content = f"SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}"
+
         self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
                              'max_advance': max_advance,
                              'sim_time': time + 1,
@@ -394,8 +398,7 @@ class CheckStateEvent(Event):
             sim.Opti_LocDec_State(True)
             sim.ShowResults()
             sim.events = [] # like doing exit() but allowing the profiler
-            sim.finalize()
-            return
+            sim._has_finished = True
         else:
             sim.Opti_LocDec_State(False)
             sim.schedule(1000, CheckStateEvent())
