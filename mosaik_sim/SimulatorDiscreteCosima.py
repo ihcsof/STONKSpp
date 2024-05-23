@@ -18,12 +18,15 @@ import sys
 import time
 import pandas as pd
 import numpy as np
+import logging
 from igraph import Graph, plot
 from ProsumerGUROBI_FIX import Prosumer, Manager
 from cosimaSim import Simulation, Event
 import mosaik_api_v3 as mosaik
 from cosima_core.util.general_config import CONNECT_ATTR
 from cosima_core.util.util_functions import log
+
+logging.basicConfig(filename='sim.log', level=logging.INFO, format='%(asctime)s %(message)s')
 
 class Simulator(Simulation):
     def __init__(self): 
@@ -186,7 +189,7 @@ class Simulator(Simulation):
     def create(self, num, model, **model_conf):
         return [{'eid': self._sid, 'type': model}]
 
-    def step(self, time, inputs, max_advance):
+    def step(self, time, inputs, max_advance): 
         content = 'Simulation has finished.'
         if self.has_finished:
             time = float('inf')
@@ -195,7 +198,6 @@ class Simulator(Simulation):
                 self.run()
             content = json.dumps(self._msg_outbox)
             self._msg_outbox = []
-            #content = f"SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}"
 
         self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
                              'max_advance': max_advance,
@@ -352,23 +354,20 @@ class PlayerOptimizationMsg(Event):
             if j not in sim.partners[self.i]:
                 sim.Trades[j] = original_values[j]
 
-        sim.Trades[:, sim.partners[self.i]] = sim.temps[:, sim.partners[self.i]]
+        sim.Trades[self.i, sim.partners[self.i]] = sim.temps[self.i, sim.partners[self.i]]
 
         sim.prim = sum([sim.players[j].Res_primal for j in sim.partners[self.i]])
         sim.dual = sum([sim.players[j].Res_dual for j in sim.partners[self.i]])
-        
+
         # schedule optimization for partners
         for j in sim.partners[self.i]:
             sim.n_updated_partners[j] += 1
             ratio = sim.n_updated_partners[j] / sim.npartners[j]
             delay = 10 - (ratio * (10- 6))
             sim.schedule(int(delay), PlayerUpdateMsg(j))
+            #sim._msg_outbox.append({'src': self.i, 'dest': j, 'trade':  sim.Trades[self.i, j]})
         
-        # Store the message to be sent to the collector
-        sim._msg_outbox.append({'prosumer': self.i,
-                             'local_prim': sim.prim,
-                             'local_dual': sim.dual,
-                             })
+        sim._msg_outbox.append({'src': self.i, 'trade':  str(sim.Trades[self.i, sim.partners[self.i]])})
 
 class PlayerUpdateMsg(Event):
     def __init__(self, player_i):
