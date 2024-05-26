@@ -35,7 +35,7 @@ class Simulator(Simulation):
         self.simulation_message = ""
         self.force_stop = False
 
-        self.MGraph = Graph.Load('../graphs/examples/P2P_model.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('P2P_model_reduced.pyp2p', format='picklez')
 
         self.timeout = 3600  # UNUSED
         self.Interval = 3  # in s
@@ -59,6 +59,7 @@ class Simulator(Simulation):
         self._sid = None
         self._client_name = None
         self._msg_counter = 0
+        self._msg_inbox = []
         self._msg_outbox = []
         self._outbox = []
         self._output_time = 0
@@ -194,7 +195,16 @@ class Simulator(Simulation):
         if self.has_finished:
             time = float('inf')
         else:
-            for i in range(self.step_Size):
+            # TEMP (not scalable): get the received messages to use them in the simulation
+            if(inputs):
+                self._msg_inbox = inputs["Simulator-0"]['message_with_delay_for_client0']['CommunicationSimulator-0.CommunicationSimulator'][0]['content']
+
+            # run the simulation for the given number of steps
+            #for i in range(self.step_Size):
+            #    self.run()
+
+            # run the simulation with step = 1 but skipping useless cycles
+            while(self._msg_outbox == []):
                 self.run()
             content = json.dumps(self._msg_outbox)
             self._msg_outbox = []
@@ -335,6 +345,45 @@ class Simulator(Simulation):
         else:
             print("Action canceled.")
 
+    # Function to check if the partners for a specific src are present in the messages
+    def check_partners_for_src(self, src):
+        data = json.loads(self._msg_inbox)
+        src_dest_set = set()
+        for message in data:
+            if message['src'] == src:
+                src_dest_set.add(message['dest'])
+        
+        # Check if each partner is present in the destinations
+        if src in self.partners:
+            partners = self.partners[src]
+            missing_partners = [partner for partner in partners if partner not in src_dest_set]
+            if missing_partners:
+                return False
+            return True
+        else:
+            return False
+
+    def update_trades_for_src(self, src):
+        # Create a dictionary to store trade values for the specified src
+        data = json.loads(self._msg_inbox)
+        trades_map = {}
+        for message in data:
+            if message['src'] == src:
+                trades_map[message['dest']] = message['trade']
+        
+        if src in self.partners:
+            partners = self.partners[src]
+            # Update sim.Trades with the extracted trade values
+            for partner in partners:
+                if partner in trades_map:
+                    self.Trades[src, partner] = trades_map[partner]
+                else:
+                    print(f"Assert: No trade value for src {src} and dest {partner}")
+                    exit()
+        else:
+            print(f"Assert: No partners found for src {src}")
+            exit()
+
 class PlayerOptimizationMsg(Event):
     def __init__(self, player_i):
         super().__init__()
@@ -343,6 +392,10 @@ class PlayerOptimizationMsg(Event):
     def process(self, sim: Simulator):
         # if not all partners have optimized, skip the turn
         if sim.n_optimized_partners[self.i] < sim.npartners[self.i]:
+            return
+
+        # if I haven't received all the messages yet, skip the turn
+        if not sim.check_partners_for_src(self.i):
             return
 
         sim.n_optimized_partners[self.i] = 0 # Reset the number of partners that have optimized
@@ -354,7 +407,8 @@ class PlayerOptimizationMsg(Event):
             if j not in sim.partners[self.i]:
                 sim.Trades[j] = original_values[j]
 
-        sim.Trades[self.i, sim.partners[self.i]] = sim.temps[self.i, sim.partners[self.i]]
+        #sim.Trades[self.i, sim.partners[self.i]] = sim.temps[self.i, sim.partners[self.i]]
+        sim.update_trades_for_src(self.i)
 
         sim.prim = sum([sim.players[j].Res_primal for j in sim.partners[self.i]])
         sim.dual = sum([sim.players[j].Res_dual for j in sim.partners[self.i]])
@@ -365,9 +419,6 @@ class PlayerOptimizationMsg(Event):
             ratio = sim.n_updated_partners[j] / sim.npartners[j]
             delay = 10 - (ratio * (10- 6))
             sim.schedule(int(delay), PlayerUpdateMsg(j))
-            #sim._msg_outbox.append({'src': self.i, 'dest': j, 'trade':  sim.Trades[self.i, j]})
-        
-        sim._msg_outbox.append({'src': self.i, 'trade':  str(sim.Trades[self.i, sim.partners[self.i]])})
 
 class PlayerUpdateMsg(Event):
     def __init__(self, player_i):
@@ -391,6 +442,9 @@ class PlayerUpdateMsg(Event):
             ratio = sim.n_optimized_partners[j] / sim.npartners[j]
             delay = 10 - (ratio * (10 - 6))
             sim.schedule(int(delay), PlayerOptimizationMsg(j))
+            sim._msg_outbox.append({'src': self.i, 'dest': j, 'trade':  sim.temps[self.i, j]})
+        
+        #sim._msg_outbox.append({'src': self.i, 'trade':  str(sim.temps[self.i, sim.partners[self.i]])})
 
 class CheckStateEvent(Event):
     def __init__(self):
