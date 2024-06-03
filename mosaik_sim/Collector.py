@@ -1,5 +1,6 @@
 import mosaik_api
 import logging
+import json
 from cosima_core.util.general_config import CONNECT_ATTR
 from cosima_core.util.util_functions import log
 
@@ -42,8 +43,8 @@ class Collector(mosaik_api.Simulator):
         return [{'eid': self._sid, 'type': model}]
 
     def step(self, time, inputs, max_advance):
-        logging.info(f'Message: {inputs}')
-        content = 'Hi simulator!'
+        # TEMP (not scalable): extracting the content of the message received
+        content = inputs["Collector-0"]["message_with_delay_for_client1"]["CommunicationSimulator-0.CommunicationSimulator"][0]["content"]
         self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
                              'max_advance': max_advance,
                              'sim_time': time + 1,
