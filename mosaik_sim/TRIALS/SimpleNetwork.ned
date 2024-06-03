@@ -49,13 +49,10 @@ network ProsumerSimNet
             @display("p=100,100");
         }
 
-        prosumer_sim: StandardHost {
+        client0: StandardHost {
             @display("p=721,100");
         }
-        client2: StandardHost {
-            @display("p=1016.6,659.1");
-        }
-        collector: StandardHost {
+        client1: StandardHost {
             @display("p=799.5,379.6");
         }
         router0: Router {
@@ -87,26 +84,21 @@ network ProsumerSimNet
         switch2: EtherSwitch {
             @display("p=613.6,315.9");
         }
-        client3: StandardHost {
-            @display("p=1030.9,942.5");
-        }
         switch3: EtherSwitch {
             @display("p=688.32007,876.82263");
         }
     connections:
-        switch0.ethg++ <--> Eth10M {  length = 1000km; } <--> client2.ethg++;
         switch0.ethg++ <--> Eth10M {  length = 1000km; } <--> router0.ethg++;
         router0.ethg++ <--> Eth10M {  length = 1000km; } <--> router1.ethg++;
-        prosumer_sim.ethg++ <--> Eth10M {  length = 500km; } <--> switch1.ethg++;
+        client0.ethg++ <--> Eth10M {  length = 500km; } <--> switch1.ethg++;
         router2.ethg++ <--> Eth10M {  length = 100km; } <--> router4.ethg++;
         router2.ethg++ <--> Eth10M {  length = 500km; } <--> router1.ethg++;
         router1.ethg++ <--> Eth10M {  length = 500km; } <--> router3.ethg++;
         router3.ethg++ <--> Eth10M {  length = 50km; } <--> router4.ethg++;
         router4.ethg++ <--> Eth10M {  length = 50km; } <--> switch1.ethg++;
         router2.ethg++ <--> Eth10M {  length = 50km; } <--> router3.ethg++;
-        switch2.ethg++ <--> Eth10M {  length = 50km; } <--> collector.ethg++;
+        switch2.ethg++ <--> Eth10M {  length = 50km; } <--> client1.ethg++;
         switch2.ethg++ <--> Eth10M {  length = 50km; } <--> router3.ethg++;
-        switch3.ethg++ <--> Eth10M {  length = 50km; } <--> client3.ethg++;
         router0.ethg++ <--> Eth10M {  length = 50km; }  <--> switch3.ethg++;
 }
 

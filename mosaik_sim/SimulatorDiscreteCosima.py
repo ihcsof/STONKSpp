@@ -195,17 +195,36 @@ class Simulator(Simulation):
         if self.has_finished:
             time = float('inf')
         else:
-            # TEMP (not scalable): get the received messages to use them in the simulation
+            # get the received messages to use them in the simulation
             if(inputs):
-                self._msg_inbox = inputs["Simulator-0"]['message_with_delay_for_client0']['CommunicationSimulator-0.CommunicationSimulator'][0]['content']
+                #!!!!!!!!!!!!!!
+                # now im lazy; put exit() in both isistances to know if you can remove them (only one case happens)
+                #!!!!!!!!!!!!!!
+                # Ensure self._msg_inbox is a list
+                if isinstance(self._msg_inbox, list):
+                    data = self._msg_inbox
+                else:
+                    # Parse the JSON string to a list
+                    data = json.loads(self._msg_inbox)
 
-            # run the simulation for the given number of steps
-            #for i in range(self.step_Size):
-            #    self.run()
+                # TO IMPROVE: Load the new data from the inputs dictionary
+                new_data = json.loads(inputs["Simulator-0"]['message_with_delay_for_client0']['CommunicationSimulator-0.CommunicationSimulator'][0]['content'])
 
-            # run the simulation with step = 1 but skipping useless cycles
-            while(self._msg_outbox == []):
+                # Ensure new_data is a list and extend the existing list with the new data
+                if isinstance(new_data, list):
+                    data.extend(new_data)
+                else:
+                    data.append(new_data)
+
+                # Update self._msg_inbox with the updated list
+                self._msg_inbox = json.dumps(data)
+
+            # run the simulation with step = X and skipping useless cycles
+            step_count = 0
+            while(self._msg_outbox == [] or step_count < self.step_Size):
                 self.run()
+                step_count += 1
+
             content = json.dumps(self._msg_outbox)
             self._msg_outbox = []
 
@@ -345,44 +364,48 @@ class Simulator(Simulation):
         else:
             print("Action canceled.")
 
-    # Function to check if the partners for a specific src are present in the messages
-    def check_partners_for_src(self, src):
+    # Function to check if the partners for a specific agent are present in the messages
+    def check_partners(self, agent):
         data = json.loads(self._msg_inbox)
-        src_dest_set = set()
+        src_set = set() # set due to presence of possible duplicates
         for message in data:
-            if message['src'] == src:
-                src_dest_set.add(message['dest'])
+            if message['dest'] == agent:
+                src_set.add(message['src'])
         
-        # Check if each partner is present in the destinations
-        if src in self.partners:
-            partners = self.partners[src]
-            missing_partners = [partner for partner in partners if partner not in src_dest_set]
-            if missing_partners:
-                return False
-            return True
-        else:
+        # Check if each partner is present in the sources
+        missing_partners = [partner for partner in self.partners[agent] if partner not in src_set]
+        if missing_partners:
             return False
+        return True
 
-    def update_trades_for_src(self, src):
-        # Create a dictionary to store trade values for the specified src
+    def update_trades(self, agent):
+        partners_set = set(self.partners[agent])
         data = json.loads(self._msg_inbox)
         trades_map = {}
+        to_remove = []
+
         for message in data:
-            if message['src'] == src:
-                trades_map[message['dest']] = message['trade']
+            if message['dest'] == agent and message['src'] in partners_set:
+                trades_map[message['src']] = message['trade']
+                # Remove the message from the partners set and the data list
+                partners_set.remove(message['src'])
+                to_remove.append(message)
+                # if the set is empty, break the loop
+                if not partners_set:
+                    break
+
+        # Update the inbox with the remaining messages after processing
+        for message in to_remove:
+            data.remove(message)
+        self._msg_inbox = json.dumps(data) 
         
-        if src in self.partners:
-            partners = self.partners[src]
-            # Update sim.Trades with the extracted trade values
-            for partner in partners:
-                if partner in trades_map:
-                    self.Trades[src, partner] = trades_map[partner]
-                else:
-                    print(f"Assert: No trade value for src {src} and dest {partner}")
-                    exit()
-        else:
-            print(f"Assert: No partners found for src {src}")
-            exit()
+        # Update sim.Trades with the extracted trade values
+        for partner in self.partners[agent]:
+            if partner in trades_map:
+                self.Trades[agent, partner] = trades_map[partner]
+            else: # should never happen (this function is always called after check_partners() returns True)
+                print(f"Assert: No trade value for agent {agent} and src {partner}")
+                exit()
 
 class PlayerOptimizationMsg(Event):
     def __init__(self, player_i):
@@ -395,7 +418,7 @@ class PlayerOptimizationMsg(Event):
             return
 
         # if I haven't received all the messages yet, skip the turn
-        if not sim.check_partners_for_src(self.i):
+        if not sim.check_partners(self.i):
             return
 
         sim.n_optimized_partners[self.i] = 0 # Reset the number of partners that have optimized
@@ -408,7 +431,7 @@ class PlayerOptimizationMsg(Event):
                 sim.Trades[j] = original_values[j]
 
         #sim.Trades[self.i, sim.partners[self.i]] = sim.temps[self.i, sim.partners[self.i]]
-        sim.update_trades_for_src(self.i)
+        sim.update_trades(self.i)
 
         sim.prim = sum([sim.players[j].Res_primal for j in sim.partners[self.i]])
         sim.dual = sum([sim.players[j].Res_dual for j in sim.partners[self.i]])

@@ -17,7 +17,7 @@ import cosima_core.util.general_config as cfg
 import mosaik
 import mosaik.util
 
-SIMULATION_END = 3000
+SIMULATION_END = 30000
 START_MODE = 'cmd'
 NETWORK = 'ProsumerSimNet'
 
@@ -38,7 +38,7 @@ SIM_CONFIG = {
 }
 
 parser = argparse.ArgumentParser(description='Run simulation with specified prosumer step size.')
-parser.add_argument('--step-size', type=int, default=5000, help='Step size for the prosumer simulator')
+parser.add_argument('--step-size', type=int, default=1, help='Step size for the prosumer simulator')
 
 args = parser.parse_args()
 
