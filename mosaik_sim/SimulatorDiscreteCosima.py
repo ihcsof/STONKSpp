@@ -197,33 +197,18 @@ class Simulator(Simulation):
         else:
             # get the received messages to use them in the simulation
             if(inputs):
-                #!!!!!!!!!!!!!!
-                # now im lazy; put exit() in both isistances to know if you can remove them (only one case happens)
-                #!!!!!!!!!!!!!!
-                # Ensure self._msg_inbox is a list
-                if isinstance(self._msg_inbox, list):
-                    data = self._msg_inbox
-                else:
-                    # Parse the JSON string to a list
-                    data = json.loads(self._msg_inbox)
+                data = self._msg_inbox if isinstance(self._msg_inbox, list) else json.loads(self._msg_inbox)
 
                 # TO IMPROVE: Load the new data from the inputs dictionary
                 new_data = json.loads(inputs["Simulator-0"]['message_with_delay_for_client0']['CommunicationSimulator-0.CommunicationSimulator'][0]['content'])
 
-                # Ensure new_data is a list and extend the existing list with the new data
-                if isinstance(new_data, list):
-                    data.extend(new_data)
-                else:
-                    data.append(new_data)
-
                 # Update self._msg_inbox with the updated list
+                data.extend(new_data)
                 self._msg_inbox = json.dumps(data)
 
-            # run the simulation with step = X and skipping useless cycles
-            step_count = 0
-            while(self._msg_outbox == [] or step_count < self.step_Size):
+            # run the simulation
+            while(self._msg_outbox == []):
                 self.run()
-                step_count += 1
 
             content = json.dumps(self._msg_outbox)
             self._msg_outbox = []
