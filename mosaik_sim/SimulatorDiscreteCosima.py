@@ -26,7 +26,7 @@ import mosaik_api_v3 as mosaik
 from cosima_core.util.general_config import CONNECT_ATTR
 from cosima_core.util.util_functions import log
 
-logging.basicConfig(filename='sim.log', level=logging.INFO, format='%(asctime)s %(message)s')
+logging.basicConfig(filename='sim.log', level=logging.DEBUG, format='%(asctime)s %(message)s')
 
 class Simulator(Simulation):
     def __init__(self): 
@@ -388,7 +388,10 @@ class Simulator(Simulation):
         for partner in self.partners[agent]:
             if partner in trades_map:
                 self.Trades[agent, partner] = trades_map[partner]
-            else: # should never happen (this function is always called after check_partners() returns True)
+                if(self.temps[agent, partner] != trades_map[partner]): #  DEBUG: should never happen
+                    print(f"Assert: Network failed")
+                    exit()
+            else: #  DEBUG: should never happen (this function is always called after check_partners() returns True)
                 print(f"Assert: No trade value for agent {agent} and src {partner}")
                 exit()
 
@@ -415,7 +418,6 @@ class PlayerOptimizationMsg(Event):
             if j not in sim.partners[self.i]:
                 sim.Trades[j] = original_values[j]
 
-        #sim.Trades[self.i, sim.partners[self.i]] = sim.temps[self.i, sim.partners[self.i]]
         sim.update_trades(self.i)
 
         sim.prim = sum([sim.players[j].Res_primal for j in sim.partners[self.i]])
@@ -450,9 +452,7 @@ class PlayerUpdateMsg(Event):
             ratio = sim.n_optimized_partners[j] / sim.npartners[j]
             delay = 10 - (ratio * (10 - 6))
             sim.schedule(int(delay), PlayerOptimizationMsg(j))
-            sim._msg_outbox.append({'src': self.i, 'dest': j, 'trade':  sim.temps[self.i, j]})
-        
-        #sim._msg_outbox.append({'src': self.i, 'trade':  str(sim.temps[self.i, sim.partners[self.i]])})
+            sim._msg_outbox.append({'src': self.i, 'dest': j, 'trade':  sim.temps[j, self.i]})
 
 class CheckStateEvent(Event):
     def __init__(self):

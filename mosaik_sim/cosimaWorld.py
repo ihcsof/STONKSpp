@@ -17,7 +17,7 @@ import cosima_core.util.general_config as cfg
 import mosaik
 import mosaik.util
 
-SIMULATION_END = 30000
+SIMULATION_END = 300000
 START_MODE = 'cmd'
 NETWORK = 'ProsumerSimNet'
 
