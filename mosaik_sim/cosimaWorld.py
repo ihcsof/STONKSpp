@@ -5,6 +5,9 @@ import sys
 import argparse
 
 from time import sleep
+import cProfile
+import pstats
+import random
 
 base_path = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(base_path))
@@ -32,9 +35,6 @@ SIM_CONFIG = {
     'CommunicationSimulator': {
         'python': 'cosima_core.simulators.communication_simulator:CommunicationSimulator',
     },
-    # 'StatisticsSimulator': {
-    #    'python': 'cosima_core.simulators.statistics_simulator:StatisticsSimulator',
-    #}
 }
 
 parser = argparse.ArgumentParser(description='Run simulation with specified prosumer step size.')
@@ -66,16 +66,14 @@ comm_sim = world.start('CommunicationSimulator',
                        port=cfg.PORT,
                        client_attribute_mapping=client_attribute_mapping).CommunicationModel()
 
-#stat_sim = world.start('StatisticsSimulator', network=NETWORK, save_plots=True).Statistics()  # , step_time=200
-
 world.connect(prosumer_sim, comm_sim, f'message', weak=True)
 world.connect(comm_sim, prosumer_sim, client_attribute_mapping['client0'])
 
 world.connect(collector, comm_sim, f'message', weak=True)
 world.connect(comm_sim, collector, client_attribute_mapping['client1'])
-#world.connect(prosumer_sim, stat_sim, 'message', time_shifted=True, initial_data={'message': None})
-#world.connect(stat_sim, prosumer_sim, 'stats')
-#world.connect(stat_sim, simple_agent, 'stats')
+
+profiler = cProfile.Profile()
+profiler.enable()
 
 # set initial event for simple agent
 world.set_initial_event(prosumer_sim.sid, time=0)
@@ -85,3 +83,15 @@ world.run(until=SIMULATION_END)
 log("end of process")
 sleep(5)
 stop_omnet(omnet_process)
+
+profiler.disable()
+
+# Generate a random integer and append to the filename
+random_number = random.randint(1000, 9999)
+filename = f'profiling_output_{random_number}.txt'
+with open(filename, 'w') as f:
+    stats = pstats.Stats(profiler, stream=f)
+    stats.sort_stats('cumulative')
+    stats.print_stats()
+
+print(f"Profiling results are written to '{filename}'.")

@@ -1,0 +1,690 @@
+         50068 function calls (49873 primitive calls) in 28.666 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   23.662   23.662 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:472(run)
+        4    0.000    0.000   23.653    5.913 /usr/local/lib/python3.8/dist-packages/mosaik/util.py:14(sync_process)
+        4    0.000    0.000   23.653    5.913 /usr/local/lib/python3.8/dist-packages/simpy/core.py:99(run)
+      255    0.001    0.000   23.652    0.093 /usr/local/lib/python3.8/dist-packages/simpy/io/base.py:59(step)
+      182    0.001    0.000   23.650    0.130 /usr/local/lib/python3.8/dist-packages/simpy/events.py:352(_resume)
+      180    0.000    0.000   23.649    0.131 {method 'send' of 'generator' objects}
+      173    0.002    0.000   23.219    0.134 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:71(sim_process)
+       87    0.001    0.000   23.190    0.267 /usr/local/lib/python3.8/dist-packages/mosaik_api/__init__.py:481(wrapper)
+       84    0.000    0.000   23.190    0.276 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:405(step)
+       21    0.002    0.000   23.160    1.103 /root/models/cosima_core/simulators/communication_simulator.py:302(step)
+      114   21.457    0.188   21.457    0.188 {method 'acquire' of '_thread.lock' objects}
+       21    0.001    0.000   21.043    1.002 /root/models/cosima_core/simulators/communication_simulator.py:222(send_message_to_omnetpp)
+       21    0.000    0.000   21.034    1.002 /root/models/cosima_core/simulators/omnetpp_connection.py:59(send_messages)
+       22    0.000    0.000   21.028    0.956 /usr/lib/python3.8/threading.py:979(join)
+       22    0.000    0.000   21.027    0.956 /usr/lib/python3.8/threading.py:1017(_wait_for_tstate_lock)
+       22    7.107    0.323    7.107    0.323 {built-in method time.sleep}
+       21    0.001    0.000    2.107    0.100 /root/models/cosima_core/simulators/communication_simulator.py:133(receive_messages_from_omnetpp)
+       21    0.000    0.000    2.104    0.100 /root/models/cosima_core/simulators/omnetpp_connection.py:76(return_messages)
+       23    0.000    0.000    0.431    0.019 /usr/lib/python3.8/threading.py:540(wait)
+       23    0.000    0.000    0.431    0.019 /usr/lib/python3.8/threading.py:270(wait)
+        1    0.000    0.000    0.430    0.430 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:681(shutdown)
+        6    0.000    0.000    0.429    0.072 /usr/local/lib/python3.8/dist-packages/mosaik/simmanager.py:629(stop)
+        1    0.000    0.000    0.429    0.429 /root/models/cosima_core/simulators/communication_simulator.py:410(finalize)
+        1    0.000    0.000    0.429    0.429 /root/models/cosima_core/simulators/omnetpp_connection.py:42(close_connection)
+        1    0.000    0.000    0.428    0.428 /usr/lib/python3.8/socketserver.py:244(shutdown)
+       11    0.000    0.000    0.028    0.003 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:193(step)
+       51    0.000    0.000    0.025    0.000 /root/models/cosima_core/mosaik_sim/cosimaSim.py:24(run)
+       11    0.001    0.000    0.022    0.002 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:438(process)
+       11    0.013    0.001    0.021    0.002 /root/models/cosima_core/mosaik_sim/ProsumerGUROBI_FIX.py:64(optimize)
+       84    0.001    0.000    0.017    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:1198(update)
+      195    0.000    0.000    0.017    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:1325(refresh)
+       23    0.000    0.000    0.017    0.001 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:1464(display)
+       23    0.000    0.000    0.012    0.001 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:1150(__str__)
+       23    0.002    0.000    0.012    0.001 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:464(format_meter)
+      263    0.004    0.000    0.011    0.000 {built-in method builtins.sum}
+       92    0.000    0.000    0.011    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:378(disp_len)
+       92    0.000    0.000    0.010    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:374(_text_width)
+       90    0.002    0.000    0.008    0.000 /root/models/cosima_core/util/util_functions.py:148(log)
+       21    0.001    0.000    0.008    0.000 /root/models/cosima_core/util/util_functions.py:110(create_protobuf_messages)
+    13253    0.005    0.000    0.008    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:375(<genexpr>)
+       23    0.000    0.000    0.007    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:386(disp_trim)
+       22    0.000    0.000    0.006    0.000 /root/models/cosima_core/util/util_functions.py:83(make_protobuf_message_for_type)
+       11    0.004    0.000    0.005    0.000 /root/models/cosima_core/mosaik_sim/ProsumerGUROBI_FIX.py:123(_update_objective)
+       22    0.000    0.000    0.005    0.000 /usr/lib/python3.8/threading.py:834(start)
+       22    0.000    0.000    0.004    0.000 /root/models/cosima_core/util/util_functions.py:73(get_protobuf_message_from_dict)
+       22    0.000    0.000    0.004    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/json_format.py:428(ParseDict)
+       23    0.000    0.000    0.004    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:457(print_status)
+       22    0.000    0.000    0.004    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/json_format.py:459(ConvertMessage)
+       22    0.001    0.000    0.004    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/json_format.py:478(_ConvertFieldValuePair)
+       84    0.001    0.000    0.003    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:484(get_outputs)
+      8/6    0.000    0.000    0.003    0.001 <frozen importlib._bootstrap>:986(_find_and_load)
+        6    0.000    0.000    0.003    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/cycles.py:100(simple_cycles)
+      8/6    0.000    0.000    0.003    0.000 <frozen importlib._bootstrap>:956(_find_and_load_unlocked)
+       42    0.001    0.000    0.003    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:263(wait_for_dependencies)
+       50    0.000    0.000    0.002    0.000 /usr/lib/python3.8/json/encoder.py:182(encode)
+    13161    0.002    0.000    0.002    0.000 {built-in method unicodedata.east_asian_width}
+       39    0.000    0.000    0.002    0.000 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:403(process)
+       29    0.000    0.000    0.002    0.000 /usr/lib/python3.8/json/__init__.py:183(dumps)
+        4    0.000    0.000    0.002    0.001 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:663(__new__)
+      6/4    0.000    0.000    0.002    0.001 <frozen importlib._bootstrap>:650(_load_unlocked)
+        1    0.000    0.000    0.002    0.002 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:578(detect_unresolved_cycles)
+       20    0.000    0.000    0.002    0.000 /root/models/cosima_core/simulators/communication_simulator.py:372(process_msg_from_omnet)
+       29    0.002    0.000    0.002    0.000 /usr/lib/python3.8/json/encoder.py:204(iterencode)
+       21    0.002    0.000    0.002    0.000 {built-in method io.open}
+       91    0.002    0.000    0.002    0.000 {built-in method builtins.print}
+        4    0.000    0.000    0.002    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:760(get_lock)
+        1    0.000    0.000    0.002    0.002 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:90(__init__)
+        1    0.000    0.000    0.002    0.002 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:116(create_mp_lock)
+        6    0.000    0.000    0.002    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/cycles.py:235(_directed_cycle_search)
+        1    0.000    0.000    0.002    0.002 /usr/lib/python3.8/multiprocessing/context.py:70(RLock)
+       20    0.000    0.000    0.002    0.000 /root/models/cosima_core/util/util_functions.py:79(get_dict_from_protobuf_message)
+       35    0.000    0.000    0.002    0.000 /usr/lib/python3.8/json/__init__.py:299(loads)
+       20    0.000    0.000    0.002    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/json_format.py:130(MessageToDict)
+        4    0.000    0.000    0.002    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:952(__init__)
+      3/2    0.000    0.000    0.002    0.001 <frozen importlib._bootstrap_external>:842(exec_module)
+       35    0.000    0.000    0.002    0.000 /usr/lib/python3.8/json/decoder.py:332(decode)
+       11    0.001    0.000    0.002    0.000 /root/models/cosima_core/mosaik_sim/ProsumerGUROBI_FIX.py:143(_opti_status)
+     10/6    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap>:211(_call_with_frames_removed)
+       88    0.001    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:632(check_and_resolve_deadlocks)
+       20    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/json_format.py:197(_MessageToJsonObject)
+      239    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:147(succeed)
+       22    0.001    0.000    0.001    0.000 {built-in method _thread.start_new_thread}
+       35    0.001    0.000    0.001    0.000 /usr/lib/python3.8/json/decoder.py:343(raw_decode)
+        2    0.000    0.000    0.001    0.001 /usr/local/lib/python3.8/dist-packages/networkx/utils/decorators.py:765(func)
+      174    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/json_format.py:701(_ConvertScalarFieldValue)
+        2    0.000    0.000    0.001    0.001 /usr/local/lib/python3.8/dist-packages/networkx/utils/decorators.py:697(_lazy_compile)
+        2    0.000    0.000    0.001    0.001 /usr/local/lib/python3.8/dist-packages/networkx/utils/decorators.py:851(compile)
+      5/4    0.000    0.000    0.001    0.000 {built-in method builtins.exec}
+        1    0.000    0.000    0.001    0.001 /usr/lib/python3.8/multiprocessing/synchronize.py:11(<module>)
+        8    0.000    0.000    0.001    0.000 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:366(update_trades)
+       21    0.001    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/simpy/io/codec.py:61(__init__)
+       20    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/json_format.py:208(_RegularMessageToJsonObject)
+       22    0.000    0.000    0.001    0.000 /usr/lib/python3.8/threading.py:761(__init__)
+     12/9    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/backends.py:129(wrapper)
+        7    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:316(__init__)
+        2    0.001    0.001    0.001    0.001 {built-in method posix.system}
+       88    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:213(has_next_step)
+      255    0.001    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/simpy/io/base.py:52(schedule)
+       21    0.001    0.000    0.001    0.000 {method 'close' of '_io.TextIOWrapper' objects}
+        1    0.000    0.000    0.001    0.001 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:597(cache_trigger_cycles)
+        2    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/networkx/convert.py:34(to_networkx_graph)
+        2    0.001    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/networkx/utils/decorators.py:899(assemble)
+       42    0.001    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:565(notify_dependencies)
+        8    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap>:890(_find_spec)
+       44    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:199(warn_if_successors_terminated)
+       23    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:451(fp_write)
+        4    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:1265(close)
+       11    0.001    0.000    0.001    0.000 /root/models/cosima_core/mosaik_sim/ProsumerGUROBI_FIX.py:135(_iter_update)
+        6    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap>:549(module_from_spec)
+      132    0.001    0.000    0.001    0.000 {method 'search' of 're.Pattern' objects}
+       47    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:193(keep_running)
+        7    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1399(find_spec)
+        7    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1367(_get_spec)
+        1    0.000    0.000    0.001    0.001 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:333(_screen_shape_linux)
+       42    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:316(get_input_data)
+        3    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:914(get_code)
+       44    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:587(__init__)
+       48    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:194(inner)
+       42    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:679(clear_wait_events)
+       56    0.000    0.000    0.001    0.000 {method 'format' of 'str' objects}
+        2    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/loguru/_logger.py:2042(info)
+        2    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/loguru/_logger.py:1906(_log)
+      100    0.001    0.000    0.001    0.000 {method 'sub' of 're.Pattern' objects}
+       21    0.000    0.000    0.001    0.000 /root/models/cosima_core/simulators/communication_simulator.py:384(get_data)
+       23    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap_external>:1498(find_spec)
+       48    0.001    0.000    0.001    0.000 {method 'write' of '_io.TextIOWrapper' objects}
+       47    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:194(<listcomp>)
+      6/5    0.000    0.000    0.001    0.000 <frozen importlib._bootstrap>:1017(_handle_fromlist)
+        1    0.000    0.000    0.001    0.001 {built-in method builtins.__import__}
+        8    0.000    0.000    0.001    0.000 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:353(check_partners)
+      291    0.000    0.000    0.001    0.000 /usr/lib/python3.8/abc.py:96(__instancecheck__)
+      389    0.000    0.000    0.001    0.000 {built-in method _heapq.heappop}
+       41    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/simmanager.py:942(add)
+       44    0.000    0.000    0.001    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:529(_build_value)
+      135    0.001    0.000    0.001    0.000 {built-in method now}
+      177    0.001    0.000    0.001    0.000 {built-in method builtins.setattr}
+      173    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:1433(set_postfix_str)
+        2    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1164(create_module)
+        2    0.000    0.000    0.000    0.000 {built-in method _imp.create_dynamic}
+       69    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:551(_check)
+       47    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:179(check_trigger)
+       42    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:626(get_avg_progress)
+       44    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:485(__init__)
+       21    0.000    0.000    0.000    0.000 {method 'SerializeToString' of 'google.protobuf.pyext._message.CMessage' objects}
+      686    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+       45    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:400(format_interval)
+       42    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:617(get_progress)
+      248    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/core.py:28(__get__)
+       43    0.000    0.000    0.000    0.000 {method 'ByteSize' of 'google.protobuf.pyext._message.CMessage' objects}
+       23    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:505(__init__)
+  762/753    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/loguru/_handler.py:127(emit)
+       46    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:273(_is_ascii)
+       27    0.000    0.000    0.000    0.000 <__array_function__ internals>:177(copy)
+      291    0.000    0.000    0.000    0.000 {built-in method _abc._abc_instancecheck}
+      477    0.000    0.000    0.000    0.000 {built-in method _heapq.heappush}
+       21    0.000    0.000    0.000    0.000 /usr/lib/python3.8/pathlib.py:945(parent)
+      127    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:231(__call__)
+        8    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/cycles.py:351(_johnson_cycle_search)
+       23    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:1446(format_dict)
+       42    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/simmanager.py:947(get_input)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/convert.py:468(from_edgelist)
+        3    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:638(_compile_bytecode)
+       12    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/components/strongly_connected.py:15(strongly_connected_components)
+       23    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:186(__format__)
+       22    0.000    0.000    0.000    0.000 {method 'CopyFrom' of 'google.protobuf.pyext._message.CMessage' objects}
+       58    0.000    0.000    0.000    0.000 {method 'extend' of 'list' objects}
+       98    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/cosimaSim.py:19(schedule)
+       32    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:102(acquire)
+      944    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
+        3    0.000    0.000    0.000    0.000 {built-in method marshal.loads}
+      217    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/json_format.py:490(<genexpr>)
+      137    0.000    0.000    0.000    0.000 {built-in method builtins.all}
+      241    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:62(__init__)
+       20    0.000    0.000    0.000    0.000 {method 'ListFields' of 'google.protobuf.pyext._message.CMessage' objects}
+       21    0.000    0.000    0.000    0.000 /usr/lib/python3.8/json/decoder.py:284(__init__)
+      345    0.000    0.000    0.000    0.000 {built-in method builtins.next}
+       50    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:424(__call__)
+       27    0.000    0.000    0.000    0.000 {built-in method numpy.core._multiarray_umath.implement_array_function}
+        2    0.000    0.000    0.000    0.000 {method 'format_map' of 'str' objects}
+       23    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:222(__init__)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:652(cache_triggering_ancestors)
+      193    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/cosimaSim.py:48(__lt__)
+       32    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:106(release)
+       22    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:944(_stop)
+      293    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/json_format.py:168(_IsMapEntry)
+       10    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/cycles.py:346(__missing__)
+        6    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/cycles.py:282(<genexpr>)
+      214    0.000    0.000    0.000    0.000 {method 'join' of 'str' objects}
+       23    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:153(__init__)
+       42    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:529(treat_cycling_output)
+      596    0.000    0.000    0.000    0.000 {built-in method time.time}
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/loguru/_datetime.py:13(__format__)
+       88    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/json_format.py:755(_ConvertInteger)
+      501    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:78(triggered)
+       21    0.000    0.000    0.000    0.000 /usr/lib/python3.8/pathlib.py:718(__str__)
+       88    0.000    0.000    0.000    0.000 {method 'get' of 'DescriptorMapping' objects}
+      119    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/json_format.py:272(_FieldToJsonObject)
+       11    0.000    0.000    0.000    0.000 {built-in method builtins.__build_class__}
+       42    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:628(<listcomp>)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/synchronize.py:186(__init__)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/synchronize.py:50(__init__)
+       22    0.000    0.000    0.000    0.000 {method 'add' of 'google.protobuf.pyext._message.RepeatedCompositeContainer' objects}
+       21    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/io/codec.py:112(encode)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:213(__init__)
+       27    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/numpy/lib/function_base.py:871(copy)
+       21    0.000    0.000    0.000    0.000 /usr/lib/python3.8/pathlib.py:691(_from_parsed_parts)
+        3    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1034(get_data)
+       42    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/json_format.py:376(_IsWrapperMessage)
+       31    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:135(_path_stat)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/_monitor.py:30(__init__)
+       21    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_weakrefset.py:38(_remove)
+        6    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:477(_init_module_attrs)
+       31    0.000    0.000    0.000    0.000 {built-in method posix.stat}
+       70    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/graph.py:489(__getitem__)
+      540    0.000    0.000    0.000    0.000 {method 'get' of 'dict' objects}
+      110    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:121(_path_join)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/util.py:10(<module>)
+      482    0.000    0.000    0.000    0.000 {method 'values' of 'dict' objects}
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:669(create_simulator_ranking)
+        1    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:461(process)
+       27    0.000    0.000    0.000    0.000 {built-in method numpy.array}
+       92    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:180(<genexpr>)
+     70/1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/abc.py:100(__subclasscheck__)
+       44    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:536(_remove_check_callbacks)
+     70/1    0.000    0.000    0.000    0.000 {built-in method _abc._abc_subclasscheck}
+       23    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:167(colour)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/utils/decorators.py:1041(signature)
+       44    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:519(_populate_value)
+        1    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:241(Opti_LocDec_State)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:264(_interrupt)
+       42    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:381(get_max_advance)
+       20    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/coreviews.py:46(__len__)
+      136    0.000    0.000    0.000    0.000 {method 'update' of 'dict' objects}
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/graph.py:1763(subgraph)
+       63    0.000    0.000    0.000    0.000 /root/models/cosima_core/simulators/communication_simulator.py:44(get_data)
+        2    0.000    0.000    0.000    0.000 {built-in method builtins.compile}
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/synchronize.py:114(_make_name)
+       82    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/coreviews.py:80(__getitem__)
+       20    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/coreviews.py:271(__len__)
+       70    0.000    0.000    0.000    0.000 {method 'match' of 're.Pattern' objects}
+  130/108    0.000    0.000    0.000    0.000 {built-in method builtins.iter}
+    16/14    0.000    0.000    0.000    0.000 /usr/lib/python3.8/functools.py:947(__get__)
+       12    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/simple_paths.py:323(all_simple_edge_paths)
+       26    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_weakrefset.py:81(add)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/tempfile.py:283(__next__)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:147(__enter__)
+      148    0.000    0.000    0.000    0.000 {built-in method builtins.min}
+        1    0.000    0.000    0.000    0.000 /root/models/cosima_core/util/util_functions.py:38(stop_omnet)
+       58    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:399(__init__)
+      255    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:90(ok)
+       22    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:734(_newname)
+       21    0.000    0.000    0.000    0.000 /usr/lib/python3.8/pathlib.py:701(_format_parsed_parts)
+  158/156    0.000    0.000    0.000    0.000 {built-in method builtins.hasattr}
+       21    0.000    0.000    0.000    0.000 {built-in method _json.encode_basestring_ascii}
+       32    0.000    0.000    0.000    0.000 {method 'acquire' of '_multiprocessing.SemLock' objects}
+       44    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:545(__getitem__)
+        3    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:25(run)
+       10    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/Collector.py:45(step)
+       50    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/coreviews.py:274(__iter__)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:679(_get_free_pos)
+        3    0.000    0.000    0.000    0.000 {built-in method io.open_code}
+       69    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:568(all_events)
+       54    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/coreviews.py:49(__iter__)
+      409    0.000    0.000    0.000    0.000 {built-in method builtins.id}
+       25    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:1306(current_thread)
+        2    0.000    0.000    0.000    0.000 {method 'throw' of 'generator' objects}
+       42    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:363(recursive_union)
+       88    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:208(<genexpr>)
+       54    0.000    0.000    0.000    0.000 {built-in method builtins.max}
+        6    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/components/strongly_connected.py:79(<dictcomp>)
+      483    0.000    0.000    0.000    0.000 {built-in method builtins.ord}
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:713(add_edges_from)
+       12    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/simple_paths.py:269(_all_simple_paths_graph)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/cycles.py:271(<listcomp>)
+      110    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:123(<listcomp>)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:376(cached)
+      106    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/coreviews.py:281(<genexpr>)
+      207    0.000    0.000    0.000    0.000 {method 'items' of 'dict' objects}
+       23    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:249(__exit__)
+       20    0.000    0.000    0.000    0.000 /root/models/cosima_core/simulators/communication_simulator.py:281(check_msgs)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/loguru/_datetime.py:88(aware_now)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/graphviews.py:74(subgraph_view)
+        7    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:299(__init__)
+       20    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/json_format.py:177(__init__)
+        6    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:354(cache_from_source)
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/inspect.py:3103(signature)
+       66    0.000    0.000    0.000    0.000 {built-in method builtins.getattr}
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:686(_decr_instances)
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/inspect.py:2851(from_callable)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:157(_get_module_lock)
+       44    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:205(<listcomp>)
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/inspect.py:2218(_signature_from_callable)
+        3    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/dag.py:76(ancestors)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:484(_get_cached)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/dag.py:241(topological_sort)
+       42    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:621(<listcomp>)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/function.py:655(get_node_attributes)
+       21    0.000    0.000    0.000    0.000 /usr/lib/python3.8/json/encoder.py:104(__init__)
+       23    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:261(_is_owned)
+       33    0.000    0.000    0.000    0.000 {method 'acquire' of '_thread.RLock' objects}
+        3    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/dag.py:164(topological_generations)
+       69    0.000    0.000    0.000    0.000 {method 'pop' of 'dict' objects}
+       23    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:258(_acquire_restore)
+        3    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/dag.py:110(<setcomp>)
+       23    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:246(__enter__)
+       23    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:1095(daemon)
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/inspect.py:2124(_signature_from_function)
+        9    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/traversal/breadth_first_search.py:91(bfs_edges)
+       12    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_weakrefset.py:58(__iter__)
+       22    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:1177(_make_invoke_excepthook)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:682(<setcomp>)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:633(cache_dependencies)
+       32    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_collections_abc.py:742(__iter__)
+       21    0.000    0.000    0.000    0.000 /root/models/cosima_core/simulators/communication_simulator.py:128(get_next_step)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:342(interrupt)
+       62    0.000    0.000    0.000    0.000 {built-in method _thread.allocate_lock}
+       21    0.000    0.000    0.000    0.000 /root/models/cosima_core/simulators/communication_simulator.py:232(<listcomp>)
+       21    0.000    0.000    0.000    0.000 /usr/lib/python3.8/pathlib.py:1049(_init)
+       42    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:372(recursive_update)
+       44    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/coreviews.py:272(<genexpr>)
+        3    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:140(get_keep_running_func)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/graph.py:1561(copy)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/tempfile.py:272(rng)
+       21    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_bootlocale.py:33(getpreferredencoding)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1493(_get_spec)
+      115    0.000    0.000    0.000    0.000 {built-in method builtins.divmod}
+        9    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/traversal/breadth_first_search.py:16(generic_bfs_edges)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:245(__init__)
+       44    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:427(__init__)
+        8    0.000    0.000    0.000    0.000 {method 'strftime' of 'datetime.date' objects}
+       22    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/coreviews.py:313(__getitem__)
+       20    0.000    0.000    0.000    0.000 /root/models/cosima_core/simulators/communication_simulator.py:40(step)
+       58    0.000    0.000    0.000    0.000 {method 'remove' of 'set' objects}
+        3    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/internal/enum_type_wrapper.py:106(__getattr__)
+       10    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:110(__enter__)
+       27    0.000    0.000    0.000    0.000 {method 'flush' of '_io.TextIOWrapper' objects}
+       44    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/coreviews.py:316(new_node_ok)
+       41    0.000    0.000    0.000    0.000 {method 'remove' of 'list' objects}
+       10    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:113(__exit__)
+        6    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/utils/decorators.py:831(_name)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/loguru/_simple_sinks.py:15(write)
+       39    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:434(__init__)
+        4    0.000    0.000    0.000    0.000 /usr/lib/python3.8/calendar.py:58(__getitem__)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/function.py:677(<dictcomp>)
+       21    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/io/codec.py:10(expand_datatype_list)
+       96    0.000    0.000    0.000    0.000 {method 'add' of 'set' objects}
+        8    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/_distutils_hack/__init__.py:89(find_spec)
+        1    0.000    0.000    0.000    0.000 /root/models/cosima_core/simulators/communication_simulator.py:244(send_initial_message)
+       23    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:255(_release_save)
+       82    0.000    0.000    0.000    0.000 {method 'setdefault' of 'dict' objects}
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/tempfile.py:286(<listcomp>)
+        4    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_weakrefset.py:106(remove)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:746(create_module)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:151(__exit__)
+       28    0.000    0.000    0.000    0.000 {built-in method __new__ of type object at 0x902780}
+        9    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:874(successors)
+       32    0.000    0.000    0.000    0.000 {method 'endswith' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/Collector.py:68(finalize)
+        2    0.000    0.000    0.000    0.000 <class 'networkx.utils.decorators.argmap'> compilation 4:1(argmap_empty_graph_1)
+       21    0.000    0.000    0.000    0.000 {method 'discard' of 'set' objects}
+        8    0.000    0.000    0.000    0.000 /usr/lib/python3.8/random.py:285(choice)
+       46    0.000    0.000    0.000    0.000 {method 'upper' of 'str' objects}
+        7    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:224(__init__)
+       45    0.000    0.000    0.000    0.000 {method 'release' of '_thread.lock' objects}
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:154(_path_isfile)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/random.py:94(__init__)
+       21    0.000    0.000    0.000    0.000 /usr/lib/python3.8/codecs.py:186(__init__)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:689(spec_from_file_location)
+        1    0.000    0.000    0.000    0.000 {built-in method _imp.create_builtin}
+        3    0.000    0.000    0.000    0.000 {method 'read' of '_io.BufferedReader' objects}
+       47    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:164(check_time)
+       21    0.000    0.000    0.000    0.000 /root/models/cosima_core/simulators/communication_simulator.py:119(is_waiting_for_messages)
+      120    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:222(_verbose_message)
+       23    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:108(__init__)
+       10    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/utils/decorators.py:1171(_indent)
+        1    0.000    0.000    0.000    0.000 {built-in method fcntl.ioctl}
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/random.py:123(seed)
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/socket.py:496(close)
+       22    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/google/protobuf/json_format.py:455(__init__)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:103(release)
+       43    0.000    0.000    0.000    0.000 {method 'startswith' of 'str' objects}
+        6    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:127(_path_split)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:145(_path_is_mode_type)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:78(acquire)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:58(__init__)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/io/base.py:230(close)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:725(find_spec)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/generators/classic.py:459(empty_graph)
+       41    0.000    0.000    0.000    0.000 {built-in method _thread.get_ident}
+       70    0.000    0.000    0.000    0.000 {method 'end' of 're.Match' objects}
+       23    0.000    0.000    0.000    0.000 {method '__enter__' of '_thread.lock' objects}
+       11    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:228(get_data)
+        8    0.000    0.000    0.000    0.000 /usr/lib/python3.8/random.py:250(_randbelow_with_getrandbits)
+       48    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:513(is_set)
+       91    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/coreviews.py:43(__init__)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/cycles.py:200(<genexpr>)
+       42    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:462(rt_check)
+       33    0.000    0.000    0.000    0.000 {method 'release' of '_thread.RLock' objects}
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/socket.py:492(_real_close)
+       10    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/cycles.py:214(<genexpr>)
+        6    0.000    0.000    0.000    0.000 /usr/lib/python3.8/re.py:203(sub)
+        4    0.000    0.000    0.000    0.000 /usr/lib/python3.8/calendar.py:77(__getitem__)
+       10    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/Collector.py:60(get_data)
+      226    0.000    0.000    0.000    0.000 {method 'rstrip' of 'str' objects}
+       32    0.000    0.000    0.000    0.000 {method 'release' of '_multiprocessing.SemLock' objects}
+       12    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/graph.py:435(__iter__)
+       23    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:112(__format__)
+        2    0.000    0.000    0.000    0.000 {built-in method _warnings.warn}
+        4    0.000    0.000    0.000    0.000 /usr/lib/python3.8/functools.py:404(__get__)
+        3    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1075(path_stats)
+       14    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/loguru/_datetime.py:79(get)
+       46    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:163(colour)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:176(cb)
+       16    0.000    0.000    0.000    0.000 {method 'update' of 'set' objects}
+       34    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:867(__exit__)
+        1    0.000    0.000    0.000    0.000 {function Random.seed at 0x7f5d73632160}
+       38    0.000    0.000    0.000    0.000 {built-in method builtins.abs}
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/socketserver.py:477(server_close)
+       12    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:188(__getitem__)
+        2    0.000    0.000    0.000    0.000 {method 'timetuple' of 'datetime.datetime' objects}
+       42    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:246(rt_sleep)
+        8    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:187(disable_on_exception)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:1286(fp_write)
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/posixpath.py:140(basename)
+        3    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:553(_classify_pyc)
+        4    0.000    0.000    0.000    0.000 /usr/lib/python3.8/inspect.py:2489(__init__)
+       34    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:863(__enter__)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/function.py:69(degree)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/util.py:171(register_after_fork)
+       11    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:389(parent)
+        8    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:423(<listcomp>)
+       78    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/filters.py:54(__call__)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:931(edges)
+        6    0.000    0.000    0.000    0.000 <class 'networkx.utils.decorators.argmap'> compilation 8:1(argmap_strongly_connected_components_5)
+        5    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_weakrefset.py:26(__exit__)
+    16/10    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/utils/decorators.py:1141(_flatten)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:417(__init__)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:125(__eq__)
+       27    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1330(_path_importer_cache)
+       21    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/io/codec.py:69(<genexpr>)
+        3    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:469(add_nodes_from)
+        1    0.000    0.000    0.000    0.000 /root/models/cosima_core/simulators/communication_simulator.py:211(check_if_is_only_one_max_advance_message_and_get_latest_simtime)
+        3    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:693(clear_wait_events_dependencies)
+       27    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/numpy/lib/function_base.py:867(_copy_dispatcher)
+       22    0.000    0.000    0.000    0.000 {method 'locked' of '_thread.lock' objects}
+        2    0.000    0.000    0.000    0.000 {built-in method time.localtime}
+        2    0.000    0.000    0.000    0.000 {function socket.close at 0x7f5d735ed1f0}
+        1    0.000    0.000    0.000    0.000 {built-in method posix.killpg}
+       33    0.000    0.000    0.000    0.000 {method 'keys' of 'dict' objects}
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/posixpath.py:117(splitext)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/graph.py:1962(nbunch_iter)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/weakref.py:102(__init__)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/core.py:53(callback)
+       21    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/io/codec.py:33(expand_converter_list)
+        1    0.000    0.000    0.000    0.000 {built-in method posix.sysconf}
+        9    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:79(_unpack_uint32)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/filters.py:51(__init__)
+       51    0.000    0.000    0.000    0.000 {method 'rpartition' of 'str' objects}
+       29    0.000    0.000    0.000    0.000 {method 'append' of 'collections.deque' objects}
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/contextlib.py:108(__enter__)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:1085(in_degree)
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/contextlib.py:238(helper)
+       63    0.000    0.000    0.000    0.000 {method 'pop' of 'list' objects}
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:1056(__init__)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:603(<listcomp>)
+        5    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_weakrefset.py:20(__enter__)
+        6    0.000    0.000    0.000    0.000 /usr/lib/python3.8/re.py:289(_compile)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/_debug.py:1(<module>)
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/process.py:234(ident)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:582(<listcomp>)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/weakref.py:159(__setitem__)
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/inspect.py:2772(__init__)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:438(status_printer)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/function.py:159(freeze)
+        3    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:586(_validate_timestamp_pyc)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/loguru/_handler.py:110(_protected_lock)
+        1    0.000    0.000    0.000    0.000 {built-in method posix.getpgid}
+       19    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/graph.py:453(__contains__)
+        8    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_collections_abc.py:676(items)
+        1    0.000    0.000    0.000    0.000 {built-in method fromtimestamp}
+       21    0.000    0.000    0.000    0.000 /usr/lib/python3.8/codecs.py:214(setstate)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/exceptions.py:22(__init__)
+        7    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:800(find_spec)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:156(__init__)
+       21    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/io/codec.py:74(<genexpr>)
+       50    0.000    0.000    0.000    0.000 {built-in method _imp.acquire_lock}
+       15    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:906(predecessors)
+       58    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_collections_abc.py:392(__subclasshook__)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/utils/decorators.py:1035(<genexpr>)
+       23    0.000    0.000    0.000    0.000 {method '__exit__' of '_thread.lock' objects}
+       12    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:152(wrapper_setattr)
+       21    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/io/codec.py:71(<genexpr>)
+        8    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:1153(_comparable)
+       10    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:788(<genexpr>)
+        4    0.000    0.000    0.000    0.000 {method 'timestamp' of 'datetime.datetime' objects}
+       26    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/coreviews.py:267(__init__)
+        8    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:424(<listcomp>)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:406(spec_from_loader)
+       50    0.000    0.000    0.000    0.000 {built-in method _imp.release_lock}
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:266(_supports_unicode)
+        8    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:361(<listcomp>)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:1093(data)
+        2    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1172(exec_module)
+        2    0.000    0.000    0.000    0.000 {method 'replace' of 'datetime.time' objects}
+        5    0.000    0.000    0.000    0.000 {built-in method _imp.is_builtin}
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/contextlib.py:82(__init__)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:1041(degree)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:674(<listcomp>)
+        7    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:364(adj)
+        6    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_collections_abc.py:664(__contains__)
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/contextlib.py:117(__exit__)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/pkg_resources/extern/__init__.py:57(find_spec)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:522(<listcomp>)
+       32    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/coreviews.py:52(__getitem__)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:547(remove_node)
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:342(__init__)
+       12    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:129(<genexpr>)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/synchronize.py:360(Barrier)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/synchronize.py:46(SemLock)
+        8    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:1157(__hash__)
+        6    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/utils/decorators.py:82(_not_implemented_for)
+        1    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:248(<listcomp>)
+       11    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/graph.py:59(__set__)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/weakref.py:284(update)
+       11    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:37(__set__)
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/genericpath.py:121(_splitext)
+        2    0.000    0.000    0.000    0.000 <string>:1(__new__)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/io/base.py:197(fileno)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/utils/decorators.py:990(get_name)
+        3    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:35(_new_module)
+        5    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:175(_path_isabs)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/loguru/_recattrs.py:16(__format__)
+       21    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/io/codec.py:76(<genexpr>)
+        8    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/utils/decorators.py:808(_count)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:647(cache_related_sims)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:589(<listcomp>)
+        2    0.000    0.000    0.000    0.000 {built-in method combine}
+        8    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:143(__init__)
+        5    0.000    0.000    0.000    0.000 {built-in method builtins.locals}
+        5    0.000    0.000    0.000    0.000 {built-in method builtins.sorted}
+        2    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:881(_find_spec_legacy)
+        3    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:516(_check_name_wrapper)
+        8    0.000    0.000    0.000    0.000 {built-in method _weakref.proxy}
+        4    0.000    0.000    0.000    0.000 /usr/lib/python3.8/enum.py:313(__call__)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:1179(clear)
+        5    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_weakrefset.py:16(__init__)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/utils/decorators.py:241(_nodes_or_number)
+       12    0.000    0.000    0.000    0.000 {method 'rfind' of 'str' objects}
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/pkg_resources/extern/__init__.py:24(_module_matches_namespace)
+       44    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/filters.py:20(no_filter)
+        5    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/graph.py:1643(<genexpr>)
+       14    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/graph.py:2008(bunch_iter)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:139(__getattr__)
+       27    0.000    0.000    0.000    0.000 {method 'getrandbits' of '_random.Random' objects}
+       23    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:68(_relax_case)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/synchronize.py:210(Condition)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:252(_is_utf)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:1132(out_degree)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/graph.py:1642(<genexpr>)
+       12    0.000    0.000    0.000    0.000 {method 'copy' of 'dict' objects}
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/dag.py:216(<dictcomp>)
+        9    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/graph.py:467(__len__)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:760(__init__)
+        7    0.000    0.000    0.000    0.000 {built-in method _imp.is_frozen}
+        3    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/_monitor.py:94(report)
+        1    0.000    0.000    0.000    0.000 /root/models/cosima_core/mosaik_sim/SimulatorDiscreteCosima.py:458(__init__)
+       11    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:63(__set__)
+        8    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:575(__iter__)
+       14    0.000    0.000    0.000    0.000 {method 'group' of 're.Match' objects}
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:787(__iter__)
+       15    0.000    0.000    0.000    0.000 {built-in method posix.fspath}
+        8    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/coreviews.py:296(__init__)
+        8    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/graph.py:1415(get_edge_data)
+        6    0.000    0.000    0.000    0.000 /usr/lib/python3.8/inspect.py:2821(<genexpr>)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:101(defused)
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/posixpath.py:41(_get_sep)
+        5    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_weakrefset.py:52(_commit_removals)
+        3    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:568(__getitem__)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:448(__iter__)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/graph.py:732(nodes)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:534(<genexpr>)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:222(__eq__)
+        3    0.000    0.000    0.000    0.000 {built-in method posix.getpid}
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:185(__iter__)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:754(exec_module)
+        8    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_collections_abc.py:698(__init__)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/dag.py:217(<listcomp>)
+        2    0.000    0.000    0.000    0.000 {method '__format__' of 'str' objects}
+       16    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:1221(is_directed)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:232(_requires_builtin_wrapper)
+       14    0.000    0.000    0.000    0.000 {method 'popitem' of 'dict' objects}
+        9    0.000    0.000    0.000    0.000 {built-in method from_bytes}
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:828(remove_edges_from)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/weakref.py:323(__new__)
+        3    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/process.py:37(current_process)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/algorithms/cycles.py:343(__init__)
+        3    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:650(<listcomp>)
+        3    0.000    0.000    0.000    0.000 {built-in method _imp._fix_co_filename}
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3/dist-packages/six.py:184(find_module)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/weakref.py:328(__init__)
+        3    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:226(__init__)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:464(__len__)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/events.py:122(value)
+        2    0.000    0.000    0.000    0.000 {method 'get' of 'ContextVar' objects}
+        4    0.000    0.000    0.000    0.000 {method 'difference' of 'set' objects}
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/util.py:182(Finalize)
+        3    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scheduler.py:176(<listcomp>)
+        4    0.000    0.000    0.000    0.000 /usr/lib/python3.8/inspect.py:158(isfunction)
+       13    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:1217(is_multigraph)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/digraph.py:383(succ)
+        4    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:607(<listcomp>)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:1110(daemon)
+        5    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/_distutils_hack/__init__.py:96(<lambda>)
+       16    0.000    0.000    0.000    0.000 /usr/lib/python3.8/inspect.py:2539(name)
+        2    0.000    0.000    0.000    0.000 {built-in method _imp.exec_dynamic}
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/loguru/_recattrs.py:23(__init__)
+       10    0.000    0.000    0.000    0.000 {method 'clear' of 'set' objects}
+        3    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1004(__init__)
+        2    0.000    0.000    0.000    0.000 {built-in method atexit.register}
+       10    0.000    0.000    0.000    0.000 {method 'pop' of 'set' objects}
+        2    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1153(__init__)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/loguru/_recattrs.py:8(__init__)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_collections_abc.py:72(_check_methods)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/synchronize.py:90(_make_methods)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/context.py:233(get_context)
+        9    0.000    0.000    0.000    0.000 {method 'popleft' of 'collections.deque' objects}
+        6    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:397(has_location)
+        8    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:774(<lambda>)
+        2    0.000    0.000    0.000    0.000 {built-in method sys._getframe}
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/process.py:99(_check_closed)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/simpy/io/base.py:34(active_process)
+        4    0.000    0.000    0.000    0.000 /usr/lib/python3.8/enum.py:631(__new__)
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:1047(ident)
+        1    0.000    0.000    0.000    0.000 {method 'encode' of 'str' objects}
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/process.py:189(name)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/loguru/_recattrs.py:51(__init__)
+       10    0.000    0.000    0.000    0.000 /usr/lib/python3.8/_collections_abc.py:302(__subclasshook__)
+        2    0.000    0.000    0.000    0.000 {method 'partition' of 'str' objects}
+        2    0.000    0.000    0.000    0.000 {method 'time' of 'datetime.datetime' objects}
+        2    0.000    0.000    0.000    0.000 {method 'values' of 'mappingproxy' objects}
+        8    0.000    0.000    0.000    0.000 {method 'clear' of 'dict' objects}
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/synchronize.py:321(Event)
+        5    0.000    0.000    0.000    0.000 {built-in method builtins.callable}
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/threading.py:1031(name)
+        2    0.000    0.000    0.000    0.000 {method 'total_seconds' of 'datetime.timedelta' objects}
+        2    0.000    0.000    0.000    0.000 {method 'setter' of 'property' objects}
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/util.py:368(ForkAwareThreadLock)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/synchronize.py:123(Semaphore)
+        2    0.000    0.000    0.000    0.000 {method 'tzname' of 'datetime.timezone' objects}
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/networkx/classes/reportviews.py:178(__init__)
+        4    0.000    0.000    0.000    0.000 {method 'index' of 'list' objects}
+        3    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:1029(get_filename)
+        8    0.000    0.000    0.000    0.000 {method 'bit_length' of 'int' objects}
+        3    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap_external>:839(create_module)
+        4    0.000    0.000    0.000    0.000 {method 'isidentifier' of 'str' objects}
+        3    0.000    0.000    0.000    0.000 {built-in method time.perf_counter}
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/util.py:385(ForkAwareLocal)
+        2    0.000    0.000    0.000    0.000 {method 'date' of 'datetime.datetime' objects}
+        1    0.000    0.000    0.000    0.000 <class 'networkx.utils.decorators.argmap'> compilation 4:1(<module>)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik/scenario.py:412(set_initial_event)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/context.py:197(get_start_method)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/synchronize.py:184(RLock)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik_api_v3/__init__.py:318(finalize)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:98(<listcomp>)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/util.py:108(_platform_supports_abstract_sockets)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/synchronize.py:142(BoundedSemaphore)
+        2    0.000    0.000    0.000    0.000 {built-in method builtins.any}
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/utils.py:282(_screen_shape_wrapper)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/synchronize.py:159(Lock)
+        1    0.000    0.000    0.000    0.000 /usr/lib/python3.8/multiprocessing/util.py:48(debug)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/loguru/_recattrs.py:37(__init__)
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+        1    0.000    0.000    0.000    0.000 <class 'networkx.utils.decorators.argmap'> compilation 8:1(<module>)
+        4    0.000    0.000    0.000    0.000 /usr/lib/python3.8/inspect.py:2551(kind)
+        2    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik_api/__init__.py:178(setup_done)
+        1    0.000    0.000    0.000    0.000 {built-in method _imp.exec_builtin}
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/tqdm/std.py:1301(<lambda>)
+        1    0.000    0.000    0.000    0.000 {method 'fileno' of '_socket.socket' objects}
+        2    0.000    0.000    0.000    0.000 {method 'utcoffset' of 'datetime.timezone' objects}
+        2    0.000    0.000    0.000    0.000 /usr/lib/python3.8/inspect.py:2857(parameters)
+        1    0.000    0.000    0.000    0.000 /usr/local/lib/python3.8/dist-packages/mosaik_api_v3/__init__.py:211(setup_done)
+        1    0.000    0.000    0.000    0.000 <frozen importlib._bootstrap>:771(is_package)
+
+
