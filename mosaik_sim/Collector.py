@@ -17,7 +17,7 @@ META = {
         'Collector': {
             'public': True,
             'params': [],
-            'attrs': ['message'], #'stats'
+            'attrs': ['message'],
         },
     },
 }
@@ -32,7 +32,6 @@ class Collector(mosaik_api.Simulator):
         self._outbox = []
         self._output_time = 0
         self._simulator = None
-        self.stats = {}
 
     def init(self, sid, **sim_params):
         self._sid = sid
@@ -41,6 +40,8 @@ class Collector(mosaik_api.Simulator):
             self._client_name = sim_params['client_name']
             # the prosumer that this collector represents
             self.whoami = int(self._client_name[len("client"):])
+            # log filename
+            self.log_filename = f'collectorLogs/collector_log_{self.whoami}.log'
         if 'simulator' in sim_params.keys():
             self._simulator = sim_params['simulator']
         return META
@@ -51,6 +52,12 @@ class Collector(mosaik_api.Simulator):
     def step(self, time, inputs, max_advance):
         # Extracting the content of the message received
         content = inputs[f'Collector-{self.whoami}'][f'message_with_delay_for_client{self.whoami}']["CommunicationSimulator-0.CommunicationSimulator"][0]["content"]
+
+        # Log the data to the file
+        tosave = json.loads(content)
+        with open(self.log_filename, 'a') as f:
+            for content_item in tosave:
+                f.write(f'{content_item["src"]},{time}\n')
 
         self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
                              'max_advance': max_advance,
