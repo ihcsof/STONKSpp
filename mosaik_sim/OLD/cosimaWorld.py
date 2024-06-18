@@ -22,8 +22,7 @@ import mosaik.util
 
 SIMULATION_END = 39000
 START_MODE = 'cmd'
-NETWORK = 'ProsumerSimNetN'
-NUM_PROSUMERS = 8
+NETWORK = 'ProsumerSimNet'
 
 # Simulation configuration -> tells mosaik where to find the simulators
 SIM_CONFIG = {
@@ -49,13 +48,18 @@ check_omnet_connection(cfg.PORT)
 # Create mosaik World
 world = mosaik.World(SIM_CONFIG, time_resolution=0.001, cache=False)
 
-client_attribute_mapping = {}
-for i in range(0, NUM_PROSUMERS + 1):
-    client_attribute_mapping[f'client{i}'] = f'message_with_delay_for_client{i}'
+client_attribute_mapping = {
+    'client0': 'message_with_delay_for_client0',
+    'client1': 'message_with_delay_for_client1'
+}
 
 prosumer_sim = world.start('Simulator',
-                            client_name=f'client{NUM_PROSUMERS}',
+                            client_name='client0',
+                            collector='client1',
                             step_size=args.step_size).ProsumerSim()
+collector = world.start('Collector',
+                             client_name='client1',
+                             simulator='client0').Collector()
 
 comm_sim = world.start('CommunicationSimulator',
                        step_size=0.0001,
@@ -63,14 +67,10 @@ comm_sim = world.start('CommunicationSimulator',
                        client_attribute_mapping=client_attribute_mapping).CommunicationModel()
 
 world.connect(prosumer_sim, comm_sim, f'message', weak=True)
-world.connect(comm_sim, prosumer_sim, client_attribute_mapping[f'client{NUM_PROSUMERS}'])
+world.connect(comm_sim, prosumer_sim, client_attribute_mapping['client0'])
 
-collectors = [None] * NUM_PROSUMERS
-for i in range(0, NUM_PROSUMERS):
-    collectors[i] = world.start('Collector', client_name=f'client{i}', simulator=f'client{NUM_PROSUMERS}').Collector()
-
-    world.connect(collectors[i], comm_sim, f'message', weak=True)
-    world.connect(comm_sim, collectors[i], client_attribute_mapping[f'client{i}'])
+world.connect(collector, comm_sim, f'message', weak=True)
+world.connect(comm_sim, collector, client_attribute_mapping['client1'])
 
 profiler = cProfile.Profile()
 profiler.enable()

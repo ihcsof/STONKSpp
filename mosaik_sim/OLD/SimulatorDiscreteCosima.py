@@ -63,6 +63,7 @@ class Simulator(Simulation):
         self._msg_outbox = []
         self._outbox = []
         self._output_time = 0
+        self._collector = None
         self.has_finished = False 
         self.step_Size = 1000
         
@@ -180,6 +181,8 @@ class Simulator(Simulation):
         if 'client_name' in sim_params.keys():
             self.meta['models']['ProsumerSim']['attrs'].append(f'{CONNECT_ATTR}{sim_params["client_name"]}')
             self._client_name = sim_params['client_name']
+        if 'collector' in sim_params.keys():
+            self._collector = sim_params['collector']
         if 'step_size' in sim_params.keys():
             self.step_Size = sim_params['step_size']
         return META
@@ -196,8 +199,8 @@ class Simulator(Simulation):
             if(inputs):
                 data = self._msg_inbox if isinstance(self._msg_inbox, list) else json.loads(self._msg_inbox)
 
-                # Load the new data from the inputs dictionary
-                new_data = json.loads(inputs["Simulator-0"][f'message_with_delay_for_client{self.nag}']['CommunicationSimulator-0.CommunicationSimulator'][0]['content'])
+                # TO IMPROVE: Load the new data from the inputs dictionary
+                new_data = json.loads(inputs["Simulator-0"]['message_with_delay_for_client0']['CommunicationSimulator-0.CommunicationSimulator'][0]['content'])
 
                 # Update self._msg_inbox with the updated list
                 data.extend(new_data)
@@ -208,14 +211,13 @@ class Simulator(Simulation):
                 self.run()
 
             content = json.dumps(self._msg_outbox)
-            towhom = self._msg_outbox[0]['src']
             self._msg_outbox = []
 
         self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
                              'max_advance': max_advance,
                              'sim_time': time + 1,
                              'sender': self._client_name,
-                             'receiver': f'client{towhom}',
+                             'receiver': self._collector,
                              'content': content,
                              'creation_time': time,
                              })

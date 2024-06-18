@@ -39,8 +39,6 @@ class Collector(mosaik_api.Simulator):
         if 'client_name' in sim_params.keys():
             self.meta['models']['Collector']['attrs'].append(f'{CONNECT_ATTR}{sim_params["client_name"]}')
             self._client_name = sim_params['client_name']
-            # the prosumer that this collector represents
-            self.whoami = int(self._client_name[len("client"):])
         if 'simulator' in sim_params.keys():
             self._simulator = sim_params['simulator']
         return META
@@ -50,7 +48,11 @@ class Collector(mosaik_api.Simulator):
 
     def step(self, time, inputs, max_advance):
         # Extracting the content of the message received
-        content = inputs[f'Collector-{self.whoami}'][f'message_with_delay_for_client{self.whoami}']["CommunicationSimulator-0.CommunicationSimulator"][0]["content"]
+        content = inputs["Collector-0"]["message_with_delay_for_client1"]["CommunicationSimulator-0.CommunicationSimulator"][0]["content"]
+
+        # save stats of latencies for each prosumer
+        new_content = json.loads(content)
+        [self.stats.setdefault(content_item["src"], []).append(time) for content_item in new_content]
 
         self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
                              'max_advance': max_advance,
@@ -72,5 +74,49 @@ class Collector(mosaik_api.Simulator):
 
         return data
 
+    # Function to calculate mean latencies
+    def calculate_mean_latencies(self, data):
+        mean_latencies = {}
+        for prosumer, times in data.items():
+            latencies = np.diff(times)  # Calculate the differences between consecutive timesteps
+            if len(latencies) > 0:
+                mean_latency = np.mean(latencies)  # Calculate the mean latency
+            else:
+                mean_latency = 0
+            mean_latencies[prosumer] = mean_latency
+        return mean_latencies
+
+
     def finalize(self):
         log('Finalize Collector')
+        mean_latencies = self.calculate_mean_latencies(self.stats)
+
+        # Plotting
+        prosumer_ids = list(mean_latencies.keys())
+        latencies = list(mean_latencies.values())
+
+        plt.figure(figsize=(14, 8))
+        plt.bar(prosumer_ids, latencies, color='skyblue')
+        plt.xlabel('Prosumer ID')
+        plt.ylabel('Mean Latency')
+        plt.title('Mean Latency for Each Prosumer')
+        plt.xticks(prosumer_ids)
+        plt.grid(True)
+        plt.show()
+
+        # Calculate latencies
+        latencies_data = {prosumer: np.diff(times) for prosumer, times in self.stats.items()}
+
+        # Plotting
+        plt.figure(figsize=(14, 8))
+
+        for prosumer, latencies in latencies_data.items():
+            steps = range(1, len(latencies) + 1)
+            plt.plot(steps, latencies, marker='o', label=f'Prosumer {prosumer}')
+
+        plt.xlabel('Step Number')
+        plt.ylabel('Latency')
+        plt.title('Latency Evolution for Each Prosumer Over Steps')
+        plt.legend()
+        plt.grid(True)
+        plt.show()

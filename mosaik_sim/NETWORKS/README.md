@@ -1,0 +1,2 @@
+Substitute mosaik.ini in cosima_omnetpp_project/mosaik.ini
+Substitute SimpleNetwork.ned in cosima_omnetpp_project/networks/SimpleNetwork.ned
