@@ -24,11 +24,88 @@ import inet.node.inet.StandardHost;
 import inet.visualizer.integrated.IntegratedCanvasVisualizer;
 import modules.MosaikSchedulerModule;
 import modules.MosaikScenarioManager;
-
+import inet.networklayer.ipv4.RoutingTableRecorder;
+import inet.node.ethernet.Eth10G;
+import inet.node.ethernet.Eth10M;
+import inet.node.inet.Router;
+import inet.node.inet.StandardHost;
+import lte.corenetwork.binder.LteBinder;
+import lte.corenetwork.nodes.eNodeB;
+import lte.world.radio.LteChannelControl;
+import lte.epc.PgwStandardSimplified;
+import lte.common.LteNetworkConfigurator;
+import modules.attacks.Attacked_Ue;
 
 channel MyEth10M extends EtherLink
 {
     datarate = 10Mbps;
+}
+
+network ProsumerAttackNetwork
+{
+    parameters:
+        @display("i=block/network2;bgb=991,558;bgi=background/budapest");
+    submodules:
+        scenarioManager: MosaikScenarioManager {
+
+            @display("p=97.5,317.19998");
+        }
+
+        schedulerModule: MosaikSchedulerModule {
+            @display("p=19582.516,1151.9127");
+        }
+        channelControl: LteChannelControl {
+            @display("p=50,25;is=s");
+        }
+        routingRecorder: RoutingTableRecorder {
+            @display("p=50,75;is=s");
+        }
+        configurator: LteNetworkConfigurator {
+            @display("p=50,125");
+        }
+        binder: LteBinder {
+            @display("p=50,175;is=s");
+        }
+        router: Router {
+            @display("p=321,136;i=device/smallrouter");
+        }
+        pgw: PgwStandardSimplified {
+            nodeType = "PGW";
+            @display("p=519,175;is=l");
+        }
+        eNB: eNodeB {
+            @display("p=391,259;is=vl");
+        }
+        client0: Attacked_Ue {
+            @display("p=783,278");
+        }
+        client1: Attacked_Ue {
+            @display("p=710.1813,364.41876");
+        }
+        client2: Attacked_Ue {
+            @display("p=664.1625,288.55");
+        }
+        client3: Attacked_Ue {
+            @display("p=717.64374,277.35626");
+        }
+        client4: Attacked_Ue {
+            @display("p=717.64374,277.35626");
+        }
+        client5: Attacked_Ue {
+            @display("p=717.64374,277.35626");
+        }
+        client6: Attacked_Ue {
+            @display("p=717.64374,277.35626");
+        }
+        client7: Attacked_Ue {
+            @display("p=717.64374,277.35626");
+        }
+        client8: Attacked_Ue {
+            @display("p=717.64374,277.35626");
+        }
+    connections:
+        router.pppg++ <--> Eth10G <--> pgw.filterGate;
+        pgw.pppg++ <--> Eth10G <--> eNB.ppp;
 }
 
 
@@ -52,11 +129,14 @@ network ProsumerSimNetN
             @display("p=400,2850");
         }
 
+        router: Router {
+            @display("p=577.2,638.3");
+        }
+
         mainSwitch: EtherSwitch {
             @display("p=1500,1500");
         }
 
-        // 51 individual clients
         client0: StandardHost { @display("p=200,100"); }
         client1: StandardHost { @display("p=400,100"); }
         client2: StandardHost { @display("p=600,100"); }
@@ -68,6 +148,7 @@ network ProsumerSimNetN
         client8: StandardHost { @display("p=1800,100"); }
 
     connections:
+        mainSwitch.ethg++ <--> Eth10M { length = 1000km; } <--> router.ethg++;
         client0.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
         client1.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
         client2.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
@@ -77,6 +158,51 @@ network ProsumerSimNetN
         client6.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
         client7.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
         client8.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+
+        // Additional connections based on the given connection types
+        client0.ethg++ <--> Eth10M { length = 50km; } <--> client1.ethg++;
+        client0.ethg++ <--> Eth10M { length = 50km; } <--> client2.ethg++;
+        client0.ethg++ <--> Eth10M { length = 50km; } <--> client3.ethg++;
+        client0.ethg++ <--> Eth10M { length = 50km; } <--> client4.ethg++;
+        client0.ethg++ <--> Eth10M { length = 50km; } <--> client5.ethg++;
+        client0.ethg++ <--> Eth10M { length = 50km; } <--> client6.ethg++;
+        client0.ethg++ <--> Eth10M { length = 50km; } <--> client7.ethg++;
+        client0.ethg++ <--> Eth10M { length = 50km; } <--> client8.ethg++;
+
+        client1.ethg++ <--> Eth10M { length = 50km; } <--> client2.ethg++;
+        client1.ethg++ <--> Eth10M { length = 50km; } <--> client3.ethg++;
+        client1.ethg++ <--> Eth10M { length = 50km; } <--> client4.ethg++;
+        client1.ethg++ <--> Eth10M { length = 50km; } <--> client5.ethg++;
+        client1.ethg++ <--> Eth10M { length = 50km; } <--> client6.ethg++;
+        client1.ethg++ <--> Eth10M { length = 50km; } <--> client7.ethg++;
+        client1.ethg++ <--> Eth10M { length = 50km; } <--> client8.ethg++;
+
+        client2.ethg++ <--> Eth10M { length = 50km; } <--> client3.ethg++;
+        client2.ethg++ <--> Eth10M { length = 50km; } <--> client4.ethg++;
+        client2.ethg++ <--> Eth10M { length = 50km; } <--> client5.ethg++;
+        client2.ethg++ <--> Eth10M { length = 50km; } <--> client6.ethg++;
+        client2.ethg++ <--> Eth10M { length = 50km; } <--> client7.ethg++;
+        client2.ethg++ <--> Eth10M { length = 50km; } <--> client8.ethg++;
+
+        client3.ethg++ <--> Eth10M { length = 50km; } <--> client4.ethg++;
+        client3.ethg++ <--> Eth10M { length = 50km; } <--> client5.ethg++;
+        client3.ethg++ <--> Eth10M { length = 50km; } <--> client6.ethg++;
+        client3.ethg++ <--> Eth10M { length = 50km; } <--> client7.ethg++;
+        client3.ethg++ <--> Eth10M { length = 50km; } <--> client8.ethg++;
+
+        client4.ethg++ <--> Eth10M { length = 50km; } <--> client5.ethg++;
+        client4.ethg++ <--> Eth10M { length = 50km; } <--> client6.ethg++;
+        client4.ethg++ <--> Eth10M { length = 50km; } <--> client7.ethg++;
+        client4.ethg++ <--> Eth10M { length = 50km; } <--> client8.ethg++;
+
+        client5.ethg++ <--> Eth10M { length = 50km; } <--> client6.ethg++;
+        client5.ethg++ <--> Eth10M { length = 50km; } <--> client7.ethg++;
+        client5.ethg++ <--> Eth10M { length = 50km; } <--> client8.ethg++;
+
+        client6.ethg++ <--> Eth10M { length = 50km; } <--> client7.ethg++;
+        client6.ethg++ <--> Eth10M { length = 50km; } <--> client8.ethg++;
+
+        client7.ethg++ <--> Eth10M { length = 50km; } <--> client8.ethg++;
 }
 
 network ProsumerSimNet
@@ -551,4 +677,6 @@ network SmallNetwork
         switch2.ethg++ <--> Eth10M {  length = 100km; } <--> client1.ethg++;
 
 }
+
+
 
