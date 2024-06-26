@@ -677,6 +677,3 @@ network SmallNetwork
         switch2.ethg++ <--> Eth10M {  length = 100km; } <--> client1.ethg++;
 
 }
-
-
-
