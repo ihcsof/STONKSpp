@@ -13,6 +13,6 @@ It is then suggested to create an alias for closing the 4242 port (cosima leaves
 sudo apt install lsof &
 alias x='sudo kill -9 $(sudo lsof -t -i :4242)'
 
-To launch the simulator with a preferred network you can just build both the graph (with the provided py tools or manually) and its network (using mosaik.ini and ned files, as stated both in cosima documentation and in the report below).
+To launch the simulator with a preferred network you can just build both the graph (with the provided py tools or manually) and its network (using mosaik.ini and ned files, as stated both in cosima documentation and in the report below). Then you have to either launch cosimaWorld or cosimaWorldChanging (after defining some dynamic changes in /scenario_config in the root directory)
 
 This is the detailed report: https://docs.google.com/document/d/1dhX8BoJopfouI9Ja6J47jQ3_RNiKPb7_Iijr7ihu9wE/edit?usp=sharing
