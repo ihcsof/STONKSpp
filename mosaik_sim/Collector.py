@@ -1,5 +1,4 @@
 import mosaik_api
-import logging
 import json
 from cosima_core.util.general_config import CONNECT_ATTR
 from cosima_core.util.util_functions import log
@@ -7,7 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import Counter
 
-logging.basicConfig(filename='collector.log', level=logging.INFO, format='%(asctime)s %(message)s')
+#import logging
+#logging.basicConfig(filename='collector.log', level=logging.INFO, format='%(asctime)s %(message)s')
 
 # The simulator meta data that we return in "init()":
 META = {
@@ -80,4 +80,5 @@ class Collector(mosaik_api.Simulator):
         return data
 
     def finalize(self):
+        log(str(self._msg_counter)+" messages received from "+str(self._client_name))
         log('Finalize Collector')
