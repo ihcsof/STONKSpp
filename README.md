@@ -1,6 +1,6 @@
 # This repo is under dev
 
-To use the full simulator within omnetpp (so with cosima) you have to place "graphs" and "mosaik_sim" directories in the "cosima_core" directory, to then build with the slightly modified Dockerfile provided in this repository using: docker build -t <x>:latest .
+To use the full simulator within omnetpp (so with cosima) you have to clone cosima (see cosima repo) and place "graphs" and "mosaik_sim" directories in the "cosima_core" directory, to then build with the slightly modified Dockerfile provided in this repository using: docker build -t <x>:latest .
 
 Then, once the container of cosima is built (with the modified Dockerfile and with inside our two directories), it's time to run it (mounting mosaik_sim directory to avoid losing changes in the code, or even mounting all "models" directory if also changes in the network are required): 
 
