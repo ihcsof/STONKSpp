@@ -108,6 +108,155 @@ network ProsumerAttackNetwork
         pgw.pppg++ <--> Eth10G <--> eNB.ppp;
 }
 
+network ProsumerSimNetN2
+{
+    @display("bgb=3000,3000");
+    submodules:
+        scenarioManager: MosaikScenarioManager {
+            @display("p=100,2850");
+        }
+
+        schedulerModule: MosaikSchedulerModule {
+            @display("p=200,2850");
+        }
+
+        configurator: Ipv4NetworkConfigurator {
+            @display("p=300,2850");
+        }
+
+        visualizer: IntegratedCanvasVisualizer {
+            @display("p=400,2850");
+        }
+
+        router: Router {
+            @display("p=577.2,638.3");
+        }
+
+        mainSwitch: EtherSwitch {
+            @display("p=1500,1500");
+        }
+
+        traffic_device_0: StandardHost {
+            @display("p=714.89,206.998");
+        }
+
+        client0: StandardHost { @display("p=200,100"); }
+        client1: StandardHost { @display("p=400,100"); }
+        client2: StandardHost { @display("p=600,100"); }
+        client3: StandardHost { @display("p=800,100"); }
+        client4: StandardHost { @display("p=1000,100"); }
+        client5: StandardHost { @display("p=1200,100"); }
+        client6: StandardHost { @display("p=1400,100"); }
+        client7: StandardHost { @display("p=1600,100"); }
+        client8: StandardHost { @display("p=1800,100"); }
+        client9: StandardHost { @display("p=2000,100"); }
+        client10: StandardHost { @display("p=2200,100"); }
+
+    connections:
+        mainSwitch.ethg++ <--> Eth10M { length = 1000km; } <--> router.ethg++;
+        traffic_device_0.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client0.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client1.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client2.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client3.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client4.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client5.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client6.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client7.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client8.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client9.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client10.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+}
+
+network ProsumerSimNetN3
+{
+    @display("bgb=3000,3000");
+    submodules:
+        scenarioManager: MosaikScenarioManager {
+            @display("p=100,2850");
+        }
+
+        schedulerModule: MosaikSchedulerModule {
+            @display("p=200,2850");
+        }
+
+        configurator: Ipv4NetworkConfigurator {
+            @display("p=300,2850");
+        }
+
+        visualizer: IntegratedCanvasVisualizer {
+            @display("p=400,2850");
+        }
+
+        router: Router {
+            @display("p=577.2,638.3");
+        }
+
+        mainSwitch: EtherSwitch {
+            @display("p=1500,1500");
+        }
+
+        switch1: EtherSwitch {
+            @display("p=1600,1600");
+        }
+
+        switch2: EtherSwitch {
+            @display("p=1700,1600");
+        }
+
+        switch3: EtherSwitch {
+            @display("p=1800,1600");
+        }
+
+        traffic_device_0: StandardHost {
+            @display("p=714.89,206.998");
+        }
+
+        client0: StandardHost { @display("p=200,100"); }
+        client1: StandardHost { @display("p=400,100"); }
+        client2: StandardHost { @display("p=600,100"); }
+        client3: StandardHost { @display("p=800,100"); }
+        client4: StandardHost { @display("p=1000,100"); }
+        client5: StandardHost { @display("p=1200,100"); }
+        client6: StandardHost { @display("p=1400,100"); }
+        client7: StandardHost { @display("p=1600,100"); }
+        client8: StandardHost { @display("p=1800,100"); }
+        client9: StandardHost { @display("p=2000,100"); }
+        client10: StandardHost { @display("p=2200,100"); }
+        client11: StandardHost { @display("p=2400,100"); }
+        client12: StandardHost { @display("p=2600,100"); }
+        client13: StandardHost { @display("p=2800,100"); }
+        client14: StandardHost { @display("p=3000,100"); }
+        client15: StandardHost { @display("p=3200,100"); }
+        client16: StandardHost { @display("p=3400,100"); }
+
+    connections:
+        mainSwitch.ethg++ <--> Eth10M { length = 1000km; } <--> router.ethg++;
+        traffic_device_0.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client16.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client15.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client14.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+        client13.ethg++ <--> MyEth10M { length = 100m; } <--> mainSwitch.ethg++;
+
+        switch1.ethg++ <--> MyEth10M { length = 100m; } <--> client13.ethg++;
+        client0.ethg++ <--> MyEth10M { length = 100m; } <--> switch1.ethg++;
+        client1.ethg++ <--> MyEth10M { length = 100m; } <--> switch1.ethg++;
+        client2.ethg++ <--> MyEth10M { length = 100m; } <--> switch1.ethg++;
+        client3.ethg++ <--> MyEth10M { length = 100m; } <--> switch1.ethg++;
+
+        switch2.ethg++ <--> MyEth10M { length = 100m; } <--> client14.ethg++;
+        client4.ethg++ <--> MyEth10M { length = 100m; } <--> switch2.ethg++;
+        client5.ethg++ <--> MyEth10M { length = 100m; } <--> switch2.ethg++;
+        client6.ethg++ <--> MyEth10M { length = 100m; } <--> switch2.ethg++;
+
+        switch3.ethg++ <--> MyEth10M { length = 100m; } <--> client15.ethg++;
+        client7.ethg++ <--> MyEth10M { length = 100m; } <--> switch3.ethg++;
+        client8.ethg++ <--> MyEth10M { length = 100m; } <--> switch3.ethg++;
+        client9.ethg++ <--> MyEth10M { length = 100m; } <--> switch3.ethg++;
+        client10.ethg++ <--> MyEth10M { length = 100m; } <--> switch3.ethg++;
+        client11.ethg++ <--> MyEth10M { length = 100m; } <--> switch3.ethg++;
+        client12.ethg++ <--> MyEth10M { length = 100m; } <--> switch3.ethg++;
+}
 
 network ProsumerSimNetN
 {
