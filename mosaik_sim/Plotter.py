@@ -17,7 +17,7 @@ def read_log_files(log_directory):
 
 def calculate_mean_latencies(data):
     mean_latencies = {}
-    for prosumer, times in data.items():3
+    for prosumer, times in data.items():
         latencies = np.diff(times)  # Calculate the differences between consecutive timesteps
         if len(latencies) > 0:
             mean_latency = np.mean(latencies)  # Calculate the mean latency
@@ -33,7 +33,7 @@ def plot_mean_latencies(mean_latencies):
     plt.figure(figsize=(14, 8))
     plt.bar(prosumer_ids, latencies, color='skyblue')
     plt.xlabel('Prosumer ID')
-    plt.ylabel('Mean Latency')
+    plt.ylabel('Mean Latency (ms)')
     plt.title('Mean Latency for Each Prosumer')
     plt.xticks(prosumer_ids)
     plt.grid(True)
@@ -47,7 +47,7 @@ def plot_latency_evolution(data):
         plt.plot(steps, latencies, marker='o', label=f'Prosumer {prosumer}')
 
     plt.xlabel('Step Number')
-    plt.ylabel('Latency')
+    plt.ylabel('Latency (ms)')
     plt.title('Latency Evolution for Each Prosumer Over Steps')
     plt.legend()
     plt.grid(True)
