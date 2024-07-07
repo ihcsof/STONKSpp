@@ -35,7 +35,7 @@ class Simulator(Simulation):
         self.simulation_message = ""
         self.force_stop = False
 
-        self.MGraph = Graph.Load('Pool_reduced.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('P2P_model_reduced.pyp2p', format='picklez')
 
         self.timeout = 3600  # UNUSED
         self.Interval = 3  # in s
@@ -65,7 +65,7 @@ class Simulator(Simulation):
         self._output_time = 0
         self.has_finished = False 
         self.step_Size = 1000
-        
+        self.scale_factor = 1
         
         # Optimization model
         self.players = {}
@@ -444,7 +444,7 @@ class PlayerUpdateMsg(Event):
         start_time = time.time()
         sim.temps[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
         end_time = time.time()
-        real_time = end_time - start_time
+        real_time = (end_time - start_time) * sim.scale_factor
 
         sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
 
