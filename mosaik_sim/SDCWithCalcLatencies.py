@@ -65,7 +65,7 @@ class Simulator(Simulation):
         self._output_time = 0
         self.has_finished = False 
         self.step_Size = 1000
-        
+        self.scale_factor = 1
         
         # Optimization model
         self.players = {}
@@ -441,7 +441,11 @@ class PlayerUpdateMsg(Event):
         # reset the number of partners that have updated
         sim.n_updated_partners[self.i] = 0
 
+        start_time = time.time()
         sim.temps[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
+        end_time = time.time()
+        real_time = (end_time - start_time) * sim.scale_factor
+
         sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
 
         # schedule optimization for partners
@@ -450,7 +454,7 @@ class PlayerUpdateMsg(Event):
             ratio = sim.n_optimized_partners[j] / sim.npartners[j]
             delay = 10 - (ratio * (10 - 6))
             sim.schedule(int(delay), PlayerOptimizationMsg(j))
-            sim._msg_outbox.append({'src': self.i, 'dest': j, 'trade':  sim.temps[j, self.i]})
+            sim._msg_outbox.append({'src': self.i, 'dest': j, 'real_time' : real_time, 'trade':  sim.temps[j, self.i]})
 
 class CheckStateEvent(Event):
     def __init__(self):

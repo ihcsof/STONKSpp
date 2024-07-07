@@ -29,6 +29,7 @@ NUM_PROSUMERS = 8
 SIM_CONFIG = {
     'Simulator': {
         'python': 'SimulatorDiscreteCosima:Simulator'
+        #'python': 'SDCWithCalcLatencies:Simulator'
     },
     'Collector': {
         'python': 'Collector:Collector',
@@ -47,7 +48,7 @@ omnet_process = start_omnet(START_MODE, NETWORK)
 check_omnet_connection(cfg.PORT)
 
 # Create mosaik World
-world = mosaik.World(SIM_CONFIG, time_resolution=0.001, cache=False)
+world = mosaik.World(SIM_CONFIG, time_resolution=1, cache=False)
 
 client_attribute_mapping = {}
 for i in range(0, NUM_PROSUMERS + 1):

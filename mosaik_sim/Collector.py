@@ -5,6 +5,7 @@ from cosima_core.util.util_functions import log
 import matplotlib.pyplot as plt
 import numpy as np
 from collections import Counter
+import random
 
 #import logging
 #logging.basicConfig(filename='collector.log', level=logging.INFO, format='%(asctime)s %(message)s')
@@ -32,6 +33,7 @@ class Collector(mosaik_api.Simulator):
         self._outbox = []
         self._output_time = 0
         self._simulator = None
+        self._nMessagesFrom = {}
 
     def init(self, sid, **sim_params):
         self._sid = sid
@@ -40,8 +42,9 @@ class Collector(mosaik_api.Simulator):
             self._client_name = sim_params['client_name']
             # the prosumer that this collector represents
             self.whoami = int(self._client_name[len("client"):])
-            # log filename
+            # log filenames
             self.log_filename = f'collectorLogs/collector_log_{self.whoami}.log'
+            self.log_filename_msgs = f'messagesLogs/message_log_{self.whoami}.log'
         if 'simulator' in sim_params.keys():
             self._simulator = sim_params['simulator']
         return META
@@ -53,20 +56,44 @@ class Collector(mosaik_api.Simulator):
         # Extracting the content of the message received
         content = inputs[f'Collector-{self.whoami}'][f'message_with_delay_for_client{self.whoami}']["CommunicationSimulator-0.CommunicationSimulator"][0]["content"]
 
-        # Log the data to the file
+        # Log the latency data to the file
         tosave = json.loads(content)
         with open(self.log_filename, 'a') as f:
             for content_item in tosave:
+                # with calc sim_time (if using SDCWithCalcLatencies)
+                #f.write(f'{content_item["src"]},{time + content_item["real_time"]}\n')
                 f.write(f'{content_item["src"]},{time}\n')
 
-        self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
+        # Count the number of messages received from each prosumer
+        for content_item in tosave:
+            pros = content_item["dest"]
+            if pros in self._nMessagesFrom:
+                self._nMessagesFrom[pros] += 1
+            else:
+                self._nMessagesFrom[pros] = 1
+
+        # DATA LOSS Retransmit the message with a probability of:
+        loss_prob = 0
+
+        if random.random() < loss_prob:
+            log("Collector: Data loss: retransmitting message")
+            self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
                              'max_advance': max_advance,
                              'sim_time': time + 1,
                              'sender': self._client_name,
-                             'receiver': self._simulator,
+                             'receiver': self._client_name,
                              'content': content,
                              'creation_time': time,
                              })
+        else:
+            self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
+                                'max_advance': max_advance,
+                                'sim_time': time + 1,
+                                'sender': self._client_name,
+                                'receiver': self._simulator,
+                                'content': content,
+                                'creation_time': time,
+                                })
         self._msg_counter += 1
         self._output_time = time + 1
         return None
@@ -81,4 +108,10 @@ class Collector(mosaik_api.Simulator):
 
     def finalize(self):
         log(str(self._msg_counter)+" messages received from "+str(self._client_name))
+        log("Messages received from each prosumer:")
+        log(str(self._nMessagesFrom))
+        # log the number of messages received from each prosumer to the file
+        with open(self.log_filename_msgs, 'w') as f:
+            for prosumer, nMessages in self._nMessagesFrom.items():
+                f.write(f'{prosumer},{nMessages}\n')
         log('Finalize Collector')

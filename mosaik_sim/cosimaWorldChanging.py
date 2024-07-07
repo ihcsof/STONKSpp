@@ -20,16 +20,17 @@ import cosima_core.util.general_config as cfg
 import mosaik
 import mosaik.util
 
-SIMULATION_END = 99999999
+SIMULATION_END = 999999999
 START_MODE = 'cmd'
-#NETWORK = 'ProsumerSimNetN'
-NETWORK = 'ProsumerAttackNetwork'
-NUM_PROSUMERS = 8
+#NETWORK = 'ProsumerAttackNetwork'
+NETWORK = 'ProsumerSimNetN2'
+NUM_PROSUMERS = 10
 
 # Simulation configuration -> tells mosaik where to find the simulators
 SIM_CONFIG = {
     'Simulator': {
-        'python': 'SimulatorDiscreteCosima:Simulator'
+        #'python': 'SimulatorDiscreteCosima:Simulator'
+        'python': 'SDCWithCalcLatencies:Simulator'
     },
     'Collector': {
         'python': 'Collector:Collector',
@@ -62,7 +63,7 @@ prosumer_sim = world.start('Simulator',
                             step_size=args.step_size).ProsumerSim()
 
 comm_sim = world.start('CommunicationSimulator',
-                       step_size=0.001,
+                       step_size=1,
                        port=cfg.PORT,
                        client_attribute_mapping=client_attribute_mapping).CommunicationModel()
 
@@ -87,7 +88,7 @@ profiler.enable()
 
 # set initial events
 world.set_initial_event(prosumer_sim.sid, time=0)
-world.set_initial_event(ict_controller.sid, time=1000)
+world.set_initial_event(ict_controller.sid)
 
 world.run(until=SIMULATION_END)
 log("end of process")
@@ -96,12 +97,11 @@ stop_omnet(omnet_process)
 
 profiler.disable()
 
-# Generate a random integer and append to the filename
-random_number = random.randint(1000, 9999)
+'''random_number = random.randint(1000, 9999)
 filename = f'profiling_output_{random_number}.txt'
 with open(filename, 'w') as f:
     stats = pstats.Stats(profiler, stream=f)
     stats.sort_stats('cumulative')
     stats.print_stats()
 
-print(f"Profiling results are written to '{filename}'.")
+print(f"Profiling results are written to '{filename}'.")'''
