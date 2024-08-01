@@ -1,0 +1,10 @@
+{
+    "name": "MyNetw",
+    "deviceName": "mySwitch",
+    "trafficDevice": "yes",
+    "nProsumers": 5,
+    "cableLen": 80,
+    "commType": "MyEth10M",
+    "routerCommType": "Eth10M",
+    "routerCableLen": "100"
+}
