@@ -23,7 +23,7 @@ class Simulator(Simulation):
         self.simulation_message = ""
         self.force_stop = False
 
-        self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('graphs/examples/Pool_reduced.pyp2p', format='picklez')
 
         self.timeout = 3600  # UNUSED
         self.Interval = 3  # in s
@@ -276,10 +276,15 @@ class PlayerOptimizationMsg(Event):
     def __init__(self, player_i):
         super().__init__()
         self.i = player_i
+        self.wait_less = 0
+        self.wait_more = 0
     
     def process(self, sim: Simulator):
         # if not all partners have optimized, skip the turn
-        if sim.n_optimized_partners[self.i] < sim.npartners[self.i]:
+        if sim.n_optimized_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
+            return
+
+        if random.random() < self.wait_more:
             return
 
         sim.n_optimized_partners[self.i] = 0 # Reset the number of partners that have optimized
@@ -291,7 +296,7 @@ class PlayerOptimizationMsg(Event):
             if j not in sim.partners[self.i]:
                 sim.Trades[j] = original_values[j]
 
-        sim.Trades[:, sim.partners[self.i]] = sim.temps[:, sim.partners[self.i]]
+        sim.Trades[self.i, sim.partners[self.i]] = sim.temps[self.i, sim.partners[self.i]]
 
         sim.prim = sum([sim.players[j].Res_primal for j in sim.partners[self.i]])
         sim.dual = sum([sim.players[j].Res_dual for j in sim.partners[self.i]])
@@ -309,10 +314,15 @@ class PlayerUpdateMsg(Event):
     def __init__(self, player_i):
         super().__init__()
         self.i = player_i
+        self.wait_less = 0
+        self.wait_more = 0
     
     def process(self, sim: Simulator):
         # if not all partners have updated, skip the turn
-        if sim.n_updated_partners[self.i] < sim.npartners[self.i]:
+        if sim.n_updated_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
+            return
+        
+        if random.random() < self.wait_more:
             return
         
         # reset the number of partners that have updated
