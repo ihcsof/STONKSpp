@@ -35,7 +35,7 @@ class Collector(mosaik_api.Simulator):
         self._simulator = None
         self._nMessagesFrom = {}
         # loss prob for each prosumer (add if needed)
-        defined_loss_prob = [0]
+        defined_loss_prob = [0, 0.4, 0.1, 0, 0.01]
         self.loss_prob = np.zeros(100)
         self.loss_prob[:len(defined_loss_prob)] = defined_loss_prob
 
@@ -79,6 +79,7 @@ class Collector(mosaik_api.Simulator):
         # Easily erase data loss probabilities
         # loss_prob = []
         if random.random() < self.loss_prob[self.whoami]:
+            # (1) Retransimmiting:
             log("Collector: Data loss: retransmitting message")
             self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
                              'max_advance': max_advance,
@@ -88,6 +89,17 @@ class Collector(mosaik_api.Simulator):
                              'content': content,
                              'creation_time': time,
                              })
+
+            # (2) Lost:
+            '''log("Collector: Data loss: lost message")
+            self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
+                                'max_advance': max_advance,
+                                'sim_time': time + 1,
+                                'sender': self._client_name,
+                                'receiver': self._simulator,
+                                'content': "[{\"src\": -1, \"dest\": -1, \"trade\": -1}]",
+                                'creation_time': time,
+                                })'''
         else:
             self._outbox.append({'msg_id': f'{self._client_name}_{self._msg_counter}',
                                 'max_advance': max_advance,

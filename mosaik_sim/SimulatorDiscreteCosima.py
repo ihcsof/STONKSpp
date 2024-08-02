@@ -15,6 +15,7 @@ META = {
 import copy
 import json
 import sys
+import random
 import time
 import pandas as pd
 import numpy as np
@@ -65,7 +66,6 @@ class Simulator(Simulation):
         self._output_time = 0
         self.has_finished = False 
         self.step_Size = 1000
-        
         
         # Optimization model
         self.players = {}
@@ -352,6 +352,8 @@ class Simulator(Simulation):
         data = json.loads(self._msg_inbox)
         src_set = set() # set due to presence of possible duplicates
         for message in data:
+            if message['dest'] == -1: # lost message
+                return False
             if message['dest'] == agent:
                 src_set.add(message['src'])
         
@@ -397,14 +399,19 @@ class PlayerOptimizationMsg(Event):
     def __init__(self, player_i):
         super().__init__()
         self.i = player_i
+        self.wait_less = 0 # [0-npart]
+        self.wait_more = 0 # [0-1]
     
     def process(self, sim: Simulator):
         # if not all partners have optimized, skip the turn
-        if sim.n_optimized_partners[self.i] < sim.npartners[self.i]:
+        if sim.n_optimized_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
             return
 
         # if I haven't received all the messages yet, skip the turn
         if not sim.check_partners(self.i):
+            return
+
+        if random.random() < self.wait_more:
             return
 
         sim.n_optimized_partners[self.i] = 0 # Reset the number of partners that have optimized
@@ -432,10 +439,15 @@ class PlayerUpdateMsg(Event):
     def __init__(self, player_i):
         super().__init__()
         self.i = player_i
+        self.wait_less = 0 # [0-npart]
+        self.wait_more = 0 # [0-1]
     
     def process(self, sim: Simulator):
         # if not all partners have updated, skip the turn
-        if sim.n_updated_partners[self.i] < sim.npartners[self.i]:
+        if sim.n_updated_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
+            return
+
+        if random.random() < self.wait_more:
             return
         
         # reset the number of partners that have updated

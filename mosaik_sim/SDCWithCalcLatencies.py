@@ -16,6 +16,7 @@ import copy
 import json
 import sys
 import time
+import random
 import pandas as pd
 import numpy as np
 from igraph import Graph, plot
@@ -35,9 +36,9 @@ class Simulator(Simulation):
         self.simulation_message = ""
         self.force_stop = False
 
-        self.MGraph = Graph.Load('P2P_model_reduced.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('Pool_reduced.pyp2p', format='picklez')
 
-        self.timeout = 3600  # UNUSED
+        self.timeout = 3600000  # UNUSED
         self.Interval = 3  # in s
         # Default optimization parameters
         self.Add_Commission_Fees = 'Yes'
@@ -49,7 +50,7 @@ class Simulator(Simulation):
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 2000
+        self.maximum_iteration = 2000000
         self.penaltyfactor = 0.01
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
@@ -65,7 +66,7 @@ class Simulator(Simulation):
         self._output_time = 0
         self.has_finished = False 
         self.step_Size = 1000
-        self.scale_factor = 1
+        self.scale_factor = 10
         
         # Optimization model
         self.players = {}
@@ -352,6 +353,8 @@ class Simulator(Simulation):
         data = json.loads(self._msg_inbox)
         src_set = set() # set due to presence of possible duplicates
         for message in data:
+            if message['dest'] == -1: # lost message
+                return False
             if message['dest'] == agent:
                 src_set.add(message['src'])
         
@@ -397,14 +400,19 @@ class PlayerOptimizationMsg(Event):
     def __init__(self, player_i):
         super().__init__()
         self.i = player_i
+        self.wait_less = 0
+        self.wait_more = 0
     
     def process(self, sim: Simulator):
         # if not all partners have optimized, skip the turn
-        if sim.n_optimized_partners[self.i] < sim.npartners[self.i]:
+        if sim.n_optimized_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
             return
 
         # if I haven't received all the messages yet, skip the turn
         if not sim.check_partners(self.i):
+            return
+
+        if random.random() < self.wait_more:
             return
 
         sim.n_optimized_partners[self.i] = 0 # Reset the number of partners that have optimized
@@ -432,10 +440,15 @@ class PlayerUpdateMsg(Event):
     def __init__(self, player_i):
         super().__init__()
         self.i = player_i
+        self.wait_less = 0
+        self.wait_more = 0
     
     def process(self, sim: Simulator):
         # if not all partners have updated, skip the turn
-        if sim.n_updated_partners[self.i] < sim.npartners[self.i]:
+        if sim.n_updated_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
+            return
+
+        if random.random() < self.wait_more:
             return
         
         # reset the number of partners that have updated
