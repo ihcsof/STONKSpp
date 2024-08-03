@@ -6,5 +6,7 @@
     "cableLen": 80,
     "commType": "MyEth10M",
     "routerCommType": "Eth10M",
-    "routerCableLen": "100"
+    "routerCableLen": "100",
+    "randomizer": "yes",
+    "redundancy": 50
 }
