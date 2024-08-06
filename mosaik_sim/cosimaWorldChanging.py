@@ -20,17 +20,17 @@ import cosima_core.util.general_config as cfg
 import mosaik
 import mosaik.util
 
-SIMULATION_END = 999999999
+SIMULATION_END = 99999999
 START_MODE = 'cmd'
 #NETWORK = 'ProsumerAttackNetwork'
 NETWORK = 'ProsumerSimNetN2'
-NUM_PROSUMERS = 10
+NUM_PROSUMERS = 8
 
 # Simulation configuration -> tells mosaik where to find the simulators
 SIM_CONFIG = {
     'Simulator': {
-        #'python': 'SimulatorDiscreteCosima:Simulator'
-        'python': 'SDCWithCalcLatencies:Simulator'
+        'python': 'SimulatorDiscreteCosima:Simulator'
+        #'python': 'SDCWithCalcLatencies:Simulator'
     },
     'Collector': {
         'python': 'Collector:Collector',
@@ -45,6 +45,7 @@ SIM_CONFIG = {
 
 parser = argparse.ArgumentParser(description='Run simulation with specified prosumer step size.')
 parser.add_argument('--step-size', type=int, default=1, help='Step size for the prosumer simulator')
+parser.add_argument('--run', type=int, default=1, help='Loop iteration index (default: 0)')
 
 args = parser.parse_args()
 
@@ -63,7 +64,7 @@ prosumer_sim = world.start('Simulator',
                             step_size=args.step_size).ProsumerSim()
 
 comm_sim = world.start('CommunicationSimulator',
-                       step_size=1,
+                       step_size=0.001,
                        port=cfg.PORT,
                        client_attribute_mapping=client_attribute_mapping).CommunicationModel()
 
@@ -78,13 +79,13 @@ world.connect(comm_sim, ict_controller, f'ctrl_message')
 
 collectors = [None] * NUM_PROSUMERS
 for i in range(0, NUM_PROSUMERS):
-    collectors[i] = world.start('Collector', client_name=f'client{i}', simulator=f'client{NUM_PROSUMERS}').Collector()
+    collectors[i] = world.start('Collector', client_name=f'client{i}', simulator=f'client{NUM_PROSUMERS}', run=args.run).Collector()
 
     world.connect(collectors[i], comm_sim, f'message', weak=True)
     world.connect(comm_sim, collectors[i], client_attribute_mapping[f'client{i}'])
 
 profiler = cProfile.Profile()
-profiler.enable()
+profiler.enable(),
 
 # set initial events
 world.set_initial_event(prosumer_sim.sid, time=0)

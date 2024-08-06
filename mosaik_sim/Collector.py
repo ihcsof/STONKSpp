@@ -41,13 +41,18 @@ class Collector(mosaik_api.Simulator):
 
     def init(self, sid, **sim_params):
         self._sid = sid
+        # id of the run among multiple runs (see runs.py)
+        if 'run' in sim_params.keys():
+            self._run_id = sim_params['run']
+        else:
+            self._run_id = 1
         if 'client_name' in sim_params.keys():
             self.meta['models']['Collector']['attrs'].append(f'{CONNECT_ATTR}{sim_params["client_name"]}')
             self._client_name = sim_params['client_name']
             # the prosumer that this collector represents
             self.whoami = int(self._client_name[len("client"):])
             # log filenames
-            self.log_filename = f'collectorLogs/collector_log_{self.whoami}.log'
+            self.log_filename = f'collectorLogs{self._run_id}/collector_log_{self.whoami}.log'
             self.log_filename_msgs = f'messagesLogs/message_log_{self.whoami}.log'
         if 'simulator' in sim_params.keys():
             self._simulator = sim_params['simulator']
@@ -69,12 +74,12 @@ class Collector(mosaik_api.Simulator):
                 f.write(f'{content_item["src"]},{time}\n')
 
         # Count the number of messages received from each prosumer
-        for content_item in tosave:
+        '''for content_item in tosave:
             pros = content_item["dest"]
             if pros in self._nMessagesFrom:
                 self._nMessagesFrom[pros] += 1
             else:
-                self._nMessagesFrom[pros] = 1
+                self._nMessagesFrom[pros] = 1'''
 
         # Easily erase data loss probabilities
         # loss_prob = []

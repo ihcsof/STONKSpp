@@ -20,7 +20,7 @@ import cosima_core.util.general_config as cfg
 import mosaik
 import mosaik.util
 
-SIMULATION_END = 39000
+SIMULATION_END = 999999999
 START_MODE = 'cmd'
 NETWORK = 'ProsumerSimNetN'
 NUM_PROSUMERS = 8
@@ -41,6 +41,8 @@ SIM_CONFIG = {
 
 parser = argparse.ArgumentParser(description='Run simulation with specified prosumer step size.')
 parser.add_argument('--step-size', type=int, default=1, help='Step size for the prosumer simulator')
+# for multiple run purposes (index of the run loop: see runs.py)
+parser.add_argument('--run', type=int, default=1, help='Loop iteration index (default: 0)')
 
 args = parser.parse_args()
 
@@ -59,7 +61,7 @@ prosumer_sim = world.start('Simulator',
                             step_size=args.step_size).ProsumerSim()
 
 comm_sim = world.start('CommunicationSimulator',
-                       step_size=0.0001,
+                       step_size=0.01,
                        port=cfg.PORT,
                        client_attribute_mapping=client_attribute_mapping).CommunicationModel()
 
@@ -68,7 +70,7 @@ world.connect(comm_sim, prosumer_sim, client_attribute_mapping[f'client{NUM_PROS
 
 collectors = [None] * NUM_PROSUMERS
 for i in range(0, NUM_PROSUMERS):
-    collectors[i] = world.start('Collector', client_name=f'client{i}', simulator=f'client{NUM_PROSUMERS}').Collector()
+    collectors[i] = world.start('Collector', client_name=f'client{i}', simulator=f'client{NUM_PROSUMERS}', run=args.run).Collector()
 
     world.connect(collectors[i], comm_sim, f'message', weak=True)
     world.connect(comm_sim, collectors[i], client_attribute_mapping[f'client{i}'])
@@ -80,6 +82,7 @@ profiler.enable()
 world.set_initial_event(prosumer_sim.sid, time=0)
 
 log(f'run until {SIMULATION_END}')
+print(args)
 world.run(until=SIMULATION_END)
 log("end of process")
 sleep(5)
@@ -88,11 +91,11 @@ stop_omnet(omnet_process)
 profiler.disable()
 
 # Generate a random integer and append to the filename
-random_number = random.randint(1000, 9999)
+'''random_number = random.randint(1000, 9999)
 filename = f'profiling_output_{random_number}.txt'
 with open(filename, 'w') as f:
     stats = pstats.Stats(profiler, stream=f)
     stats.sort_stats('cumulative')
     stats.print_stats()
 
-print(f"Profiling results are written to '{filename}'.")
+print(f"Profiling results are written to '{filename}'.")'''
