@@ -29,8 +29,8 @@ NUM_PROSUMERS = 8
 # Simulation configuration -> tells mosaik where to find the simulators
 SIM_CONFIG = {
     'Simulator': {
-        'python': 'SimulatorDiscreteCosima:Simulator'
-        #'python': 'SDCWithCalcLatencies:Simulator'
+        #'python': 'SimulatorDiscreteCosima:Simulator'
+        'python': 'SDCWithCalcLatencies:Simulator'
     },
     'Collector': {
         'python': 'Collector:Collector',
@@ -61,7 +61,8 @@ for i in range(0, NUM_PROSUMERS + 1):
 
 prosumer_sim = world.start('Simulator',
                             client_name=f'client{NUM_PROSUMERS}',
-                            step_size=args.step_size).ProsumerSim()
+                            step_size=args.step_size,
+                            run=args.run).ProsumerSim()
 
 comm_sim = world.start('CommunicationSimulator',
                        step_size=0.001,

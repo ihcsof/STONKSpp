@@ -1,6 +1,6 @@
 import subprocess
 
-script_to_run = 'cosimaWorld.py'
+script_to_run = 'cosimaWorldChanging.py'
 
 for i in range(1, 3):
     print(f"Running iteration {i}")

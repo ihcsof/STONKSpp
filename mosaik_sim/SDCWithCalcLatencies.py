@@ -25,6 +25,7 @@ from cosimaSim import Simulation, Event
 import mosaik_api_v3 as mosaik
 from cosima_core.util.general_config import CONNECT_ATTR
 from cosima_core.util.util_functions import log
+import re
 
 #import logging
 #logging.basicConfig(filename='sim.log', level=logging.DEBUG, format='%(asctime)s %(message)s')
@@ -34,9 +35,9 @@ class Simulator(Simulation):
         super().__init__(META)
         self.simulation_on = False
         self.simulation_message = ""
-        self.force_stop = False
+        self.force_stop = True
 
-        self.MGraph = Graph.Load('Pool_reduced.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('P2P_model_reduced.pyp2p', format='picklez')
 
         self.timeout = 3600000  # UNUSED
         self.Interval = 3  # in s
@@ -66,7 +67,7 @@ class Simulator(Simulation):
         self._output_time = 0
         self.has_finished = False 
         self.step_Size = 1000
-        self.scale_factor = 10
+        self.scale_factor = 1
         
         # Optimization model
         self.players = {}
@@ -102,6 +103,17 @@ class Simulator(Simulation):
             print("Config file not found.")
         except json.JSONDecodeError:
             print("Invalid JSON format in config file.")
+        
+    def get_multi_msg(self, msg_id):
+        # Regex to find the last number after the second underscore
+        match = re.match(r"^(.*?_\d+)(?:_(\d+))?$", msg_id)
+        
+        if match:
+            last_number = match.group(2)  # the last number after the second underscore
+            return int(last_number) if last_number is not None else 0
+        else:
+            # In case the msg_id doesn't match the expected pattern
+            raise ValueError("msg_id format is incorrect")
     
     def Parameters_Test(self):
         if not self.location == 'local':
@@ -176,8 +188,12 @@ class Simulator(Simulation):
             self.n_optimized_partners[vertex.index] = 0
             self.n_updated_partners[vertex.index] = len(self.partners[vertex.index])
 
+        print(self.partners)
+
     def init(self, sid, **sim_params):
         self._sid = sid
+        if 'run' in sim_params.keys():
+            self._run_id = sim_params['run']
         if 'client_name' in sim_params.keys():
             self.meta['models']['ProsumerSim']['attrs'].append(f'{CONNECT_ATTR}{sim_params["client_name"]}')
             self._client_name = sim_params['client_name']
@@ -198,7 +214,17 @@ class Simulator(Simulation):
                 data = self._msg_inbox if isinstance(self._msg_inbox, list) else json.loads(self._msg_inbox)
 
                 # Load the new data from the inputs dictionary
-                new_data = json.loads(inputs["Simulator-0"][f'message_with_delay_for_client{self.nag}']['CommunicationSimulator-0.CommunicationSimulator'][0]['content'])
+                received = inputs["Simulator-0"][f'message_with_delay_for_client{self.nag}']['CommunicationSimulator-0.CommunicationSimulator'][0]
+                msg_id = received['msg_id']
+                lat = self.get_multi_msg(msg_id)
+                start_time = received['creation_time']
+                new_data = json.loads(received['content'])
+
+                # Save latency logs (aggregated)
+                with open(f'collectorLogs/collector_log_{self._run_id }', 'a') as f:
+                    for content_item in new_data:
+                        f.write(f'{msg_id},{((time + lat) - start_time) + (content_item["real_time"] * 1000)},{content_item["trade"]},{content_item["prim"]},{content_item["dual"]}\n')
+                        #f.write(f'{msg_id},{time + lat},{start_time},{content_item["real_time"]},{content_item["trade"]}\n')
 
                 # Update self._msg_inbox with the updated list
                 data.extend(new_data)
@@ -296,7 +322,7 @@ class Simulator(Simulation):
 
         if self.force_stop:
             print("Simulation stopped by parameter change.")
-            return
+            exit()
         
         while(True):
             print("What do you want to do next?")
@@ -467,7 +493,7 @@ class PlayerUpdateMsg(Event):
             ratio = sim.n_optimized_partners[j] / sim.npartners[j]
             delay = 10 - (ratio * (10 - 6))
             sim.schedule(int(delay), PlayerOptimizationMsg(j))
-            sim._msg_outbox.append({'src': self.i, 'dest': j, 'real_time' : real_time, 'trade':  sim.temps[j, self.i]})
+            sim._msg_outbox.append({'src': self.i, 'dest': j, 'real_time' : real_time, 'trade':  sim.temps[j, self.i], 'prim': sim.prim, 'dual': sim.dual})
 
 class CheckStateEvent(Event):
     def __init__(self):

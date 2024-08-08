@@ -28,8 +28,8 @@ NUM_PROSUMERS = 8
 # Simulation configuration -> tells mosaik where to find the simulators
 SIM_CONFIG = {
     'Simulator': {
-        'python': 'SimulatorDiscreteCosima:Simulator'
-        #'python': 'SDCWithCalcLatencies:Simulator'
+        #'python': 'SimulatorDiscreteCosima:Simulator'
+        'python': 'SDCWithCalcLatencies:Simulator'
     },
     'Collector': {
         'python': 'Collector:Collector',
@@ -58,10 +58,11 @@ for i in range(0, NUM_PROSUMERS + 1):
 
 prosumer_sim = world.start('Simulator',
                             client_name=f'client{NUM_PROSUMERS}',
-                            step_size=args.step_size).ProsumerSim()
+                            step_size=args.step_size,
+                            run=args.run).ProsumerSim()
 
 comm_sim = world.start('CommunicationSimulator',
-                       step_size=0.01,
+                       step_size=1,
                        port=cfg.PORT,
                        client_attribute_mapping=client_attribute_mapping).CommunicationModel()
 
@@ -84,6 +85,7 @@ world.set_initial_event(prosumer_sim.sid, time=0)
 log(f'run until {SIMULATION_END}')
 print(args)
 world.run(until=SIMULATION_END)
+#world.run(until=SIMULATION_END, rt_factor=1/10000)
 log("end of process")
 sleep(5)
 stop_omnet(omnet_process)

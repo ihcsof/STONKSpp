@@ -34,7 +34,7 @@ class Simulator(Simulation):
         super().__init__(META)
         self.simulation_on = False
         self.simulation_message = ""
-        self.force_stop = False
+        self.force_stop = True
 
         self.MGraph = Graph.Load('P2P_model_reduced.pyp2p', format='picklez')
 
@@ -295,7 +295,7 @@ class Simulator(Simulation):
 
         if self.force_stop:
             print("Simulation stopped by parameter change.")
-            return
+            exit()
         
         while(True):
             print("What do you want to do next?")
