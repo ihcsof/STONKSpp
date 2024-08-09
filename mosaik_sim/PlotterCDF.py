@@ -17,7 +17,8 @@ for filename in os.listdir(directory):
                 # Split the line by comma and extract the second value
                 try:
                     value = float(line.split(',')[1])
-                    second_values.append(value)
+                    if value < 100:
+                        second_values.append(value)
                 except (IndexError, ValueError):
                     print(f"Skipping line in {filename}: {line.strip()}")
 
