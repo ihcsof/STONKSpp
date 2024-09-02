@@ -2,57 +2,67 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Directory containing the files
-directory = 'collectorLogs'
+# List of directories containing the files
+directories = ['backups/10mbps', 'backups/10gbps']  # Example directories
 
-# Initialize a list to hold the second values
-second_values = []
+# List of labels corresponding to each directory
+labels = ['10 Mbps Network', '10 Gbps Network']  # Example labels
 
-# Loop through each file in the directory
-for filename in os.listdir(directory):
-    filepath = os.path.join(directory, filename)
-    if os.path.isfile(filepath):  # Check if it's a file
-        with open(filepath, 'r') as file:
-            for line in file:
-                # Split the line by comma and extract the second value
-                try:
-                    value = float(line.split(',')[1])
-                    if value < 100:
-                        second_values.append(value)
-                except (IndexError, ValueError):
-                    print(f"Skipping line in {filename}: {line.strip()}")
+# Initialize a dictionary to hold the second values for each directory
+all_second_values = {}
 
-# Convert the list to a numpy array for further processing
-second_values = np.array(second_values)
+# Loop through each directory
+for directory in directories:
+    second_values = []
+    
+    # Loop through each file in the directory
+    for filename in os.listdir(directory):
+        filepath = os.path.join(directory, filename)
+        if os.path.isfile(filepath):  # Check if it's a file
+            with open(filepath, 'r') as file:
+                for line in file:
+                    # Split the line by comma and extract the second value
+                    try:
+                        value = float(line.split(',')[1])
+                        if value < 100:
+                            second_values.append(value)
+                    except (IndexError, ValueError):
+                        print(f"Skipping line in {filename}: {line.strip()}")
+    
+    # Ensure that second_values is not empty before proceeding
+    if len(second_values) == 0:
+        raise ValueError(f"No valid second values were found in the files of {directory}.")
+    
+    # Store the second values in the dictionary
+    all_second_values[directory] = np.array(second_values)
 
-# Ensure that second_values is not empty before proceeding
-if len(second_values) == 0:
-    raise ValueError("No valid second values were found in the files.")
-
-# Sort the data for CDF
-sorted_values = np.sort(second_values)
-cdf = np.arange(len(sorted_values)) / float(len(sorted_values))
-
-# Plot the CDF with an interpolated line
+# Plot the CDF for each directory
 plt.figure(figsize=(8, 6))
-plt.plot(sorted_values, cdf, linestyle='-', marker='')  # Use a line without markers
+
+for directory, label in zip(all_second_values.keys(), labels):
+    second_values = all_second_values[directory]
+    sorted_values = np.sort(second_values)
+    cdf = np.arange(len(sorted_values)) / float(len(sorted_values))
+    plt.plot(sorted_values, cdf, linestyle='-', label=f'CDF for {label}')
+
 plt.xlabel('Latency (ms)')
 plt.ylabel('Probability')
 plt.title('Latency CDF for perfect network')
 plt.grid(True)
-cdf_filepath = os.path.join(directory, 'cdf.png')
+plt.legend()
+cdf_filepath = 'collectorLogs/combined_cdf.png'
 plt.savefig(cdf_filepath)
 plt.show()
 
-# Create a boxplot
+# Create a combined boxplot
 plt.figure(figsize=(8, 6))
-plt.boxplot(second_values, vert=False)
-plt.xlabel('Latency (ms)')
+plt.boxplot(all_second_values.values(), vert=True, labels=labels)
+plt.ylabel('Latency (ms)')
 plt.title('Latency Boxplot for perfect network')
 plt.grid(True)
-boxplot_filepath = os.path.join(directory, 'boxplot.png')
+boxplot_filepath = 'collectorLogs/combined_boxplot.png'
 plt.savefig(boxplot_filepath)
 plt.show()
 
-print(f"CDF plot saved to {cdf_filepath}")
-print(f"Boxplot saved to {boxplot_filepath}")
+print(f"Combined CDF plot saved to {cdf_filepath}")
+print(f"Combined Boxplot saved to {boxplot_filepath}")

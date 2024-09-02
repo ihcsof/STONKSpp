@@ -59,12 +59,12 @@ def save_combined_average_primal_dual_plot_without_infinity(primal_values, dual_
     plt.ylabel('Value in log scale')
     plt.yscale('log')
     plt.legend()
-    plt.savefig(os.path.join(output_dir, 'avg_prim_dual_val.png'))
+    plt.savefig(os.path.join(output_dir, 'conv10gbps.png'))
     plt.close()
 
 # Assuming the logs are in the 'collectorLogs' directory
-directory = 'collectorLogs'
+directory = 'backups/10gbps'
 primal_values, dual_values = extract_primal_dual_values(directory)
 
 # Save the combined average plot without infinity values to the current directory
-save_combined_average_primal_dual_plot_without_infinity(primal_values, dual_values, output_dir='.')
+save_combined_average_primal_dual_plot_without_infinity(primal_values, dual_values, output_dir='collectorLogs')

@@ -515,7 +515,7 @@ class CheckStateEvent(Event):
             sim.has_finished = True
         else:
             sim.Opti_LocDec_State(False)
-            sim.schedule(1000, CheckStateEvent())
+            sim.schedule(100, CheckStateEvent())
 
 def main():
     
