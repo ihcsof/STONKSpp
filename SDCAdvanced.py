@@ -418,6 +418,11 @@ class Simulator(Simulation):
         for message in to_remove:
             data.remove(message)
         self._msg_inbox = json.dumps(data) 
+
+        # touch carefully :)
+        complete_lost_prob = 0
+        if random.random() < complete_lost_prob:
+            return
         
         # Update sim.Trades with the extracted trade values
         for partner in self.partners[agent]:
@@ -435,7 +440,7 @@ class PlayerOptimizationMsg(Event):
         super().__init__()
         self.i = player_i
         self.wait_less = 0
-        self.wait_more = 0
+        self.wait_more = 0.1
     
     def process(self, sim: Simulator):
         # if not all partners have optimized, skip the turn
@@ -447,6 +452,7 @@ class PlayerOptimizationMsg(Event):
             return
 
         if random.random() < self.wait_more:
+            sim.schedule(random.randint(5, 10), PlayerOptimizationMsg(self.i))
             return
 
         # if the player has already converged, skip the turn
@@ -482,14 +488,15 @@ class PlayerUpdateMsg(Event):
         super().__init__()
         self.i = player_i
         self.wait_less = 0
-        self.wait_more = 0
+        self.wait_more = 0.1
     
     def process(self, sim: Simulator):
         # if not all partners have updated, skip the turn
-        if sim.n_updated_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
+        if (sim.n_updated_partners[self.i] < (sim.npartners[self.i] - self.wait_less)):
             return
 
         if random.random() < self.wait_more:
+            sim.schedule(random.randint(5, 10), PlayerUpdateMsg(self.i))
             return
 
         # if the player has already converged, skip the turn
