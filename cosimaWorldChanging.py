@@ -69,7 +69,7 @@ comm_sim = world.start('CommunicationSimulator',
                        port=cfg.PORT,
                        client_attribute_mapping=client_attribute_mapping).CommunicationModel()
 
-ict_controller = world.start('ICTController').ICT()
+ict_controller = world.start('ICTController', step_size=0.001).ICT()
 
 world.connect(prosumer_sim, comm_sim, f'message', weak=True)
 world.connect(comm_sim, prosumer_sim, client_attribute_mapping[f'client{NUM_PROSUMERS}'])
