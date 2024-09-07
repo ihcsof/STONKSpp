@@ -108,7 +108,7 @@ WORKDIR /root/models
 RUN wget https://github.com/inet-framework/inet/releases/download/v4.2.2/inet-4.2.2-src.tgz \
     && tar -xzf inet-4.2.2-src.tgz \
     && rm inet-4.2.2-src.tgz 
-#    && mv inet4 inet
+# NOTE: Comment the next lines to avoid compiling INET (if you want to modify something about it before compiling, e.g increasing the number of used ports if your network is really that big)
 WORKDIR /root/models/inet4
 RUN make makefiles \
     && make -j$(grep -c proc /proc/cpuinfo) \
@@ -137,8 +137,9 @@ RUN apt-get update && apt-get install -y python3.8 python3.8-dev\
     python3-pip
 
 WORKDIR /root/models
-#now copy gurobi.lic in /home/<user>
+# copy files and install pip requirements
 COPY . .
+#now copy gurobi.lic in /home/<user>
 RUN pip3 install -r requirements.txt
 
 # Build OMNeT++ files
