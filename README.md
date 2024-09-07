@@ -16,3 +16,5 @@ alias x='sudo kill -9 $(sudo lsof -t -i :4242)'
 To launch the simulator with a preferred network you can just build both the graph (with the provided py tools or manually) and its network (using mosaik.ini and ned files, as stated both in cosima documentation and in the report below). Then you have to either launch cosimaWorld or cosimaWorldChanging (after defining some dynamic changes in /scenario_config in the root directory)
 
 This is the detailed report: https://docs.google.com/document/d/1dhX8BoJopfouI9Ja6J47jQ3_RNiKPb7_Iijr7ihu9wE/edit?usp=sharing
+
+NOTE: If your network is really big and you finish the ports, increase EPHEMERAL_PORTRANGE_END in inet4/src/inet/transportlayer/tcp/Tcp.h and recompile INET (see Dockerfile comment under INET).
