@@ -35,11 +35,7 @@ class Collector(mosaik_api.Simulator):
         self._output_time = 0
         self._simulator = None
         self._nMessagesFrom = {}
-        # loss prob for each prosumer (add if needed)
-        defined_loss_prob = [0.2, 0.01, 0.5, 0.04, 0.1, 0.4, 0.005, 0.01]
-        #defined_loss_prob = []
-        self.loss_prob = np.zeros(100)
-        self.loss_prob[:len(defined_loss_prob)] = defined_loss_prob
+        self.loss_prob = np.zeros(200)
 
     def init(self, sid, **sim_params):
         self._sid = sid
@@ -58,6 +54,17 @@ class Collector(mosaik_api.Simulator):
             self.log_filename_msgs = f'messagesLogs/message_log_{self.whoami}.log'
         if 'simulator' in sim_params.keys():
             self._simulator = sim_params['simulator']
+        if 'loss_prob' in sim_params.keys():
+            if len(sim_params['loss_prob']) == 1:
+                # Repeat the single element 200 times
+                defined_loss_prob = [sim_params['loss_prob'][0]] * 200
+            else:
+                # Use the provided loss_prob array as is
+                defined_loss_prob = sim_params['loss_prob']
+        else:
+            defined_loss_prob = []
+        
+        self.loss_prob[:len(defined_loss_prob)] = defined_loss_prob
         return META
     
     def append_or_increment_msg_id(self, msg_id):
@@ -86,6 +93,7 @@ class Collector(mosaik_api.Simulator):
     def step(self, time, inputs, max_advance):
         # Extracting the content of the message received
         msg_id = inputs[f'Collector-{self.whoami}'][f'message_with_delay_for_client{self.whoami}']["CommunicationSimulator-0.CommunicationSimulator"][0]["msg_id"]
+        prev_time = inputs[f'Collector-{self.whoami}'][f'message_with_delay_for_client{self.whoami}']["CommunicationSimulator-0.CommunicationSimulator"][0]["sim_time"]
         content = inputs[f'Collector-{self.whoami}'][f'message_with_delay_for_client{self.whoami}']["CommunicationSimulator-0.CommunicationSimulator"][0]["content"]
 
         # Log the latency data to the file (event steps for each prosumer)
@@ -118,7 +126,7 @@ class Collector(mosaik_api.Simulator):
                              'sender': self._client_name,
                              'receiver': self._client_name,
                              'content': content,
-                             'creation_time': time,
+                             'creation_time': prev_time,
                              })
 
             # (2) Lost:
@@ -138,7 +146,7 @@ class Collector(mosaik_api.Simulator):
                                 'sender': self._client_name,
                                 'receiver': self._simulator,
                                 'content': content,
-                                'creation_time': time,
+                                'creation_time': prev_time,
                                 })
         self._msg_counter += 1
         self._output_time = time + 1
@@ -157,7 +165,7 @@ class Collector(mosaik_api.Simulator):
         log("Messages received from each prosumer:")
         log(str(self._nMessagesFrom))
         # log the number of messages received from each prosumer to the file
-        with open(self.log_filename_msgs, 'w') as f:
+        '''with open(self.log_filename_msgs, 'w') as f:
             for prosumer, nMessages in self._nMessagesFrom.items():
-                f.write(f'{prosumer},{nMessages}\n')
+                f.write(f'{prosumer},{nMessages}\n')'''
         log('Finalize Collector')

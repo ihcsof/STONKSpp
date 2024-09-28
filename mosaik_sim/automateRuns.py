@@ -10,7 +10,7 @@ nruns = 2  # Number of runs for each set
 
 # Define the different run types with their respective arguments
 args_2 = ['--network', 'ProsumerSimNetN2', '--size', '10', '--graph', 'Pool_reduced.pyp2p']
-args_3 = ['--network', 'ProsumerNetLarge', '--size', '40', '--graph', 'biggest.pyp2p']
+args_3 = ['--network', 'ProsumerNetLarge', '--size', '40', '--graph', 'new_graph2.pyp2p']
 
 run_types = [
     # FIRST GRAPH
@@ -36,10 +36,10 @@ run_types = [
 
     # THIRD GRAPH
     #---------------------------------------------
-    {'name': 'First set', 'script': script_cosima_world, 'args': args_2.copy(), 'name_tag': '3.1'},
-    #{'name': 'Second set', 'script': script_cosima_world, 'args': args_2 + ['--scale-factor', '2'], 'name_tag': '3.2'},
-    #{'name': 'Third set', 'script': script_cosima_world, 'args': args_2 + ['--loss-prob', '0.05', '0.01', '0.01', '0.5', '0.15', '0.2', '0.1', '0.35, 0.05', '0.01', '0.01', '0.5', '0.15', '0.1', '0.2', '0.3'], 'name_tag': '3.3'},
-    #{'name': 'Fourth set', 'script': script_cosima_world, 'args': args_2 + ['--loss-prob', '0.15'], 'name_tag': '3.4'}
+    {'name': 'First set', 'script': script_cosima_world, 'args': args_3.copy(), 'name_tag': '3.1'},
+    #{'name': 'Second set', 'script': script_cosima_world, 'args': args_3 + ['--scale-factor', '2'], 'name_tag': '3.2'},
+    #{'name': 'Third set', 'script': script_cosima_world, 'args': args_3 + ['--loss-prob', '0.05', '0.01', '0.01', '0.5', '0.15', '0.2', '0.1', '0.35, 0.05', '0.01', '0.01', '0.5', '0.15', '0.1', '0.2', '0.3'], 'name_tag': '3.3'},
+    #{'name': 'Fourth set', 'script': script_cosima_world, 'args': args_3 + ['--loss-prob', '0.15'], 'name_tag': '3.4'}
 ]
 
 # Run all sets

@@ -33,11 +33,10 @@ import re
 class Simulator(Simulation):
     def __init__(self): 
         super().__init__(META)
+        self.logname = 'collectorLogs'
         self.simulation_on = False
         self.simulation_message = ""
         self.force_stop = True
-
-        self.MGraph = Graph.Load('P2P_model_reduced.pyp2p', format='picklez')
 
         self.timeout = 3600000  # UNUSED
         self.Interval = 3  # in s
@@ -68,24 +67,11 @@ class Simulator(Simulation):
         self.has_finished = False 
         self.step_Size = 1000
         self.scale_factor = 1
-        
-        # Optimization model
-        self.players = {}
-        self.Trades = 0
-        self.Opti_LocDec_Init()
-        self.Opti_LocDec_InitModel()
-        self.temps = np.zeros([self.nag, self.nag]) # Temporary trades matrix
     
         self.partners = {}
         self.npartners = {} # Number of partners for each player
         self.n_optimized_partners = {} # Number of partners that has optimized for each player
         self.n_updated_partners = {} # Number of partners that has updated for each player
-        self.initialize_partners()
-
-        #plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
-
-        self.Opti_LocDec_Start()
-
         return
     
     def load_config(self, config_file):
@@ -199,6 +185,24 @@ class Simulator(Simulation):
             self._client_name = sim_params['client_name']
         if 'step_size' in sim_params.keys():
             self.step_Size = sim_params['step_size']
+        if 'scale_factor' in sim_params.keys():
+            self.scale_factor = sim_params['scale_factor']
+            print(f"Scale factor: {self.scale_factor}")
+        if 'graph' in sim_params.keys():
+            self.MGraph = Graph.Load(sim_params['graph'], format='picklez')
+        if 'name' in sim_params.keys():
+            self.logname = sim_params['name']
+        else:
+            print("Graph not provided. Exiting.")
+ 
+        self.players = {}
+        self.Trades = 0
+        self.Opti_LocDec_Init()
+        self.Opti_LocDec_InitModel()
+        self.temps = np.zeros([self.nag, self.nag]) # Temporary trades matrix
+        self.Opti_LocDec_Start()
+        self.initialize_partners()
+
         return META
 
     def create(self, num, model, **model_conf):
@@ -221,7 +225,7 @@ class Simulator(Simulation):
                 new_data = json.loads(received['content'])
 
                 # Save latency logs (aggregated)
-                with open(f'collectorLogs/collector_log_{self._run_id }', 'a') as f:
+                with open(f'{self.logname}/collector_log_{self._run_id }', 'a') as f:
                     for content_item in new_data:
                         f.write(f'{msg_id},{((time + lat) - start_time) + (content_item["real_time"] * 1000)},{content_item["trade"]},{content_item["prim"]},{content_item["dual"]}\n')
                         #f.write(f'{msg_id},{time + lat},{start_time},{content_item["real_time"]},{content_item["trade"]}\n')
