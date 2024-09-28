@@ -10,6 +10,7 @@ nruns = 2  # Number of runs for each set
 
 # Define the different run types with their respective arguments
 args_2 = ['--network', 'ProsumerSimNetN2', '--size', '10', '--graph', 'Pool_reduced.pyp2p']
+args_3 = ['--network', 'ProsumerNetLarge', '--size', '40', '--graph', 'biggest.pyp2p']
 
 run_types = [
     # FIRST GRAPH
@@ -25,13 +26,20 @@ run_types = [
     #{'name': 'Network set 2', 'script': script_cosima_world, 'args': ['--network', 'ProsumerWifiNetwork', '--scale-factor', '2'], 'name_tag': '1.10'},
     #{'name': 'Network set 3', 'script': script_cosima_world, 'args': ['--network', 'ProsumerWifiNetwork', '--loss-prob', '0.15'], 'name_tag': '1.11'},
 
-     # SECOND GRAPH
+    # SECOND GRAPH
     #---------------------------------------------
     #{'name': 'First set', 'script': script_cosima_world, 'args': args_2.copy(), 'name_tag': '2.1'},
     #{'name': 'Second set', 'script': script_cosima_world, 'args': args_2 + ['--scale-factor', '2'], 'name_tag': '2.2'},
     #{'name': 'Third set', 'script': script_cosima_world, 'args': args_2 + ['--scale-factor', '3'], 'name_tag': '2.3'},
     #{'name': 'Fourth set', 'script': script_cosima_world, 'args': args_2 + ['--loss-prob', '0.05', '0.01', '0.01', '0.5', '0.15', '0', '0', '0.35'], 'name_tag': '2.4'},
     #{'name': 'Fifth set', 'script': script_cosima_world, 'args': args_2 + ['--loss-prob', '0.15'], 'name_tag': '2.5'}
+
+    # THIRD GRAPH
+    #---------------------------------------------
+    {'name': 'First set', 'script': script_cosima_world, 'args': args_2.copy(), 'name_tag': '3.1'},
+    #{'name': 'Second set', 'script': script_cosima_world, 'args': args_2 + ['--scale-factor', '2'], 'name_tag': '3.2'},
+    #{'name': 'Third set', 'script': script_cosima_world, 'args': args_2 + ['--loss-prob', '0.05', '0.01', '0.01', '0.5', '0.15', '0.2', '0.1', '0.35, 0.05', '0.01', '0.01', '0.5', '0.15', '0.1', '0.2', '0.3'], 'name_tag': '3.3'},
+    #{'name': 'Fourth set', 'script': script_cosima_world, 'args': args_2 + ['--loss-prob', '0.15'], 'name_tag': '3.4'}
 ]
 
 # Run all sets
@@ -76,7 +84,12 @@ scenario_configs_1 = [
 scenario_configs_2 = [
     '/root/models/cosima_core/mosaik_sim/scenario_configs/first.py',
     '/root/models/cosima_core/mosaik_sim/scenario_configs/fourth.py',
-    '/root/models/cosima_core/mosaik_sim/scenario_configs/fifth.py'
+    '/root/models/cosima_core/mosaik_sim/scenario_configs/fifth.py',
+    '/root/models/cosima_core/mosaik_sim/scenario_configs/first.py' # again first but for mixed with retrans
+]
+scenario_configs_3 = [
+    '/root/models/cosima_core/mosaik_sim/scenario_configs/sixth.py',
+    '/root/models/cosima_core/mosaik_sim/scenario_configs/seventh.py',
 ]
 
 def run_scenario_configs(scenario_configs, graph, name_tag_base, extra_args = []):
@@ -105,8 +118,11 @@ def run_scenario_configs(scenario_configs, graph, name_tag_base, extra_args = []
         for i in range(1, nruns):
             print(f"Running iteration {i} with substituted scenario_config.py ({config_name}) and name {name_tag}")
             
-            # Run cosimaWorldChanging.py for this set
-            subprocess.run(['python3', script_cosima_changing, '--run', str(i), '--name', name_tag] + extra_args)
+            # Run cosimaWorldChanging.py for this set (if 9: mixed with retrans)
+            if name_tag_base < 9:
+                subprocess.run(['python3', script_cosima_changing, '--run', str(i), '--name', name_tag] + extra_args)
+            else:
+                subprocess.run(['python3', script_cosima_changing, '--run', str(i), '--name', name_tag] + extra_args + ['--loss-prob', '0.15'])
             
             # Kill process on port 4242 if necessary
             print(f"Attempting to kill process on port 4242 after iteration {i}")
@@ -126,4 +142,5 @@ def run_scenario_configs(scenario_configs, graph, name_tag_base, extra_args = []
     print("All iterations completed for all scenario configs.")
 
 #run_scenario_configs(scenario_configs_1, '1', 6)
-run_scenario_configs(scenario_configs_2, '2', 6, args_2)
+#run_scenario_configs(scenario_configs_2, '2', 6, args_2)
+run_scenario_configs(scenario_configs_3, '3', 5, args_3)
