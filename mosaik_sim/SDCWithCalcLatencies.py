@@ -33,10 +33,11 @@ import re
 class Simulator(Simulation):
     def __init__(self): 
         super().__init__(META)
-        self.logname = 'collectorLogs'
         self.simulation_on = False
         self.simulation_message = ""
         self.force_stop = True
+
+        self.MGraph = Graph.Load('Pool_reduced.pyp2p', format='picklez')
 
         self.timeout = 3600000  # UNUSED
         self.Interval = 3  # in s
@@ -67,11 +68,28 @@ class Simulator(Simulation):
         self.has_finished = False 
         self.step_Size = 1000
         self.scale_factor = 1
+        
+        # Optimization model
+        self.players = {}
+        self.Trades = 0
+        self.Opti_LocDec_Init()
+        self.Opti_LocDec_InitModel()
+        self.temps = np.zeros([self.nag, self.nag]) # Temporary trades matrix
     
         self.partners = {}
         self.npartners = {} # Number of partners for each player
         self.n_optimized_partners = {} # Number of partners that has optimized for each player
         self.n_updated_partners = {} # Number of partners that has updated for each player
+        self.initialize_partners()
+
+        #plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
+
+        self.Opti_LocDec_Start()
+
+        # FOR DEBUGGING
+        self.prev_step = 0
+        self.debug_delay = 0
+
         return
     
     def load_config(self, config_file):
@@ -185,24 +203,6 @@ class Simulator(Simulation):
             self._client_name = sim_params['client_name']
         if 'step_size' in sim_params.keys():
             self.step_Size = sim_params['step_size']
-        if 'scale_factor' in sim_params.keys():
-            self.scale_factor = sim_params['scale_factor']
-            print(f"Scale factor: {self.scale_factor}")
-        if 'graph' in sim_params.keys():
-            self.MGraph = Graph.Load(sim_params['graph'], format='picklez')
-        if 'name' in sim_params.keys():
-            self.logname = sim_params['name']
-        else:
-            print("Graph not provided. Exiting.")
- 
-        self.players = {}
-        self.Trades = 0
-        self.Opti_LocDec_Init()
-        self.Opti_LocDec_InitModel()
-        self.temps = np.zeros([self.nag, self.nag]) # Temporary trades matrix
-        self.Opti_LocDec_Start()
-        self.initialize_partners()
-
         return META
 
     def create(self, num, model, **model_conf):
@@ -225,7 +225,7 @@ class Simulator(Simulation):
                 new_data = json.loads(received['content'])
 
                 # Save latency logs (aggregated)
-                with open(f'{self.logname}/collector_log_{self._run_id }', 'a') as f:
+                with open(f'collectorLogs/collector_log_{self._run_id }', 'a') as f:
                     for content_item in new_data:
                         f.write(f'{msg_id},{((time + lat) - start_time) + (content_item["real_time"] * 1000)},{content_item["trade"]},{content_item["prim"]},{content_item["dual"]}\n')
                         #f.write(f'{msg_id},{time + lat},{start_time},{content_item["real_time"]},{content_item["trade"]}\n')
@@ -233,8 +233,21 @@ class Simulator(Simulation):
                 # Update self._msg_inbox with the updated list
                 data.extend(new_data)
                 self._msg_inbox = json.dumps(data)
+            elif (self.prev_step + 5) < time:
+                print("USED Keep Alive at time: ", time, " with prev_step: ", self.prev_step)
+                debug_delay += (time - self.prev_step)
+                while(True):
+                    self.run()
+                    if(self._msg_outbox == []):
+                        for i in range(self.nag):
+                            self.schedule(time + 1, PlayerUpdateMsg(i))
+                            self.schedule(time + 1, PlayerOptimizationMsg(i))
+                    else:
+                        break;
+            elif time != 0:
+                print("SKIPPED Keep Alive at time: ", time, " with prev_step: ", self.prev_step)
+                return time + 3000
 
-            # run the simulation
             while(self._msg_outbox == []):
                 self.run()
 
@@ -250,8 +263,14 @@ class Simulator(Simulation):
                              'content': content,
                              'creation_time': time,
                              })
+
+        self.prev_step = time
         self._msg_counter += 1
         self._output_time = time + 1
+        if time % 3000 == 0 and time != 0:
+            return time + 3000
+        else:
+            return None
         return None
 
     def get_data(self, outputs):
@@ -314,6 +333,7 @@ class Simulator(Simulation):
             print(f"The total amount of power produced is {self.tot_prod.sum():.0f} kW.")
             print(f"The total amount of power consumed is {self.tot_cons.sum():.0f} kW.")
             print(f"With an average energy/trading price of {self.Price_avg * 100:.2f} c$/kWh.")
+            print(f"Debug delay: {self.debug_delay}")
         else:
             if self.simulation_message == -1:
                 print("Maximum number of iterations reached.")
