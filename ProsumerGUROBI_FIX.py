@@ -6,6 +6,7 @@ Created on Mon Jan 15 10:11:54 2018
 """
 
 # Import Gurobi Library
+import random
 import gurobipy as gb
 import numpy as np
 
@@ -22,6 +23,12 @@ class Prosumer:
         # Data -- Agent and its assets
         if agent is not None:
             self.data.type = agent['Type']
+            '''self.data.isByzantine = random.random() < 0.1
+            if self.data.isByzantine:
+                print('Agent '+str(agent['ID'])+' is Byzantine: '+str(self.data.isByzantine))'''
+            self.data.id = agent['ID']
+            # TODO: to be removed
+            self.data.isByzantine = (self.data.id==200)
             self.data.CM = (agent['Type']=='Manager')
             if agent['AssetsNum']<=len(agent['Assets']):
                 self.data.num_assets = agent['AssetsNum']
@@ -73,6 +80,8 @@ class Prosumer:
         self.model.optimize()
         if self.model.Status == gb.GRB.Status.OPTIMAL:
             self._opti_status(trade)
+            if self.data.isByzantine:
+                self.t_old *= 1.5
             trade[self.data.partners] = self.t_old
         return trade
     

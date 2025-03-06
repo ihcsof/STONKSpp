@@ -4,7 +4,7 @@ import numpy as np
 def perturb_values(val, percent=10):
     return val * (1 + np.random.randn() * percent / 100)
 
-def expand_data(file_path, output_path, expansion_factor=10):
+def expand_data(file_path, output_path, expansion_factor=90):
     data = pd.read_csv(file_path)
     expanded_data = pd.DataFrame()
     
