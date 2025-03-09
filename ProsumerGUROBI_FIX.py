@@ -145,12 +145,37 @@ class Prosumer:
         return
         
     ###
-    #   Iteration Update
-    ###    
+    #   Iteration Update (ORIGINAL)
+    ### 
+    # 
+    '''
     def _iter_update(self, trade):
         self.t_average = (self.t_old - trade[self.data.partners])/2
         self.y -= self.data.rho*(self.t_old - self.t_average)
-        return
+        return'
+    '''
+    
+    def _iter_update(self, trade):
+        # Compute the consensus value as before
+        self.t_average = (self.t_old - trade[self.data.partners]) / 2
+
+        # Check if the model solved optimally before proceeding
+        if self.model.Status == gb.GRB.Status.OPTIMAL:
+            # Retrieve new t values from the Gurobi model
+            t_new = np.array([self.variables.t[i].X for i in range(self.data.num_partners)])
+        else:
+            # If not optimal, you could choose to skip the update or use the previous t values
+            t_new = self.t_old.copy()
+
+        # Define the relaxation parameter (alpha > 1 for over-relaxation)
+        alpha = 1.5  # You may tune this value
+
+        # Compute the relaxed version of the update
+        t_relaxed = alpha * t_new + (1 - alpha) * self.t_old
+
+        # Use the relaxed value to update the dual variable
+        self.y -= self.data.rho * (self.t_old - t_relaxed)
+
         
     ###
     #   Optimization status
