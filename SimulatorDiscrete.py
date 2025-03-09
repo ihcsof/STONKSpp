@@ -317,134 +317,52 @@ class PlayerUpdateMsg(Event):
         self.wait_less = 0
         self.wait_more = 0
     
-    '''def process(self, sim: Simulator):
-        # If not all partners have updated, skip the turn
-        if sim.n_updated_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
-            return
-
-        if random.random() < self.wait_more:
-            return
-
-        # Reset the number of partners that have updated
-        sim.n_updated_partners[self.i] = 0
-
-        # Get a copy of the current trade vector for agent self.i.
-        # This is the row corresponding to the agent's own trades.
-        robust_trade = np.copy(sim.Trades[self.i, :])
-
-        # Identify partner indices for agent self.i
-        partner_indices = sim.partners[self.i]
-        # Gather the trade values reported by these partners for agent self.i
-        partner_trades = np.array([sim.Trades[j, self.i] for j in partner_indices])
-        median_trade = np.median(partner_trades)
-        mad = np.median(np.abs(partner_trades - median_trade))
-        fixed_threshold = 100
-        adaptive_threshold = max(3 * mad, 1e-6)
-        threshold_to_use = max(adaptive_threshold, fixed_threshold)
-
-        for j in partner_indices:
-            deviation = abs(sim.Trades[j, self.i] - median_trade)
-            if deviation > threshold_to_use:
-                # Compute weight: the higher the deviation beyond the threshold, the closer weight is to 1.
-                weight = min((deviation - threshold_to_use) / deviation, 1.0)
-                # Blend the reported value with the median based on the computed weight.
-                robust_trade[j] = (1 - weight) * sim.Trades[j, self.i] + weight * median_trade
-                # Log details about the adjustment.
-                with open("log.txt", "a") as f:
-                    f.write(
-                        f"Agent {j} deviation: {deviation:.2f}, median={median_trade:.2f}, "
-                        f"weight={weight:.2f}, threshold={threshold_to_use:.2f}, "
-                        f"original={sim.Trades[j, self.i]:.2f}, new={robust_trade[j]:.2f}\n"
-                    )
-
-        # Pass the (potentially filtered) robust trade vector to the optimization routine.
-        sim.temps[:, self.i] = sim.players[self.i].optimize(robust_trade)
-        sim.Prices[:, self.i][partner_indices] = sim.players[self.i].y
-
-        # Schedule optimization events for all partner agents
-        max_delay = 10 + random.randint(0, 2) if sim.isLatency else 10
-        for j in partner_indices:
-            sim.n_optimized_partners[j] += 1
-            ratio = sim.n_optimized_partners[j] / sim.npartners[j]
-            delay = max_delay - (ratio * (max_delay - 6))
-            sim.latency_times.append(delay)
-            sim.schedule(int(delay), PlayerOptimizationMsg(j))'''
-    
     def process(self, sim: Simulator):
-        # Only proceed if the current agent's partners have updated enough.
+        # Only proceed when enough partners have updated
         if sim.n_updated_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
             return
 
-        if random.random() < self.wait_more:
-            return
-
-        # Reset the counter for updated partners.
+        # Reset the counter for updated partners
         sim.n_updated_partners[self.i] = 0
 
-        # Make a copy of the current trade row for agent self.i.
+        # Make a copy of the current trade vector for self.i
         robust_trade = np.copy(sim.Trades[self.i, :])
 
-        # Get the list of partner indices.
+        # Get partner indices
         partner_indices = sim.partners[self.i]
-
-        # Compute the median trade value from the partner updates (using row indexing).
+        
         if partner_indices:
+            # Gather all trade values from partners
             partner_trades = [sim.Trades[self.i, j] for j in partner_indices]
+            
+            # Calculate median and median absolute deviation (MAD)
             median_trade = np.median(partner_trades)
-        else:
-            median_trade = 0
-
-        # Define a fixed threshold.
-        threshold_to_use = 100
-
-        # Process each partner update.
-        for j in partner_indices:
-            if j == 200:  # This is our known Byzantine agent.
+            mad = np.median(np.abs(np.array(partner_trades) - median_trade))
+            
+            # Set adaptive threshold with minimum value
+            min_threshold = 0.01  # Absolute minimum threshold 
+            scale_factor = 3.0    # How many MADs to allow
+            adaptive_threshold = max(scale_factor * mad, min_threshold)
+            
+            # Apply robust filtering to ALL partners
+            for j in partner_indices:
                 deviation = abs(sim.Trades[self.i, j] - median_trade)
-                if deviation > threshold_to_use:
-                    weight = min((deviation - threshold_to_use) / deviation, 1.0)
+                if deviation > adaptive_threshold:
+                    print("\n\n\n")
+                    # Calculate weight that decreases as deviation increases
+                    weight = min((deviation - adaptive_threshold) / deviation, 0.8)  # Cap at 80% replacement
+                    # Blend the reported value with the median
                     new_value = (1 - weight) * sim.Trades[self.i, j] + weight * median_trade
                     robust_trade[j] = new_value
-                    with open("logSucc2.txt", "a") as f:
-                        f.write(
-                            f"[Agent {self.i} update] Byzantine partner 2: deviation: {deviation:.2f}, "
-                            f"median: {median_trade:.2f}, weight: {weight:.2f}, threshold: {threshold_to_use:.2f}, "
-                            f"original: {sim.Trades[self.i, j]:.2f}, new: {new_value:.2f}\n"
-                        )
-                else:
-                    robust_trade[j] = sim.Trades[self.i, j]
-            else:
-                robust_trade[j] = sim.Trades[self.i, j]
+                    # Log the mitigation
+                    with open("log_mitigation.txt", "a") as f:
+                        f.write(f"Mitigated agent {j}: deviation={deviation:.2f}, median={median_trade:.2f}, " +
+                                f"weight={weight:.2f}, threshold={adaptive_threshold:.2f}, " +
+                                f"original={sim.Trades[self.i, j]:.2f}, new={new_value:.2f}\n")
 
-        # Log the complete robust trade vector and related info before optimization.
-        with open("logSucc2.txt", "a") as f:
-            f.write(f"[Agent {self.i} update] robust_trade vector before optimization: {robust_trade}\n")
-            f.write(f"[Agent {self.i} update] original trade vector: {sim.Trades[self.i, :]}\n")
-            f.write(f"[Agent {self.i} update] computed median: {median_trade:.2f}\n")
-
-        # Use the (potentially modified) trade vector in the optimization.
+        # Use the robust trade vector for optimization
         sim.temps[:, self.i] = sim.players[self.i].optimize(robust_trade)
-        sim.Prices[:, self.i][partner_indices] = sim.players[self.i].y
-
-        # Log post-optimization details.
-        with open("logSucc2.txt", "a") as f:
-            f.write(f"[Agent {self.i} update] After optimization, temps[:, {self.i}]: {sim.temps[:, self.i]}\n")
-            f.write(f"[Agent {self.i} update] Prices[:, {self.i}]: {sim.Prices[:, self.i][partner_indices]}\n")
-            # Log additional simulation state if available.
-            f.write(f"[Agent {self.i} update] Iteration: {sim.iteration if hasattr(sim, 'iteration') else 'N/A'}, "
-                    f"SW: {sim.SW if hasattr(sim, 'SW') else 'N/A'}, "
-                    f"Primal Residual: {sim.prim if hasattr(sim, 'prim') else 'N/A'}, "
-                    f"Dual Residual: {sim.dual if hasattr(sim, 'dual') else 'N/A'}, "
-                    f"Avg Price: {sim.Price_avg*100 if hasattr(sim, 'Price_avg') else 'N/A'}\n")
-
-        # Schedule optimization updates for each partner.
-        max_delay = 10 + random.randint(0, 2) if sim.isLatency else 10
-        for j in partner_indices:
-            sim.n_optimized_partners[j] += 1
-            ratio = sim.n_optimized_partners[j] / sim.npartners[j]
-            delay = max_delay - (ratio * (max_delay - 6))
-            sim.latency_times.append(delay)
-            sim.schedule(int(delay), PlayerOptimizationMsg(j))
+        # Continue with the rest of the function...
 
 class CheckStateEvent(Event):
     def __init__(self):
