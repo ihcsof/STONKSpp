@@ -318,17 +318,50 @@ class PlayerUpdateMsg(Event):
         self.wait_more = 0
     
     def process(self, sim: Simulator):
-        # if not all partners have updated, skip the turn
+        # Only proceed when enough partners have updated
         if sim.n_updated_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
             return
-        
-        if random.random() < self.wait_more:
-            return
-        
-        # reset the number of partners that have updated
+
+        # Reset the counter for updated partners
         sim.n_updated_partners[self.i] = 0
 
-        sim.temps[:, self.i] = sim.players[self.i].optimize(sim.Trades[self.i, :])
+        # Make a copy of the current trade vector for self.i
+        robust_trade = np.copy(sim.Trades[self.i, :])
+
+        # Get partner indices
+        partner_indices = sim.partners[self.i]
+        
+        if partner_indices:
+            # Gather all trade values from partners
+            partner_trades = [sim.Trades[self.i, j] for j in partner_indices]
+            
+            # Calculate median and median absolute deviation (MAD)
+            median_trade = np.median(partner_trades)
+            mad = np.median(np.abs(np.array(partner_trades) - median_trade))
+            
+            # Set adaptive threshold with minimum value
+            min_threshold = 0.01  # Absolute minimum threshold 
+            scale_factor = 3.0    # How many MADs to allow
+            adaptive_threshold = max(scale_factor * mad, min_threshold)
+            
+            # Apply robust filtering to ALL partners
+            for j in partner_indices:
+                deviation = abs(sim.Trades[self.i, j] - median_trade)
+                if deviation > adaptive_threshold:
+                    print("\n\n\n")
+                    # Calculate weight that decreases as deviation increases
+                    weight = min((deviation - adaptive_threshold) / deviation, 0.8)  # Cap at 80% replacement
+                    # Blend the reported value with the median
+                    new_value = (1 - weight) * sim.Trades[self.i, j] + weight * median_trade
+                    robust_trade[j] = new_value
+                    # Log the mitigation
+                    with open("log_mitigation.txt", "a") as f:
+                        f.write(f"Mitigated agent {j}: deviation={deviation:.2f}, median={median_trade:.2f}, " +
+                                f"weight={weight:.2f}, threshold={adaptive_threshold:.2f}, " +
+                                f"original={sim.Trades[self.i, j]:.2f}, new={new_value:.2f}\n")
+
+        # Use the robust trade vector for optimization
+        sim.temps[:, self.i] = sim.players[self.i].optimize(robust_trade)
         sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
 
         # schedule optimization for partners
