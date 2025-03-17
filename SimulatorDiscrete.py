@@ -37,7 +37,7 @@ class Simulator(Simulation):
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 100
+        self.maximum_iteration = 200
         self.penaltyfactor = 0.01
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
@@ -341,8 +341,12 @@ class PlayerUpdateMsg(Event):
             
             # Set adaptive threshold with minimum value
             min_threshold = 0.01  # Absolute minimum threshold 
-            scale_factor = 3.0    # How many MADs to allow
-            adaptive_threshold = max(scale_factor * mad, min_threshold)
+            scale_factor = 15.0    # How many MADs to allow (THE HIGHER IS THIS THE LOWER CAN BE THE CHECK BELOW)
+
+            if mad < 5:  # or another small threshold
+                adaptive_threshold = float('inf')  # so no value is filtered
+            else:
+                adaptive_threshold = max(scale_factor * mad, min_threshold)
             
             # Apply robust filtering to ALL partners
             for j in partner_indices:
@@ -365,11 +369,11 @@ class PlayerUpdateMsg(Event):
         sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
 
         # schedule optimization for partners
-        max = 10 + random.randint(0, 2) if sim.isLatency else 10
+        maxval = 10 + random.randint(0, 2) if sim.isLatency else 10
         for j in sim.partners[self.i]:
             sim.n_optimized_partners[j] += 1
             ratio = sim.n_optimized_partners[j] / sim.npartners[j]
-            delay = max - (ratio * (max - 6))
+            delay = maxval - (ratio * (maxval - 6))
             sim.latency_times.append(delay)
             sim.schedule(int(delay), PlayerOptimizationMsg(j))
 

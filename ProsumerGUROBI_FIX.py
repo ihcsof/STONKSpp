@@ -28,7 +28,7 @@ class Prosumer:
                 print('Agent '+str(agent['ID'])+' is Byzantine: '+str(self.data.isByzantine))'''
             self.data.id = agent['ID']
             # TODO: to be removed
-            self.data.isByzantine = (self.data.id==200)
+            self.data.isByzantine = (self.data.id==2)
             self.data.CM = (agent['Type']=='Manager')
             if agent['AssetsNum']<=len(agent['Assets']):
                 self.data.num_assets = agent['AssetsNum']
@@ -80,9 +80,10 @@ class Prosumer:
         self.model.optimize()
         if self.model.Status == gb.GRB.Status.OPTIMAL:
             self._opti_status(trade)
-            if self.data.isByzantine:
-                self.t_old *= 1.5
-            trade[self.data.partners] = self.t_old
+            val = self.t_old
+            if self.data.isByzantine and random.random() < 0.05:
+                val *= 1.2
+            trade[self.data.partners] = val
         return trade
     
     def production_consumption(self):
