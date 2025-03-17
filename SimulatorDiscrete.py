@@ -362,7 +362,16 @@ class PlayerUpdateMsg(Event):
 
         # Use the robust trade vector for optimization
         sim.temps[:, self.i] = sim.players[self.i].optimize(robust_trade)
-        # Continue with the rest of the function...
+        sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
+
+        # schedule optimization for partners
+        max = 10 + random.randint(0, 2) if sim.isLatency else 10
+        for j in sim.partners[self.i]:
+            sim.n_optimized_partners[j] += 1
+            ratio = sim.n_optimized_partners[j] / sim.npartners[j]
+            delay = max - (ratio * (max - 6))
+            sim.latency_times.append(delay)
+            sim.schedule(int(delay), PlayerOptimizationMsg(j))
 
 class CheckStateEvent(Event):
     def __init__(self):
