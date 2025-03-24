@@ -1,7 +1,11 @@
 {
-    "maximum_iteration": 5,
-    "penaltyfactor": 0.005,
-    "residual_primal": 1e-5,
-    "residual_dual": 1e-5,
-    "target": "GPU"
-}
+    "log_mitigation_file": "enhancdddd_log.txt",
+    "iter_update_method": "method1",
+    "byzantine_ids": [200],
+    "byzantine_attack_probability": 0.05,
+    "byzantine_multiplier_lower": 0.5,
+    "byzantine_multiplier_upper": 1.2,
+    "scale_factor": 15.0,
+    "mad_threshold": 5,
+    "non_interactive": true
+  }
