@@ -38,7 +38,7 @@ class Simulator(Simulation):
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 200
+        self.maximum_iteration = 500
         self.penaltyfactor = 0.01
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
@@ -306,20 +306,50 @@ class PlayerOptimizationMsg(Event):
 
         if random.random() < self.wait_more:
             return
-
-        sim.n_optimized_partners[self.i] = 0  # Reset counter
+          
+        sim.n_optimized_partners[self.i] = 0
 
         original_values = np.copy(sim.Trades)
-        sim.Trades = np.copy(sim.temps) 
-        for j in range(len(sim.Trades)):
-            if j not in sim.partners[self.i]:
-                sim.Trades[j] = original_values[j]
+        proposed_trades = np.copy(sim.temps)
 
-        sim.Trades[self.i, sim.partners[self.i]] = sim.temps[self.i, sim.partners[self.i]]
+        for j in range(len(proposed_trades)):
+            if j not in sim.partners[self.i]:
+                proposed_trades[j] = original_values[j]
+
+        row_values = proposed_trades[self.i, sim.partners[self.i]]
+
+        if len(row_values) > 0:
+            row_median = np.median(row_values)
+            row_mad = np.median(np.abs(row_values - row_median))
+
+            scale_factor = 15.0
+            min_threshold = 0.01
+
+            if row_mad < 4.1:
+                adaptive_threshold = float('inf')
+            else:
+                adaptive_threshold = max(scale_factor * row_mad, min_threshold)
+
+            for idx, j in enumerate(sim.partners[self.i]):
+                deviation = abs(row_values[idx] - row_median)
+                if deviation > adaptive_threshold:
+                    weight = min((deviation - adaptive_threshold)/deviation, 0.83)
+                    new_value = (1 - weight)*row_values[idx] + weight*row_median
+                    row_values[idx] = new_value
+                    with open("log_mitigation.txt", "a") as f:
+                        f.write((
+                            f"[Mitigation in PlayerOptimizationMsgMitigated] Agent {self.i} -> Partner {j}"
+                            f": deviation={deviation:.2f}, median={row_median:.2f}, "
+                            f"threshold={adaptive_threshold:.2f}, corrected={new_value:.2f}\n"
+                        ))
+
+            proposed_trades[self.i, sim.partners[self.i]] = row_values
+
+        sim.Trades = proposed_trades
 
         sim.prim = sum([sim.players[j].Res_primal for j in sim.partners[self.i]])
         sim.dual = sum([sim.players[j].Res_dual for j in sim.partners[self.i]])
-        
+
         max_delay = 10 + random.randint(0, 2) if sim.isLatency else 10
         for j in sim.partners[self.i]:
             sim.n_updated_partners[j] += 1
@@ -353,7 +383,7 @@ class PlayerUpdateMsg(Event):
             # Use configurable parameters for robust filtering:
             min_threshold = 0.01  # Absolute minimum threshold (could also be made configurable if needed)
             scale_factor = sim.config.get("scale_factor", 15.0)
-            mad_threshold = sim.config.get("mad_threshold", 5)
+            mad_threshold = sim.config.get("mad_threshold", 4.1)
             
             if mad < mad_threshold:
                 adaptive_threshold = float('inf')
@@ -363,7 +393,7 @@ class PlayerUpdateMsg(Event):
             for j in partner_indices:
                 deviation = abs(sim.Trades[self.i, j] - median_trade)
                 if deviation > adaptive_threshold:
-                    weight = min((deviation - adaptive_threshold) / deviation, 0.8)
+                    weight = min((deviation - adaptive_threshold) / deviation, 0.9)
                     new_value = (1 - weight) * sim.Trades[self.i, j] + weight * median_trade
                     robust_trade[j] = new_value
                     timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())

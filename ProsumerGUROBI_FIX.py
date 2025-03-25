@@ -32,6 +32,7 @@ class Prosumer:
             else:
                 self.data.isByzantine = (self.data.id == 2)
                 print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
+            self.data.tampered = 0
             self.data.CM = (agent['Type'] == 'Manager')
             if agent['AssetsNum'] <= len(agent['Assets']):
                 self.data.num_assets = agent['AssetsNum']
@@ -98,17 +99,20 @@ class Prosumer:
         self.model.optimize()
         if self.model.Status == gb.GRB.Status.OPTIMAL:
             self._opti_status(trade)
+            
             val = self.t_old.copy()
             # Check for Byzantine behavior
-            if self.data.isByzantine:
+            if self.data.isByzantine and self.data.tampered < 1:
                 # Read chance and multipliers from config with defaults
                 chance = self.config.get("byzantine_attack_probability", 0.05)
                 lower = self.config.get("byzantine_multiplier_lower", 0.5)
                 upper = self.config.get("byzantine_multiplier_upper", 1.2)
                 if random.random() < chance:
-                    # Randomly choose to under-report (lower) or over-report (upper)
-                    multiplier = random.choice([lower, upper])
+                    self.data.tampered += 1
+                    # multiplier = random.choice([lower, upper])
+                    multiplier = upper
                     val *= multiplier
+
             trade[self.data.partners] = val
         return trade
     
