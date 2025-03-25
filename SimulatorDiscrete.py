@@ -37,7 +37,7 @@ class Simulator(Simulation):
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 100
+        self.maximum_iteration = 500
         self.penaltyfactor = 0.01
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
@@ -312,7 +312,7 @@ class PlayerOptimizationMsg(Event):
             for idx, j in enumerate(sim.partners[self.i]):
                 deviation = abs(row_values[idx] - row_median)
                 if deviation > adaptive_threshold:
-                    weight = min((deviation - adaptive_threshold)/deviation, 0.8)
+                    weight = min((deviation - adaptive_threshold)/deviation, 0.83)
                     new_value = (1 - weight)*row_values[idx] + weight*row_median
                     row_values[idx] = new_value
                     with open("log_mitigation.txt", "a") as f:
@@ -380,13 +380,13 @@ class PlayerUpdateMsg(Event):
                 deviation = abs(sim.Trades[self.i, j] - median_trade)
                 if deviation > adaptive_threshold:
                     # Calculate weight that decreases as deviation increases
-                    weight = min((deviation - adaptive_threshold) / deviation, 0.8)  # Cap at 80% replacement
+                    weight = min((deviation - adaptive_threshold) / deviation, 0.9)  # Cap at 80% replacement
                     # Blend the reported value with the median
                     new_value = (1 - weight) * sim.Trades[self.i, j] + weight * median_trade
                     robust_trade[j] = new_value
                     # Log the mitigation
                     with open("log_mitigation.txt", "a") as f:
-                        f.write(f"Mitigated agent {j}: deviation={deviation:.2f}, median={median_trade:.2f}, " +
+                        f.write(f"Mitigation in PlayerUpdateMsg {j}: deviation={deviation:.2f}, median={median_trade:.2f}, " +
                                 f"weight={weight:.2f}, threshold={adaptive_threshold:.2f}, " +
                                 f"original={sim.Trades[self.i, j]:.2f}, new={new_value:.2f}\n")
 

@@ -29,6 +29,7 @@ class Prosumer:
             self.data.id = agent['ID']
             # TODO: to be removed
             self.data.isByzantine = (self.data.id==2)
+            self.data.tampered = 0
             self.data.CM = (agent['Type']=='Manager')
             if agent['AssetsNum']<=len(agent['Assets']):
                 self.data.num_assets = agent['AssetsNum']
@@ -81,7 +82,8 @@ class Prosumer:
         if self.model.Status == gb.GRB.Status.OPTIMAL:
             self._opti_status(trade)
             val = self.t_old
-            if self.data.isByzantine and random.random() < 0.05:
+            if self.data.isByzantine and self.data.tampered < 1 and random.random() < 0.05:
+                self.data.tampered += 1
                 val *= 1.2
             trade[self.data.partners] = val
         return trade
