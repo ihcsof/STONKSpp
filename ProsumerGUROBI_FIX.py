@@ -2,48 +2,50 @@
 """
 Created on Mon Jan 15 10:11:54 2018
 
-@author: fmoret
+Original Author: fmoret
+Updated by: [Your Name]
 """
 
-# Import Gurobi Library
 import random
 import gurobipy as gb
 import numpy as np
 
-# Class which can have attributes set.
+# Class for flexible attribute storage.
 class expando(object):
     pass
 
-
-# Subproblem
+# Subproblem: Prosumer
 class Prosumer:
-    def __init__(self,agent=None,partners=None,preferences=None,rho=1):
+    def __init__(self, agent=None, partners=None, preferences=None, rho=1, config=None):
         self.data = expando()
         self.Who()
+        # Store config for use in the agent (default to empty dict if None)
+        self.config = config if config is not None else {}
+        
         # Data -- Agent and its assets
         if agent is not None:
             self.data.type = agent['Type']
-            '''self.data.isByzantine = random.random() < 0.1
-            if self.data.isByzantine:
-                print('Agent '+str(agent['ID'])+' is Byzantine: '+str(self.data.isByzantine))'''
             self.data.id = agent['ID']
-            # TODO: to be removed
-            self.data.isByzantine = (self.data.id==2)
+            if "byzantine_ids" in self.config:
+                self.data.isByzantine = (self.data.id in self.config["byzantine_ids"])
+                print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
+            else:
+                self.data.isByzantine = (self.data.id == 2)
+                print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
             self.data.tampered = 0
-            self.data.CM = (agent['Type']=='Manager')
-            if agent['AssetsNum']<=len(agent['Assets']):
+            self.data.CM = (agent['Type'] == 'Manager')
+            if agent['AssetsNum'] <= len(agent['Assets']):
                 self.data.num_assets = agent['AssetsNum']
                 self.data.a = np.zeros([self.data.num_assets])
                 self.data.b = np.zeros([self.data.num_assets])
                 self.data.Pmin = np.zeros([self.data.num_assets])
                 self.data.Pmax = np.zeros([self.data.num_assets])
                 for i in range(self.data.num_assets):
-                    if agent['Assets'][i]['costfct']=='Quadratic':
+                    if agent['Assets'][i]['costfct'] == 'Quadratic':
                         self.data.a[i] = agent['Assets'][i]['costfct_coeff'][0]
                         self.data.b[i] = agent['Assets'][i]['costfct_coeff'][1]
                         self.data.Pmax[i] = agent['Assets'][i]['p_bounds_up']
                         self.data.Pmin[i] = agent['Assets'][i]['p_bounds_low']
-                #print('a:'+str(self.data.a)+', b:'+str(self.data.b)+', max:'+str(self.data.Pmax)+', min:'+str(self.data.Pmin))
             else:
                 self.data.num_assets = 0
         
@@ -73,18 +75,44 @@ class Prosumer:
         self.constraints = expando()
         self.results = expando()
         self._build_model()
+        
+        # Initialize iteration variables
+        self.t_old = np.zeros(self.data.num_partners)
+        self.t_new = np.zeros(self.data.num_partners)
+        self.y = np.zeros(self.data.num_partners)
+        self.y0 = np.zeros(self.data.num_partners)
+        
+        # Choose the iterative update method based on config (default is "method2")
+        method = self.config.get("iter_update_method", "method2")
+        if method == "method1":
+            self.iter_update_method = self._iter_update_method1
+        elif method == "method2":
+            self.iter_update_method = self._iter_update_method2
+        else:
+            raise ValueError("Unknown iter_update_method in config: " + method)
         return
 
     def optimize(self, trade):
-        self._iter_update(trade)
+        # Use the chosen iterative update method
+        self.iter_update_method(trade)
         self._update_objective()
         self.model.optimize()
         if self.model.Status == gb.GRB.Status.OPTIMAL:
             self._opti_status(trade)
-            val = self.t_old
-            if self.data.isByzantine and self.data.tampered < 1 and random.random() < 0.05:
-                self.data.tampered += 1
-                val *= 1.2
+            
+            val = self.t_old.copy()
+            # Check for Byzantine behavior
+            if self.data.isByzantine and self.data.tampered < 1:
+                # Read chance and multipliers from config with defaults
+                chance = self.config.get("byzantine_attack_probability", 0.05)
+                lower = self.config.get("byzantine_multiplier_lower", 0.5)
+                upper = self.config.get("byzantine_multiplier_upper", 1.2)
+                if random.random() < chance:
+                    self.data.tampered += 1
+                    # multiplier = random.choice([lower, upper])
+                    multiplier = upper
+                    val *= multiplier
+
             trade[self.data.partners] = val
         return trade
     
@@ -98,13 +126,12 @@ class Prosumer:
             print("Cannot compute production and consumption because the model did not solve optimally.")
         return prod, cons
 
-
     ###
     #   Model Building
     ###
     def _build_model(self):
         self.model = gb.Model()
-        self.model.setParam( 'OutputFlag', False )
+        self.model.setParam('OutputFlag', False)
         self._build_variables()
         self._build_constraints()
         self._build_objective()
@@ -113,13 +140,9 @@ class Prosumer:
 
     def _build_variables(self):
         m = self.model
-        self.variables.p = np.array([m.addVar(lb = self.data.Pmin[i], ub = self.data.Pmax[i], name = 'p') for i in range(self.data.num_assets)])
-        self.variables.t = np.array([m.addVar(lb = -gb.GRB.INFINITY, name = 't') for i in range(self.data.num_partners)])
-        self.variables.t_pos = np.array([m.addVar(name = 't_pos') for i in range(self.data.num_partners)]) #obj=self.data.pref[i], 
-        self.t_old = np.zeros(self.data.num_partners)
-        self.t_new = np.zeros(self.data.num_partners)
-        self.y = np.zeros(self.data.num_partners)
-        self.y0 = np.zeros(self.data.num_partners)
+        self.variables.p = np.array([m.addVar(lb=self.data.Pmin[i], ub=self.data.Pmax[i], name='p') for i in range(self.data.num_assets)])
+        self.variables.t = np.array([m.addVar(lb=-gb.GRB.INFINITY, name='t') for i in range(self.data.num_partners)])
+        self.variables.t_pos = np.array([m.addVar(name='t_pos') for i in range(self.data.num_partners)])
         m.update()
         return
         
@@ -131,81 +154,57 @@ class Prosumer:
         return
         
     def _build_objective(self):
-        self.obj_assets = (sum(self.data.b*self.variables.p + self.data.a*self.variables.p*self.variables.p/2) +
-                           sum(self.data.pref*self.variables.t_pos) )
+        self.obj_assets = (sum(self.data.b * self.variables.p + self.data.a * self.variables.p * self.variables.p / 2) +
+                           sum(self.data.pref * self.variables.t_pos))
         return
         
-    ###
-    #   Model Updating
-    ###    
     def _update_objective(self):
-        augm_lag = (-sum(self.y*( self.variables.t - self.t_average )) + 
-                    self.data.rho/2*sum( ( self.variables.t - self.t_average )
-                                            *( self.variables.t - self.t_average ))
-                   )
+        augm_lag = (-sum(self.y * (self.variables.t - self.t_average)) + 
+                    self.data.rho / 2 * sum((self.variables.t - self.t_average) * (self.variables.t - self.t_average)))
         self.model.setObjective(self.obj_assets + augm_lag)
         self.model.update()
         return
         
     ###
-    #   Iteration Update (ORIGINAL)
-    ### 
-    # 
-    '''
-    def _iter_update(self, trade):
-        self.t_average = (self.t_old - trade[self.data.partners])/2
-        self.y -= self.data.rho*(self.t_old - self.t_average)
-        return'
-    '''
-    
-    def _iter_update(self, trade):
-        # Compute the "classical" consensus value using the previous t_old and partner trades.
+    #   Interchangeable Iterative Updates
+    ###
+    def _iter_update_method1(self, trade):
+        # Original simpler update
         self.t_average = (self.t_old - trade[self.data.partners]) / 2
+        self.y -= self.data.rho * (self.t_old - self.t_average)
+        return
 
-        # Retrieve new t values from the optimization.
+    def _iter_update_method2(self, trade):
+        # Current update method with relaxation
+        self.t_average = (self.t_old - trade[self.data.partners]) / 2
         if self.model.Status == gb.GRB.Status.OPTIMAL:
             t_new = np.array([self.variables.t[i].X for i in range(self.data.num_partners)])
         else:
             t_new = self.t_old.copy()
-
-        '''
-        Theoretically, alpha can be any real number, but in practice we usually choose it in a range around 1. 
-        Values between 0 and 1 provide under-relaxation (a more conservative update), while alpha = 1 gives you the full update. 
-        Choosing values above 1 (typically not too much above 1, for example between 1 and 2) implements over-relaxation, 
-        which can sometimes accelerate convergence—but if chosen too high, it may lead to instability.
-        '''
         alpha = 0.95
         t_relaxed = alpha * t_new + (1 - alpha) * self.t_old
-
         self.y -= self.data.rho * (t_relaxed - self.t_average)
-
-        # Update the stored t_old for the next iteration.
         self.t_old = t_new.copy()
-
         return
 
-        
     ###
     #   Optimization status
     ###    
-    def _opti_status(self,trade):
+    def _opti_status(self, trade):
         for i in range(self.data.num_partners):
             self.t_new[i] = self.variables.t[i].X
         self.SW = -self.model.objVal
-        self.Res_primal = sum( (self.t_new + trade[self.data.partners])*(self.t_new + trade[self.data.partners]) )
-        self.Res_dual = sum( (self.t_new-self.t_old)*(self.t_new-self.t_old) )
+        self.Res_primal = sum((self.t_new + trade[self.data.partners])**2)
+        self.Res_dual = sum((self.t_new - self.t_old)**2)
         self.t_old = np.copy(self.t_new)
         return
     
     def Who(self):
-        #print('Prosumer')
         self.who = 'Prosumer'
         return
 
-
-# Subproblem
+# Subproblem: Manager inherits from Prosumer.
 class Manager(Prosumer):
     def Who(self):
-        #print('Manager')
         self.who = 'Manager'
         return
