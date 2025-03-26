@@ -4,14 +4,14 @@
 batch_run.py
 
 This script performs N executions over different configurations:
-  - iter_update_method: "method1" and "method2"
-  - byzantine_ids: various lists (e.g., [2], [2,5], [2,5,8])
-  - byzantine_attack_probability: different probabilities (e.g., 0.05 and 0.1)
-  - byzantine_multiplier_lower and byzantine_multiplier_upper: different multipliers
-
+  - iter_update_method: "method1" (classical ADMM) and "method2" (relaxed ADMM with tunable alpha)
+  - For method2, we vary the relaxation parameter "alpha" (e.g. 0.7, 0.85, 0.95, 1.0)
+  - byzantine_attack_probability: different probabilities (e.g. 0.05, 0.1, 0.2)
+  - byzantine_multiplier: different tampering magnitudes (using the upper multiplier, e.g. 1.2, 1.3, 1.5, 2.0)
+  
 For each simulation, it collects:
   - iteration count
-  - mitigation data (read from the log file specified in the config):
+  - mitigation data (from the log file):
       • mitigation_count: number of mitigation events
       • avg_weight: average mitigation weight used
       • avg_deviation: average deviation in mitigated trades
@@ -43,19 +43,17 @@ def parse_log_file(file_name):
         for line in lines:
             count += 1
             try:
-                # Extract deviation:
                 parts = line.split("deviation=")
                 if len(parts) > 1:
                     deviation_str = parts[1].split(",")[0]
                     deviation = float(deviation_str)
                     total_deviation += deviation
-                # Extract weight:
                 parts = line.split("weight=")
                 if len(parts) > 1:
                     weight_str = parts[1].split(",")[0]
                     weight = float(weight_str)
                     total_weight += weight
-            except Exception as e:
+            except Exception:
                 continue
     avg_weight = total_weight / count if count > 0 else 0
     avg_deviation = total_deviation / count if count > 0 else 0
@@ -67,29 +65,19 @@ def run_simulation(config):
     Returns a dictionary of results.
     """
     sim = Simulator()
-    # Pass configuration to simulator (overwriting defaults)
     sim.config = config
     for key, value in config.items():
         if hasattr(sim, key):
             setattr(sim, key, value)
-    # Run the simulation (assumes sim.run() runs to termination)
     sim.run()
     
-    result = {
-        "iterations": sim.iteration,
-        # We can add additional simulation metrics if needed.
-    }
-    
-    # Parse the mitigation log file from the config.
+    result = {"iterations": sim.iteration}
     log_file = config.get("log_mitigation_file", "log_mitigation.txt")
     mitigation_data = parse_log_file(log_file)
     result.update(mitigation_data)
     return result
 
 def plot_bar_chart(df, group_col, value_col, ylabel, title, filename):
-    """
-    Create a bar chart (with error bars) for the mean of value_col grouped by group_col.
-    """
     grouped = df.groupby(group_col)[value_col].agg(['mean', 'std']).reset_index()
     plt.figure()
     plt.bar(grouped[group_col], grouped['mean'], yerr=grouped['std'], capsize=5)
@@ -101,13 +89,10 @@ def plot_bar_chart(df, group_col, value_col, ylabel, title, filename):
     plt.show()
 
 def plot_line_chart(df, x_col, y_col, group_col, ylabel, title, filename):
-    """
-    Create a line chart showing y_col versus x_col for each group in group_col, with error bars.
-    """
     plt.figure()
     for key, grp in df.groupby(group_col):
         grouped = grp.groupby(x_col)[y_col].agg(['mean', 'std']).reset_index()
-        plt.errorbar(grouped[x_col], grouped['mean'], yerr=grouped['std'], 
+        plt.errorbar(grouped[x_col], grouped['mean'], yerr=grouped['std'],
                      label=str(key), marker='o', capsize=5)
     plt.xlabel(x_col)
     plt.ylabel(ylabel)
@@ -118,117 +103,127 @@ def plot_line_chart(df, x_col, y_col, group_col, ylabel, title, filename):
     plt.show()
 
 def main():
-    # Number of executions for each configuration combination.
-    N = 3  # Adjust as needed
+    N = 3  # executions per configuration
 
-    # Parameter sweeps.
     methods = ["method1", "method2"]
-    byzantine_ids_list = [[2], [3], [5]]
-    byzantine_probabilities = [0.05, 0.1]
-    multipliers = [(0.1, 1.2), (0.5, 1.2)]
+    # For method2, we vary alpha; for method1, alpha is not used.
+    alphas = [0.25, 0.5, 0.75, 0.9]
+    byzantine_ids_list = [[2]]  # Fixed for simplicity
+    attack_probs = [0.01, 0.05, 0.1, 0.5]
+    multipliers = [(0.5, 1.2), (0.5, 1.3), (0.5, 1.5)]
 
     results = []
 
-    # Loop over all configuration combinations.
     for method in methods:
         for byz_ids in byzantine_ids_list:
-            for prob in byzantine_probabilities:
+            for prob in attack_probs:
                 for (lower, upper) in multipliers:
-                    for run in range(N):
-                        # Build configuration dictionary.
-                        config = {
-                            "iter_update_method": method,
-                            "byzantine_ids": byz_ids,
-                            "byzantine_attack_probability": prob,
-                            "byzantine_multiplier_lower": lower,
-                            "byzantine_multiplier_upper": upper,
-                            "scale_factor": 15.0,
-                            "mad_threshold": 5,
-                            "log_mitigation_file": f"log_{method}_ids{'-'.join(map(str, byz_ids))}_prob{prob}_mult{lower}-{upper}.txt",
-                            "non_interactive": True
-                        }
-                        print(f"Running: method={method}, byzantine_ids={byz_ids}, prob={prob}, multipliers=({lower}, {upper}), run={run}")
-                        
-                        sim_result = run_simulation(config)
-                        sim_result.update({
-                            "method": method,
-                            "byzantine_ids": str(byz_ids),
-                            "byzantine_attack_probability": prob,
-                            "byzantine_multiplier_lower": lower,
-                            "byzantine_multiplier_upper": upper,
-                            "run": run
-                        })
-                        results.append(sim_result)
+                    if method == "method2":
+                        for alpha in alphas:
+                            for run in range(N):
+                                config = {
+                                    "iter_update_method": method,
+                                    "alpha": alpha,
+                                    "byzantine_ids": byz_ids,
+                                    "byzantine_attack_probability": prob,
+                                    "byzantine_multiplier_lower": lower,
+                                    "byzantine_multiplier_upper": upper,
+                                    "scale_factor": 15.0,
+                                    "mad_threshold": 4.1,
+                                    "log_mitigation_file": f"log_{method}_alpha{alpha}_ids{'-'.join(map(str, byz_ids))}_prob{prob}_mult{upper}.txt",
+                                    "non_interactive": True,
+                                    "maximum_iteration": 500,
+                                    "penaltyfactor": 0.01,
+                                    "residual_primal": 4e-3,
+                                    "residual_dual": 4e-3
+                                }
+                                print(f"Running: method={method}, alpha={alpha}, byzantine_ids={byz_ids}, prob={prob}, upper multiplier={upper}, run={run}")
+                                sim_result = run_simulation(config)
+                                sim_result.update({
+                                    "method": method,
+                                    "alpha": alpha,
+                                    "byzantine_ids": str(byz_ids),
+                                    "byzantine_attack_probability": prob,
+                                    "byzantine_multiplier_upper": upper,
+                                    "run": run
+                                })
+                                results.append(sim_result)
+                    else:  # method1 (classical ADMM; no alpha used)
+                        for run in range(N):
+                            config = {
+                                "iter_update_method": method,
+                                "byzantine_ids": byz_ids,
+                                "byzantine_attack_probability": prob,
+                                "byzantine_multiplier_lower": lower,
+                                "byzantine_multiplier_upper": upper,
+                                "scale_factor": 15.0,
+                                "mad_threshold": 4.1,
+                                "log_mitigation_file": f"log_{method}_ids{'-'.join(map(str, byz_ids))}_prob{prob}_mult{upper}.txt",
+                                "non_interactive": True,
+                                "maximum_iteration": 500,
+                                "penaltyfactor": 0.01,
+                                "residual_primal": 4e-3,
+                                "residual_dual": 4e-3
+                            }
+                            print(f"Running: method={method}, byzantine_ids={byz_ids}, prob={prob}, upper multiplier={upper}, run={run}")
+                            sim_result = run_simulation(config)
+                            sim_result.update({
+                                "method": method,
+                                "alpha": None,
+                                "byzantine_ids": str(byz_ids),
+                                "byzantine_attack_probability": prob,
+                                "byzantine_multiplier_upper": upper,
+                                "run": run
+                            })
+                            results.append(sim_result)
     
-    # Save results to CSV.
     df = pd.DataFrame(results)
     print(df)
     df.to_csv("simulation_results.csv", index=False)
     print("Results saved to simulation_results.csv")
     
     # --- Generate Graphs ---
-    # Graph 1: Bar chart of iteration count by method.
-    plot_bar_chart(
-        df=df,
-        group_col="method",
-        value_col="iterations",
-        ylabel="Average Iterations",
-        title="Average Iterations by Iterative Update Method",
-        filename="avg_iterations_by_method.png"
-    )
-    
-    # Graph 2: Bar chart of mitigation event count by method.
-    plot_bar_chart(
-        df=df,
-        group_col="method",
-        value_col="mitigation_count",
-        ylabel="Average Mitigation Events",
-        title="Average Mitigation Events by Iterative Update Method",
-        filename="avg_mitigations_by_method.png"
-    )
-    
-    # Graph 3: Line chart of iteration count vs. Byzantine attack probability for each method.
+    # Graph: Iteration count vs. Byzantine attack probability (separate lines for method and alpha if applicable)
     plot_line_chart(
-        df=df,
+        df=df[df["method"]=="method2"],
         x_col="byzantine_attack_probability",
         y_col="iterations",
-        group_col="method",
+        group_col="alpha",
         ylabel="Average Iterations",
-        title="Iterations vs. Byzantine Attack Probability",
-        filename="iterations_vs_probability.png"
+        title="Iterations vs. Attack Probability (Relaxed ADMM, varying alpha)",
+        filename="iterations_vs_prob_relaxed.png"
     )
     
-    # Graph 4: Line chart of mitigation count vs. Byzantine attack probability for each method.
+    # Graph: Iteration count vs. Upper Tampering Multiplier for method2 (grouped by alpha)
     plot_line_chart(
-        df=df,
+        df=df[df["method"]=="method2"],
+        x_col="byzantine_multiplier_upper",
+        y_col="iterations",
+        group_col="alpha",
+        ylabel="Average Iterations",
+        title="Iterations vs. Tampering Multiplier (Relaxed ADMM, varying alpha)",
+        filename="iterations_vs_multiplier_relaxed.png"
+    )
+    
+    # Graph: Mitigation event count vs. Byzantine attack probability for method2 (grouped by alpha)
+    plot_line_chart(
+        df=df[df["method"]=="method2"],
         x_col="byzantine_attack_probability",
         y_col="mitigation_count",
-        group_col="method",
+        group_col="alpha",
         ylabel="Average Mitigation Events",
-        title="Mitigation Events vs. Byzantine Attack Probability",
-        filename="mitigations_vs_probability.png"
+        title="Mitigation Events vs. Attack Probability (Relaxed ADMM, varying alpha)",
+        filename="mitigations_vs_prob_relaxed.png"
     )
     
-    # Graph 5: Line chart of average mitigation weight vs. Byzantine attack probability.
-    plot_line_chart(
-        df=df,
-        x_col="byzantine_attack_probability",
-        y_col="avg_weight",
-        group_col="method",
-        ylabel="Average Mitigation Weight",
-        title="Avg Mitigation Weight vs. Byzantine Attack Probability",
-        filename="avg_weight_vs_probability.png"
-    )
-    
-    # Graph 6: Line chart of average mitigation deviation vs. Byzantine attack probability.
-    plot_line_chart(
-        df=df,
-        x_col="byzantine_attack_probability",
-        y_col="avg_deviation",
-        group_col="method",
-        ylabel="Average Mitigation Deviation",
-        title="Avg Mitigation Deviation vs. Byzantine Attack Probability",
-        filename="avg_deviation_vs_probability.png"
+    # Graph: For classical ADMM (method1) as baseline
+    plot_bar_chart(
+        df=df[df["method"]=="method1"],
+        group_col="byzantine_attack_probability",
+        value_col="iterations",
+        ylabel="Average Iterations",
+        title="Iterations vs. Attack Probability (Classical ADMM)",
+        filename="iterations_vs_prob_classical.png"
     )
 
 if __name__ == "__main__":

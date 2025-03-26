@@ -103,13 +103,12 @@ class Prosumer:
             val = self.t_old.copy()
             # Check for Byzantine behavior
             if self.data.isByzantine and self.data.tampered < 1:
-                # Read chance and multipliers from config with defaults
                 chance = self.config.get("byzantine_attack_probability", 0.05)
                 lower = self.config.get("byzantine_multiplier_lower", 0.5)
                 upper = self.config.get("byzantine_multiplier_upper", 1.2)
                 if random.random() < chance:
                     self.data.tampered += 1
-                    # multiplier = random.choice([lower, upper])
+                    # For tampering, we use the upper multiplier (tampering magnitude)
                     multiplier = upper
                     val *= multiplier
 
@@ -169,19 +168,19 @@ class Prosumer:
     #   Interchangeable Iterative Updates
     ###
     def _iter_update_method1(self, trade):
-        # Original simpler update
+        # Classical ADMM update (effectively alpha = 0)
         self.t_average = (self.t_old - trade[self.data.partners]) / 2
         self.y -= self.data.rho * (self.t_old - self.t_average)
         return
 
     def _iter_update_method2(self, trade):
-        # Current update method with relaxation
+        # Relaxed ADMM update with tunable alpha (default 0.95)
         self.t_average = (self.t_old - trade[self.data.partners]) / 2
         if self.model.Status == gb.GRB.Status.OPTIMAL:
             t_new = np.array([self.variables.t[i].X for i in range(self.data.num_partners)])
         else:
             t_new = self.t_old.copy()
-        alpha = 0.95
+        alpha = self.config.get("alpha", 0.95)  # Tunable parameter
         t_relaxed = alpha * t_new + (1 - alpha) * self.t_old
         self.y -= self.data.rho * (t_relaxed - self.t_average)
         self.t_old = t_new.copy()
