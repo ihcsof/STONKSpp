@@ -14,6 +14,41 @@ import numpy as np
 class expando(object):
     pass
 
+def apply_beta_gamma_weights(trades_array, neighbor_indices, trust_dict, local_malicious, beta=0.15, gamma=4):
+    n_partners = len(neighbor_indices)
+    if n_partners == 0:
+        return trades_array, np.array([])
+    alpha = np.zeros(n_partners, dtype=float)
+    candidates = []
+    for idx, nb in enumerate(neighbor_indices):
+        if nb in local_malicious:
+            alpha[idx] = 0.0
+        else:
+            score = trust_dict.get(nb, 1.0)
+            candidates.append((score, idx, nb))
+    candidates.sort(key=lambda x: x[0], reverse=True)
+    for rank, (score, idx, nb) in enumerate(candidates):
+        if rank < gamma:
+            alpha[idx] = beta
+        else:
+            alpha[idx] = 0.0
+    total_assigned = alpha.sum()
+    if 0 < total_assigned < 1.0:
+        leftover = 1.0 - total_assigned
+        non_mal_indices = [idx for idx, nb in enumerate(neighbor_indices) if nb not in local_malicious]
+        if len(non_mal_indices) > 0:
+            leftover_each = leftover / len(non_mal_indices)
+            for i in non_mal_indices:
+                alpha[i] += leftover_each
+        else:
+            alpha[:] = 1.0 / n_partners
+    elif total_assigned == 0.0:
+        alpha[:] = 1.0 / n_partners
+    else:
+        alpha /= total_assigned
+    new_trades = trades_array * alpha
+    return new_trades, alpha
+
 # Subproblem: Prosumer
 class Prosumer:
     def __init__(self, agent=None, partners=None, preferences=None, rho=1, config=None):

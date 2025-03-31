@@ -5,6 +5,7 @@
 
 import copy
 import json
+import math
 import sys
 import time
 import pandas as pd
@@ -12,7 +13,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 from igraph import Graph, plot
-from ProsumerGUROBI_FIX import Prosumer, Manager  # Updated prosumer file
+from ProsumerGUROBI_FIX import Prosumer, Manager, apply_beta_gamma_weights  # Updated prosumer file
 from discrete_event_sim import Simulation, Event
 
 
@@ -52,6 +53,12 @@ class Simulator(Simulation):
         self.config = {}  
         self.log_mitigation_file = "log_mitigation.txt"
         self.iter_update_method = "method2"  # default method for _iter_update
+
+        # Trust model parameters
+        self.gamma_malicious = 1
+        self.malicious_set = {}
+        self.mitigation_count = {}
+        self.trust_scores = {}
 
         # Optimization model initialization
         self.players = {}
@@ -322,27 +329,45 @@ class PlayerOptimizationMsg(Event):
             row_median = np.median(row_values)
             row_mad = np.median(np.abs(row_values - row_median))
 
-            scale_factor = 15.0
+            scale_factor = sim.config.get("scale_factor", 15.0)
+            mad_threshold = sim.config.get("mad_threshold", 4.1)
             min_threshold = 0.01
 
-            if row_mad < 4.1:
+            if row_mad < mad_threshold:
                 adaptive_threshold = float('inf')
             else:
                 adaptive_threshold = max(scale_factor * row_mad, min_threshold)
 
-            for idx, j in enumerate(sim.partners[self.i]):
+            for idx, nb in enumerate(sim.partners[self.i]):
                 deviation = abs(row_values[idx] - row_median)
                 if deviation > adaptive_threshold:
                     weight = min((deviation - adaptive_threshold)/deviation, 0.83)
                     new_value = (1 - weight)*row_values[idx] + weight*row_median
                     row_values[idx] = new_value
+
+                    sim.mitigation_count[self.i][nb] += 1
+                    if sim.mitigation_count[self.i][nb] >= sim.gamma_malicious:
+                        sim.malicious_set[self.i].add(nb)
+
                     with open("log_mitigation.txt", "a") as f:
                         f.write((
-                            f"[Mitigation in PlayerOptimizationMsgMitigated] Agent {self.i} -> Partner {j}"
+                            f"[Mitigation in PlayerOptimizationMsgMitigated] Agent {self.i} -> Partner {nb}"
                             f": deviation={deviation:.2f}, median={row_median:.2f}, "
                             f"threshold={adaptive_threshold:.2f}, corrected={new_value:.2f}\n"
                         ))
 
+            neighbor_ids = sim.partners[self.i]
+            local_malicious = sim.malicious_set[self.i]
+            i_trust_dict = sim.trust_scores[self.i]
+            beta_cfg = sim.config.get("beta_admissible", 0.15)
+            gamma_cfg = sim.config.get("gamma_admissible", 4)
+            weighted_trades, alpha = apply_beta_gamma_weights(row_vals, neighbor_ids, i_trust_dict, local_malicious, beta=beta_cfg, gamma=gamma_cfg)
+            for (a_w, nb) in zip(alpha, neighbor_ids):
+                if math.isclose(a_w, 0.0, abs_tol=1e-9):
+                    sim.trust_scores[self.i][nb] *= 0.9
+                elif a_w >= beta_cfg:
+                    sim.trust_scores[self.i][nb] *= 1.05
+            row_vals = weighted_trades
             proposed_trades[self.i, sim.partners[self.i]] = row_values
 
         sim.Trades = proposed_trades
@@ -396,6 +421,11 @@ class PlayerUpdateMsg(Event):
                     weight = min((deviation - adaptive_threshold) / deviation, 0.9)
                     new_value = (1 - weight) * sim.Trades[self.i, j] + weight * median_trade
                     robust_trade[j] = new_value
+
+                    sim.mitigation_count[self.i][j] += 1
+                    if sim.mitigation_count[self.i][j] >= sim.gamma_malicious:
+                        sim.malicious_set[self.i].add(j)
+
                     timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                     log_line = (
                         f"{timestamp} - Mitigated agent {j}: deviation={deviation:.2f}, "
