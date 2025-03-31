@@ -173,16 +173,26 @@ class Simulator(Simulation):
         return
     
     def initialize_partners(self):
+        # First, initialize dictionaries for every agent in the graph.
         for vertex in self.MGraph.vs:
-            self.partners[vertex.index] = []
-
+            agent_id = vertex.index
+            self.partners[agent_id] = []
+            self.malicious_set[agent_id] = set()
+            self.mitigation_count[agent_id] = {}
+            self.trust_scores[agent_id] = {}
+        # Build the partners list.
         for edge in self.MGraph.es:
             self.partners[edge.source].append(edge.target)
-
+        # For each agent, initialize mitigation counts and trust scores for each partner.
         for vertex in self.MGraph.vs:
-            self.npartners[vertex.index] = len(self.partners[vertex.index])
-            self.n_optimized_partners[vertex.index] = 0
-            self.n_updated_partners[vertex.index] = len(self.partners[vertex.index])
+            agent_id = vertex.index
+            self.npartners[agent_id] = len(self.partners[agent_id])
+            self.n_optimized_partners[agent_id] = 0
+            self.n_updated_partners[agent_id] = len(self.partners[agent_id])
+            for nb in self.partners[agent_id]:
+                self.mitigation_count[agent_id][nb] = 0
+                self.trust_scores[agent_id][nb] = 1.0
+
     
     def Opti_LocDec_Start(self):
         for i in range(self.nag):

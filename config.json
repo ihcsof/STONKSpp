@@ -1,5 +1,5 @@
 {
-    "log_mitigation_file": "enhancdddd_log.txt",
+    "log_mitigation_file": "enhance_log.txt",
     "iter_update_method": "method1",
     "byzantine_ids": [200],
     "byzantine_attack_probability": 0.05,
