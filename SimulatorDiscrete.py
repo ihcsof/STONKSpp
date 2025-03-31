@@ -333,7 +333,12 @@ class PlayerOptimizationMsg(Event):
             if j not in sim.partners[self.i]:
                 proposed_trades[j] = original_values[j]
 
-        row_values = proposed_trades[self.i, sim.partners[self.i]]
+        row_values = []
+        if sim.partners[self.i]:
+            row_vals = proposed_trades[self.i, sim.partners[self.i]]
+        else:
+            row_vals = np.array([])
+
 
         if len(row_values) > 0:
             row_median = np.median(row_values)
