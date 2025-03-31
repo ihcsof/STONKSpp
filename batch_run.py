@@ -3,25 +3,11 @@
 """
 batch_run.py
 
-This script performs N executions over different configurations, including:
-  - iter_update_method: "method1" (classical ADMM) and "method2" (relaxed ADMM with tunable alpha)
-  - For method2, we vary "alpha".
-  - byzantine_ids: which agents are malicious
-  - byzantine_attack_probability: how often a malicious agent chooses to tamper
-  - byzantine_multiplier_(lower, upper): tampering magnitude
-  - NEW: byzantine_max_tampering: how many times a malicious agent can tamper (1, 5, 10, 30, 50)
-
-For each simulation, it collects:
-  - iteration count
-  - mitigation data (from the log file):
-      • mitigation_count: number of mitigation events
-      • avg_weight: average mitigation weight used
-      • avg_deviation: average deviation in mitigated trades
-
-Results are saved:
-  1) "simulation_results.csv" with all raw runs
-  2) Several grouped bar charts (histogram style)
-  3) A "simulation_summary_table.csv" pivot with aggregated meaningful data
+Changes from previous version:
+  - "byzantine_max_tampering" has been renamed to "tampering_count".
+  - The final summary table pivot includes both method1 and method2 
+    (classical ADMM and relaxed ADMM).
+  - For method1, we store alpha as "N/A" to avoid confusion in the pivot.
 """
 
 import os
@@ -85,8 +71,6 @@ def run_simulation(config):
     mitigation_data = parse_log_file(log_file)
     result.update(mitigation_data)
     return result
-
-# --- Reuse the bar chart code from before but we won't re-post all if we have it.
 
 def clamp_errorbars_at_zero(means, errs):
     import numpy as np
@@ -185,8 +169,8 @@ def main():
     byzantine_ids_list = [[2]]              # fixed for simplicity
     attack_probs = [0.01, 0.05, 0.1, 0.5]
     multipliers = [(0.5, 1.2), (0.5, 1.3), (0.5, 1.5)]
-    # NEW: tamper limit
-    tamper_limits = [1, 5, 10, 30, 50]
+    # Renamed from 'byzantine_max_tampering' to 'tampering_count'
+    tampering_counts = [1, 5, 10, 30, 50]
 
     results = []
 
@@ -194,7 +178,7 @@ def main():
         for byz_ids in byzantine_ids_list:
             for prob in attack_probs:
                 for (lower, upper) in multipliers:
-                    for tamplimit in tamper_limits:
+                    for tamplimit in tampering_counts:
                         if method == "method2":
                             # Vary alpha
                             for alpha in alphas:
@@ -206,18 +190,20 @@ def main():
                                         "byzantine_attack_probability": prob,
                                         "byzantine_multiplier_lower": lower,
                                         "byzantine_multiplier_upper": upper,
-                                        "byzantine_max_tampering": tamplimit,
+                                        "tampering_count": tamplimit,
                                         "scale_factor": 15.0,
                                         "mad_threshold": 4.1,
-                                        "log_mitigation_file": (f"log_{method}_alpha{alpha}_ids{'-'.join(map(str, byz_ids))}"
-                                                                f"_prob{prob}_mult{upper}_maxT{tamplimit}.txt"),
+                                        "log_mitigation_file": (
+                                            f"log_{method}_alpha{alpha}_ids{'-'.join(map(str, byz_ids))}"
+                                            f"_prob{prob}_mult{upper}_tcount{tamplimit}.txt"
+                                        ),
                                         "non_interactive": True,
                                         "maximum_iteration": 500,
                                         "penaltyfactor": 0.01,
                                         "residual_primal": 4e-3,
                                         "residual_dual": 4e-3
                                     }
-                                    print(f"Running: method={method}, alpha={alpha}, maxT={tamplimit}, prob={prob}, mult={upper}")
+                                    print(f"Running: method={method}, alpha={alpha}, tampering_count={tamplimit}, prob={prob}, mult={upper}")
                                     sim_result = run_simulation(config)
                                     sim_result.update({
                                         "method": method,
@@ -225,12 +211,12 @@ def main():
                                         "byzantine_ids": str(byz_ids),
                                         "byzantine_attack_probability": prob,
                                         "byzantine_multiplier_upper": upper,
-                                        "byzantine_max_tampering": tamplimit,
+                                        "tampering_count": tamplimit,
                                         "run": run
                                     })
                                     results.append(sim_result)
                         else:
-                            # method1 (classical ADMM); alpha not used
+                            # method1 (classical ADMM); alpha not used, store alpha as "N/A"
                             for run in range(N):
                                 config = {
                                     "iter_update_method": method,
@@ -238,26 +224,28 @@ def main():
                                     "byzantine_attack_probability": prob,
                                     "byzantine_multiplier_lower": lower,
                                     "byzantine_multiplier_upper": upper,
-                                    "byzantine_max_tampering": tamplimit,
+                                    "tampering_count": tamplimit,
                                     "scale_factor": 15.0,
                                     "mad_threshold": 4.1,
-                                    "log_mitigation_file": (f"log_{method}_ids{'-'.join(map(str, byz_ids))}"
-                                                           f"_prob{prob}_mult{upper}_maxT{tamplimit}.txt"),
+                                    "log_mitigation_file": (
+                                        f"log_{method}_ids{'-'.join(map(str, byz_ids))}"
+                                        f"_prob{prob}_mult{upper}_tcount{tamplimit}.txt"
+                                    ),
                                     "non_interactive": True,
                                     "maximum_iteration": 500,
                                     "penaltyfactor": 0.01,
                                     "residual_primal": 4e-3,
                                     "residual_dual": 4e-3
                                 }
-                                print(f"Running: method={method}, maxT={tamplimit}, prob={prob}, mult={upper}")
+                                print(f"Running: method={method}, tampering_count={tamplimit}, prob={prob}, mult={upper}")
                                 sim_result = run_simulation(config)
                                 sim_result.update({
                                     "method": method,
-                                    "alpha": None,
+                                    "alpha": "N/A",
                                     "byzantine_ids": str(byz_ids),
                                     "byzantine_attack_probability": prob,
                                     "byzantine_multiplier_upper": upper,
-                                    "byzantine_max_tampering": tamplimit,
+                                    "tampering_count": tamplimit,
                                     "run": run
                                 })
                                 results.append(sim_result)
@@ -267,52 +255,50 @@ def main():
     df.to_csv("simulation_results.csv", index=False)
     print("Results saved to simulation_results.csv")
 
-    # We can produce the old graphs if desired (be mindful of all the new dimension "byzantine_max_tampering")
-    # For brevity, let's do a couple new grouped bar charts focusing on the new tampering dimension:
-
-    # 1) For method2, group by alpha, x-axis = byzantine_max_tampering, y=iterations
+    # 1) For method2, group by alpha, x-axis = tampering_count, y=iterations
     plot_grouped_bar_chart(
         df=df[df["method"]=="method2"],
-        x_col="byzantine_max_tampering",
+        x_col="tampering_count",
         group_col="alpha",
         value_col="iterations",
         ylabel="Average Iterations",
-        title="Iterations vs. Max Tampering (Relaxed ADMM, varying alpha)",
-        filename="iterations_vs_maxtampering_relaxed.png"
+        title="Iterations vs. Tampering Count (Relaxed ADMM, varying alpha)",
+        filename="iterations_vs_tamperingcount_relaxed.png"
     )
 
-    # 2) For method2, group by alpha, x-axis = byzantine_max_tampering, y=mitigation_count
+    # 2) For method2, group by alpha, x-axis = tampering_count, y=mitigation_count
     plot_grouped_bar_chart(
         df=df[df["method"]=="method2"],
-        x_col="byzantine_max_tampering",
+        x_col="tampering_count",
         group_col="alpha",
         value_col="mitigation_count",
         ylabel="Average Mitigation Events",
-        title="Mitigation Events vs. Max Tampering (Relaxed ADMM, varying alpha)",
-        filename="mitigations_vs_maxtampering_relaxed.png"
+        title="Mitigation Events vs. Tampering Count (Relaxed ADMM, varying alpha)",
+        filename="mitigations_vs_tamperingcount_relaxed.png"
     )
 
-    # 3) For classical ADMM, show iterations vs. max tampering (simple bar)
+    # 3) For classical ADMM, show iterations vs. tampering_count (simple bar)
     plot_bar_chart(
         df=df[df["method"]=="method1"],
-        group_col="byzantine_max_tampering",
+        group_col="tampering_count",
         value_col="iterations",
         ylabel="Average Iterations",
-        title="Iterations vs. Max Tampering (Classical ADMM)",
-        filename="iterations_vs_maxtampering_classical.png"
+        title="Iterations vs. Tampering Count (Classical ADMM)",
+        filename="iterations_vs_tamperingcount_classical.png"
     )
 
-    # Finally, produce a meaningful summary table with average iteration count, average mitigation, etc.
-    # We'll pivot on method, alpha, max tampering, maybe probability, etc.
-    pivot_cols = ["method", "alpha", "byzantine_attack_probability", "byzantine_max_tampering"]
-    # Pivot aggregator: mean of 'iterations', 'mitigation_count'
+    # Produce a meaningful summary table with everything
+    # We'll pivot on method, alpha, byzantine_attack_probability, tampering_count
+    pivot_cols = ["method", "alpha", "byzantine_attack_probability", "tampering_count"]
     summary_table = df.groupby(pivot_cols).agg({
         "iterations": ["mean","std"],
         "mitigation_count": ["mean","std"]
     }).reset_index()
+
+    # Flatten column names
     summary_table.columns = [
-        "method", "alpha", "attack_prob", "max_tampering",
-        "iter_mean","iter_std","mitig_mean","mitig_std"
+        "method", "alpha", "attack_prob", "tampering_count",
+        "iter_mean", "iter_std", "mitig_mean", "mitig_std"
     ]
     summary_table.to_csv("simulation_summary_table.csv", index=False)
     print("Final summary table saved to simulation_summary_table.csv")
