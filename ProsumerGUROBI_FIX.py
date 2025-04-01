@@ -39,7 +39,7 @@ class Prosumer:
             # Track how many times we tampered for repeated tampering
             self.data.tampered = 0
             # The maximum times a byzantine agent can tamper
-            self.data.max_tampering = self.config.get("byzantine_max_tampering", 1)
+            self.data.max_tampering = self.config.get("tampering_count", 1)
 
             self.data.CM = (agent['Type'] == 'Manager')
             if agent['AssetsNum'] <= len(agent['Assets']):

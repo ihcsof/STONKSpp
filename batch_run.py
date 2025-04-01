@@ -1,14 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-batch_run.py
-
-Changes from previous version:
-  - "byzantine_max_tampering" has been renamed to "tampering_count".
-  - The final summary table pivot includes both method1 and method2 
-    (classical ADMM and relaxed ADMM).
-  - For method1, we store alpha as "N/A" to avoid confusion in the pivot.
-"""
 
 import os
 import time
@@ -169,7 +160,6 @@ def main():
     byzantine_ids_list = [[2]]              # fixed for simplicity
     attack_probs = [0.01, 0.05, 0.1, 0.5]
     multipliers = [(0.5, 1.2), (0.5, 1.3), (0.5, 1.5)]
-    # Renamed from 'byzantine_max_tampering' to 'tampering_count'
     tampering_counts = [1, 5, 10, 30, 50]
 
     results = []
