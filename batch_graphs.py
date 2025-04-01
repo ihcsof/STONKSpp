@@ -105,7 +105,7 @@ def main():
                 "byzantine_ids": byz_ids,
                 "byzantine_attack_probability": prob,
                 "byzantine_multiplier_upper": mult,
-                "tampering_count": tcount,  # renamed from byzantine_max_tampering
+                "tampering_count": tcount,
                 "iterations": iterations,
                 "mitigation_count": mitigation_data["mitigation_count"],
                 "avg_weight": mitigation_data["avg_weight"],
