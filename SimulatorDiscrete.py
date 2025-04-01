@@ -335,9 +335,9 @@ class PlayerOptimizationMsg(Event):
 
         row_values = []
         if sim.partners[self.i]:
-            row_vals = proposed_trades[self.i, sim.partners[self.i]]
+            row_values = proposed_trades[self.i, sim.partners[self.i]]
         else:
-            row_vals = np.array([])
+            row_values = np.array([])
 
 
         if len(row_values) > 0:
@@ -376,13 +376,13 @@ class PlayerOptimizationMsg(Event):
             i_trust_dict = sim.trust_scores[self.i]
             beta_cfg = sim.config.get("beta_admissible", 0.15)
             gamma_cfg = sim.config.get("gamma_admissible", 4)
-            weighted_trades, alpha = apply_beta_gamma_weights(row_vals, neighbor_ids, i_trust_dict, local_malicious, beta=beta_cfg, gamma=gamma_cfg)
+            weighted_trades, alpha = apply_beta_gamma_weights(row_values, neighbor_ids, i_trust_dict, local_malicious, beta=beta_cfg, gamma=gamma_cfg)
             for (a_w, nb) in zip(alpha, neighbor_ids):
                 if math.isclose(a_w, 0.0, abs_tol=1e-9):
                     sim.trust_scores[self.i][nb] *= 0.9
                 elif a_w >= beta_cfg:
                     sim.trust_scores[self.i][nb] *= 1.05
-            row_vals = weighted_trades
+            row_values = weighted_trades
             proposed_trades[self.i, sim.partners[self.i]] = row_values
 
         sim.Trades = proposed_trades
