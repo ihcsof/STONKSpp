@@ -8,45 +8,84 @@ Updated by: [Your Name]
 
 import random
 import gurobipy as gb
+import logging
 import numpy as np
 
 # Class for flexible attribute storage.
 class expando(object):
     pass
 
+# Configure the logger to write DEBUG messages to a file
+logging.basicConfig(
+    filename="beta_gamma.log",
+    level=logging.DEBUG,
+    format="%(message)s",
+    filemode="w"  # Overwrite the file each time; remove or change as needed
+)
+logger = logging.getLogger(__name__)
+
 def apply_beta_gamma_weights(trades_array, neighbor_indices, trust_dict, local_malicious, beta=0.15, gamma=4):
+    logger.debug("Starting apply_beta_gamma_weights")
+    logger.debug("Input trades_array: %s", trades_array)
+    logger.debug("Neighbor indices: %s", neighbor_indices)
+    logger.debug("Trust dict: %s", trust_dict)
+    logger.debug("Local malicious set: %s", local_malicious)
+    logger.debug("beta=%s, gamma=%s", beta, gamma)
+    
     n_partners = len(neighbor_indices)
     if n_partners == 0:
+        logger.debug("No partners found; returning original trades.")
         return trades_array, np.array([])
+    
     alpha = np.zeros(n_partners, dtype=float)
     candidates = []
     for idx, nb in enumerate(neighbor_indices):
         if nb in local_malicious:
             alpha[idx] = 0.0
+            logger.debug("Neighbor %s flagged as malicious; alpha[%s]=0", nb, idx)
         else:
             score = trust_dict.get(nb, 1.0)
             candidates.append((score, idx, nb))
+            logger.debug("Neighbor %s not malicious; trust score=%s", nb, score)
+    
     candidates.sort(key=lambda x: x[0], reverse=True)
+    logger.debug("Sorted candidates: %s", candidates)
+    
     for rank, (score, idx, nb) in enumerate(candidates):
         if rank < gamma:
             alpha[idx] = beta
+            logger.debug("Assigning beta (%s) to neighbor %s (rank %s)", beta, nb, rank)
         else:
             alpha[idx] = 0.0
+            logger.debug("Assigning 0 weight to neighbor %s (rank %s)", nb, rank)
+    
     total_assigned = alpha.sum()
+    logger.debug("Total assigned weight before leftover: %s", total_assigned)
+    
     if 0 < total_assigned < 1.0:
         leftover = 1.0 - total_assigned
         non_mal_indices = [idx for idx, nb in enumerate(neighbor_indices) if nb not in local_malicious]
+        logger.debug("Non-malicious indices for leftover: %s", non_mal_indices)
         if len(non_mal_indices) > 0:
             leftover_each = leftover / len(non_mal_indices)
+            logger.debug("Distributing leftover weight %s equally; each gets %s", leftover, leftover_each)
             for i in non_mal_indices:
                 alpha[i] += leftover_each
         else:
             alpha[:] = 1.0 / n_partners
+            logger.debug("No non-malicious neighbors found; fallback to uniform distribution.")
     elif total_assigned == 0.0:
         alpha[:] = 1.0 / n_partners
+        logger.debug("Total assigned weight is 0; using uniform distribution.")
     else:
         alpha /= total_assigned
+        logger.debug("Scaling alpha vector to sum to 1: %s", alpha)
+    
     new_trades = trades_array * alpha
+    logger.debug("Final alpha vector: %s", alpha)
+    logger.debug("New trades after weighting: %s", new_trades)
+    logger.debug("apply_beta_gamma_weights finished")
+    
     return new_trades, alpha
 
 # Subproblem: Prosumer
