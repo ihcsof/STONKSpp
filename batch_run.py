@@ -158,7 +158,7 @@ def main():
     byzantine_ids_list = [[2]]              # fixed for simplicity
     attack_probs = [0.01, 0.05, 0.1, 0.5]
     multipliers = [(0.5, 1.2), (0.5, 1.3), (0.5, 1.5)]
-    tampering_counts = [1000, 5, 10, 30, 50]
+    tampering_counts = [1, 5, 10, 30, 50]
 
     results = []
 
