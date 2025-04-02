@@ -48,8 +48,7 @@ def run_simulation(config):
     Instantiate the Simulator with the given config, run it, and then parse its log file.
     Returns a dictionary of results.
     """
-    sim = Simulator()
-    sim.config = config
+    sim = Simulator(config=config)
     for key, value in config.items():
         if hasattr(sim, key):
             setattr(sim, key, value)
