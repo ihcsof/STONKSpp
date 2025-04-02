@@ -18,8 +18,9 @@ from discrete_event_sim import Simulation, Event
 
 
 class Simulator(Simulation):
-    def __init__(self): 
+    def __init__(self, config=None): 
         super().__init__()
+        self.config = config or {}
         self.simulation_on = False
         self.simulation_message = ""
         self.force_stop = False
@@ -48,9 +49,7 @@ class Simulator(Simulation):
         # Latency
         self.isLatency = False
         self.latency_times = []
-
-        # New: default config dictionary and log file name
-        self.config = {}  
+  
         self.log_mitigation_file = "log_mitigation.txt"
         self.iter_update_method = "method2"  # default method for _iter_update
 
