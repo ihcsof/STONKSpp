@@ -276,7 +276,7 @@ class Prosumer:
             t_new = np.array([self.variables.t[i].X for i in range(self.data.num_partners)])
         else:
             t_new = self.t_old.copy()
-        alpha = self.config.get("alpha", 0.95)
+        alpha = self.config.get("alpha", 0)
         t_relaxed = alpha * t_new + (1 - alpha) * self.t_old
         self.y -= self.data.rho * (t_relaxed - self.t_average)
         self.t_old = t_new.copy()
