@@ -65,7 +65,7 @@ class Simulator(Simulation):
         self.n_updated_partners = {}  # Number of partners that have updated for each player
         self.initialize_partners()
 
-        plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
+        #plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
 
         self.Opti_LocDec_Start()
 
@@ -183,6 +183,9 @@ class Simulator(Simulation):
         self.schedule(0, CheckStateEvent())
     
     def Opti_LocDec_State(self, out):
+        if self.iteration >= self.maximum_iteration:
+            return
+            
         self.iteration += 1
         
         if self.Prices[self.Prices != 0].size != 0:

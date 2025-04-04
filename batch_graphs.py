@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-process_logs.py
+batch_graphs.py
 
 This script processes existing log files (without re-running simulations) and produces:
   1) "simulation_results.csv" with all raw runs
   2) Several grouped bar charts (histogram style)
   3) A "simulation_summary_table.csv" pivot with aggregated data
+  4) Additional charts for analyzing how iteration & mitigation vary with
+     attack probability and multiplier, grouped by tampering count or alpha, etc.
 """
 
 import os
@@ -14,7 +16,7 @@ import re
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Import plotting helpers from batch_run.py (ensure batch_run.py is in the same folder)
+# Import plotting helpers from batch_run.py (ensure batch_run.py is in the same folder or adjust imports)
 from batch_run import plot_bar_chart, plot_grouped_bar_chart
 
 def parse_log_file(file_name):
@@ -36,8 +38,10 @@ def parse_log_file(file_name):
         for line in lines:
             count += 1
             try:
-                deviation = float(line.split("deviation=")[1].split(",")[0])
-                weight = float(line.split("weight=")[1].split(",")[0])
+                deviation_str = line.split("deviation=")[1].split(",")[0]
+                weight_str = line.split("weight=")[1].split(",")[0]
+                deviation = float(deviation_str)
+                weight = float(weight_str)
                 total_deviation += deviation
                 total_weight += weight
             except:
@@ -60,22 +64,22 @@ def clamp_errorbars_at_zero(means, errs):
     positive_error = upper - means
     return [negative_error, positive_error]
 
-# Main extraction process
 def main():
     """
-    1) Scans all log_*.txt files
-    2) Extracts method, alpha, etc. from the filename via regex
-    3) Reads line counts and mitigation stats
-    4) Saves the combined results to 'simulation_results.csv'
-    5) Plots grouped bar charts
-    6) Builds a pivoted summary table, saved to 'simulation_summary_table.csv'
+    1) Scans all log_*.txt files.
+    2) Extracts method, alpha, etc. from the filename via regex.
+    3) Reads line counts and mitigation stats from the logs.
+    4) Saves the combined results to 'simulation_results.csv'.
+    5) Plots grouped bar charts (and additional charts) for iteration & mitigation.
+    6) Builds a pivoted summary table, saved to 'simulation_summary_table.csv'.
     """
     # Find all log files matching our naming scheme
     files = [f for f in os.listdir('.') if re.match(r'log_.*\.txt', f)]
     results = []
 
-    # Regex pattern to capture method, alpha (optional), IDs, probability, multiplier, and tampering count
-    pattern = r"log_(method\d)(?:_alpha([\d\.]+))?_ids([\d\-]+)_prob([\d\.]+)_mult([\d\.]+)_tcount(\d+)\.txt"
+    # Regex pattern to capture method, alpha (optional), IDs, probability, multiplier, tampering_count
+    # e.g. log_method2_alpha0.5_ids2_prob0.1_mult1.5_tcount30.txt
+    pattern = r"log_(method\d)(?:_alpha([\d\.]+))?_ids([\d\-]+)_prob([\d\.]+)_mult([\d\.]+)_tcount(\S+)\.txt"
 
     for log_file in files:
         params = re.match(pattern, log_file)
@@ -86,17 +90,23 @@ def main():
             if alpha_str is None:
                 alpha = "N/A"
             else:
-                alpha = alpha_str  # keep as string; could also convert to float if desired
+                alpha = alpha_str
 
             # Process the rest
             byz_ids = [int(i) for i in byz_ids_str.split('-')]
             prob = float(prob_str)
             mult = float(mult_str)
-            tcount = int(tcount_str)
+            # tampering_count might be "inf" if you're using float('inf')
+            if tcount_str == 'inf':
+                tcount = float('inf')
+            else:
+                tcount = float(tcount_str)
 
+            # Parse mitigation stats
             mitigation_data = parse_log_file(log_file)
+
             # Example assumption: # of "iterations" = # of lines in log 
-            # (assuming 1 line per iteration in method logs)
+            # This might not match exactly if your code logs multiple lines per iteration.
             iterations = len(open(log_file).readlines())
 
             results.append({
@@ -106,6 +116,7 @@ def main():
                 "byzantine_attack_probability": prob,
                 "byzantine_multiplier_upper": mult,
                 "tampering_count": tcount,
+                "iterations": iterations,
                 "mitigation_count": mitigation_data["mitigation_count"],
                 "avg_weight": mitigation_data["avg_weight"],
                 "avg_deviation": mitigation_data["avg_deviation"]
@@ -127,7 +138,7 @@ def main():
             group_col="alpha",
             value_col="iterations",
             ylabel="Average Iterations",
-            title="Iterations vs. Tampering Count (Relaxed ADMM, varying alpha)",
+            title="Iterations vs. Tampering Count (Relaxed ADMM)",
             filename="iterations_vs_tamperingcount_relaxed.png"
         )
 
@@ -138,7 +149,7 @@ def main():
             group_col="alpha",
             value_col="mitigation_count",
             ylabel="Average Mitigation Events",
-            title="Mitigation Events vs. Tampering Count (Relaxed ADMM, varying alpha)",
+            title="Mitigation Events vs. Tampering Count (Relaxed ADMM)",
             filename="mitigations_vs_tamperingcount_relaxed.png"
         )
 
@@ -154,8 +165,55 @@ def main():
             filename="iterations_vs_tamperingcount_classical.png"
         )
 
-    # Build a summary pivot table that includes both method1 and method2
-    # Group by method, alpha, probability, and tampering_count
+    # 4) Iterations vs. Attack Probability (Grouped by tampering_count)
+    if not df_method2.empty:
+        plot_grouped_bar_chart(
+            df=df_method2,
+            x_col="byzantine_attack_probability",
+            group_col="tampering_count",
+            value_col="iterations",
+            ylabel="Average Iterations",
+            title="Iterations vs. Attack Probability (Relaxed ADMM)",
+            filename="iterations_vs_attackprob_relaxed.png"
+        )
+
+    # 5) Mitigations vs. Attack Probability (Grouped by tampering_count)
+    if not df_method2.empty:
+        plot_grouped_bar_chart(
+            df=df_method2,
+            x_col="byzantine_attack_probability",
+            group_col="tampering_count",
+            value_col="mitigation_count",
+            ylabel="Average Mitigation Events",
+            title="Mitigations vs. Attack Probability (Relaxed ADMM)",
+            filename="mitigations_vs_attackprob_relaxed.png"
+        )
+
+    # 6) Iterations vs. Multiplier (Grouped by tampering_count)
+    if not df_method2.empty:
+        plot_grouped_bar_chart(
+            df=df_method2,
+            x_col="byzantine_multiplier_upper",
+            group_col="tampering_count",
+            value_col="iterations",
+            ylabel="Average Iterations",
+            title="Iterations vs. Multiplier (Relaxed ADMM)",
+            filename="iterations_vs_multiplier_relaxed.png"
+        )
+
+    # 7) Mitigations vs. Multiplier (Grouped by tampering_count)
+    if not df_method1.empty:
+        plot_grouped_bar_chart(
+            df=df_method1,
+            x_col="byzantine_multiplier_upper",
+            group_col="tampering_count",
+            value_col="mitigation_count",
+            ylabel="Average Mitigation Events",
+            title="Mitigations vs. Multiplier (Classical ADMM)",
+            filename="mitigations_vs_multiplier_classical.png"
+        )
+
+    # ---- Summary Table ----
     summary_table = df.groupby(["method", "alpha", "byzantine_attack_probability", "tampering_count"]).agg({
         "iterations": ["mean", "std"],
         "mitigation_count": ["mean", "std"]

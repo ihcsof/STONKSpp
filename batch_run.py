@@ -1,6 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""
+batch_run.py
+
+This script:
+  - Sweeps over multiple parameter configurations (method, tampering_count, attack_prob, etc.).
+  - Runs each configuration N times, saving raw results to "simulation_results.csv."
+  - Produces bar charts and grouped-bar charts (iterations vs. tampering_count, etc.).
+  - Produces additional charts for:
+      1) Iterations vs. Attack Probability
+      2) Mitigations vs. Attack Probability
+      3) Iterations vs. Multiplier
+      4) Mitigations vs. Multiplier
+  - Saves a pivot summary table to "simulation_summary_table.csv."
+"""
+
 import os
 import time
 import random
@@ -46,14 +61,19 @@ def parse_log_file(file_name):
 def run_simulation(config):
     """
     Instantiate the Simulator with the given config, run it, and then parse its log file.
-    Returns a dictionary of results.
+    Returns a dictionary of results (including iteration count, mitigation stats).
     """
+    # Pass config to the simulator constructor
     sim = Simulator(config=config)
+
+    # For any attributes that actually exist on the simulator class, set them:
     for key, value in config.items():
         if hasattr(sim, key):
             setattr(sim, key, value)
+
     sim.run()
     
+    # Gather results
     result = {
         "iterations": sim.iteration
     }
@@ -92,7 +112,6 @@ def plot_grouped_bar_chart(df, x_col, group_col, value_col, ylabel, title, filen
     pivot_mean = pivot_mean.sort_index()
     pivot_std  = pivot_std.sort_index()
 
-    import numpy as np
     fig, ax = plt.subplots(figsize=(8,6))
     num_groups = len(pivot_mean.columns)
     x_vals = np.arange(len(pivot_mean.index))
@@ -151,15 +170,16 @@ def plot_bar_chart(df, group_col, value_col, ylabel, title, filename):
 ############################################
 def main():
     # Number of executions per configuration
-    N = 3
+    N = 10
 
     # Parameter sweeps
     methods = ["method1", "method2"]
-    alphas = [0.25, 0.5, 0.75, 0.9]          # only for method2
-    byzantine_ids_list = [[2]]              # fixed for simplicity
-    attack_probs = [0.01, 0.05, 0.1, 0.5]
-    multipliers = [(0.5, 1.2), (0.5, 1.3), (0.5, 1.5)]
-    tampering_counts = [1, 5, 10, 30, 50]
+    alphas = [0.15, 0.5, 0.9]  # only for method2
+    byzantine_ids_list = [[2]]  # fixed for simplicity
+    attack_probs = [0.01, 0.1, 0.5]
+    multipliers = [(0.5, 1.1), (0.5, 1.5)]
+    # If you want infinite tampering, we might store float('inf') or a large number
+    tampering_counts = [1, 10, 30, float('inf')]
 
     results = []
 
@@ -169,7 +189,7 @@ def main():
                 for (lower, upper) in multipliers:
                     for tamplimit in tampering_counts:
                         if method == "method2":
-                            # Vary alpha
+                            # Vary alpha for relaxed ADMM
                             for alpha in alphas:
                                 for run in range(N):
                                     config = {
@@ -205,7 +225,7 @@ def main():
                                     })
                                     results.append(sim_result)
                         else:
-                            # method1 (classical ADMM); alpha not used, store alpha as "N/A"
+                            # method1 (classical ADMM); alpha not used, store alpha as "0" or "N/A"
                             for run in range(N):
                                 config = {
                                     "iter_update_method": method,
@@ -230,7 +250,7 @@ def main():
                                 sim_result = run_simulation(config)
                                 sim_result.update({
                                     "method": method,
-                                    "alpha": "N/A",
+                                    "alpha": "0",
                                     "byzantine_ids": str(byz_ids),
                                     "byzantine_attack_probability": prob,
                                     "byzantine_multiplier_upper": upper,
@@ -239,10 +259,13 @@ def main():
                                 })
                                 results.append(sim_result)
 
+    # Convert results list to DataFrame
     df = pd.DataFrame(results)
     print(df)
     df.to_csv("simulation_results.csv", index=False)
     print("Results saved to simulation_results.csv")
+
+    # ----- Standard Plots -----
 
     # 1) For method2, group by alpha, x-axis = tampering_count, y=iterations
     plot_grouped_bar_chart(
@@ -276,7 +299,53 @@ def main():
         filename="iterations_vs_tamperingcount_classical.png"
     )
 
-    # Produce a meaningful summary table with everything
+    # ----- Additional Charts -----
+    
+    # 4) Iterations vs. Attack Probability (Grouped by tampering_count)
+    plot_grouped_bar_chart(
+        df=df[df["method"]=="method2"],  # or remove filter to see both methods
+        x_col="byzantine_attack_probability",
+        group_col="tampering_count",
+        value_col="iterations",
+        ylabel="Average Iterations",
+        title="Iterations vs. Attack Probability (Relaxed ADMM)",
+        filename="iterations_vs_attackprob_relaxed.png"
+    )
+
+    # 5) Mitigations vs. Attack Probability (Grouped by tampering_count)
+    plot_grouped_bar_chart(
+        df=df[df["method"]=="method2"],
+        x_col="byzantine_attack_probability",
+        group_col="tampering_count",
+        value_col="mitigation_count",
+        ylabel="Average Mitigation Events",
+        title="Mitigations vs. Attack Probability (Relaxed ADMM)",
+        filename="mitigations_vs_attackprob_relaxed.png"
+    )
+
+    # 6) Iterations vs. Multiplier (Grouped by tampering_count)
+    plot_grouped_bar_chart(
+        df=df[df["method"]=="method2"],
+        x_col="byzantine_multiplier_upper",
+        group_col="tampering_count",
+        value_col="iterations",
+        ylabel="Average Iterations",
+        title="Iterations vs. Multiplier (Relaxed ADMM)",
+        filename="iterations_vs_multiplier_relaxed.png"
+    )
+
+    # 7) Mitigations vs. Multiplier (Grouped by tampering_count)
+    plot_grouped_bar_chart(
+        df=df[df["method"]=="method1"],
+        x_col="byzantine_multiplier_upper",
+        group_col="tampering_count",
+        value_col="mitigation_count",
+        ylabel="Average Mitigation Events",
+        title="Mitigations vs. Multiplier (Classical ADMM)",
+        filename="mitigations_vs_multiplier_classical.png"
+    )
+
+    # ----- Summary Table -----
     # We'll pivot on method, alpha, byzantine_attack_probability, tampering_count
     pivot_cols = ["method", "alpha", "byzantine_attack_probability", "tampering_count"]
     summary_table = df.groupby(pivot_cols).agg({
