@@ -83,6 +83,7 @@ def apply_beta_gamma_weights(trades_array, neighbor_indices, trust_dict, local_m
     
     new_trades = trades_array * alpha
     logger.debug("Final alpha vector: %s", alpha)
+    logger.debug("New trades before weighting: %s", trades_array)
     logger.debug("New trades after weighting: %s", new_trades)
     logger.debug("apply_beta_gamma_weights finished")
     
