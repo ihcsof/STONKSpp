@@ -22,61 +22,74 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def apply_beta_gamma_weights(trades_array, neighbor_indices, trust_dict, local_malicious, beta=0.15, gamma=4):
-    logger.debug("Starting apply_beta_gamma_weights")
-    logger.debug("Input trades_array: %s", trades_array)
-    logger.debug("Neighbor indices: %s", neighbor_indices)
-    logger.debug("Trust dict: %s", trust_dict)
-    logger.debug("Local malicious set: %s", local_malicious)
-    logger.debug("beta=%s, gamma=%s", beta, gamma)
+def apply_beta_gamma_weights(
+    trades_array,
+    neighbor_indices,
+    trust_dict,
+    local_malicious,
+    beta=0.15,
+    gamma=4,
+    outlier_factor=3.0,
+    trust_penalty=0.1,
+    min_trust_for_nonzero=0.2
+):
     n_partners = len(neighbor_indices)
     if n_partners == 0:
-        logger.debug("No partners found; returning original trades.")
-        return trades_array, np.array([])
+        return trades_array.copy(), np.array([])
+    median_val = np.median(trades_array)
+    abs_devs = np.abs(trades_array - median_val)
+    mad = np.median(abs_devs)
+    if mad < 1e-9:
+        threshold = float('inf')
+    else:
+        threshold = outlier_factor * mad
+    for idx, nb in enumerate(neighbor_indices):
+        cur_trade = trades_array[idx]
+        diff_from_median = abs(cur_trade - median_val)
+        old_trust = trust_dict.get(nb, 1.0)
+        if diff_from_median > threshold:
+            new_trust = max(0.0, old_trust - trust_penalty)
+            trust_dict[nb] = new_trust
+        else:
+            new_trust = min(1.0, old_trust + 0.01)
+            trust_dict[nb] = new_trust
     alpha = np.zeros(n_partners, dtype=float)
-    candidates = []
+    good_candidates = []
     for idx, nb in enumerate(neighbor_indices):
         if nb in local_malicious:
             alpha[idx] = 0.0
-            logger.debug("Neighbor %s flagged as malicious; alpha[%s]=0", nb, idx)
         else:
-            score = trust_dict.get(nb, 1.0)
-            candidates.append((score, idx, nb))
-            logger.debug("Neighbor %s not malicious; trust score=%s", nb, score)
-    candidates.sort(key=lambda x: x[0], reverse=True)
-    logger.debug("Sorted candidates: %s", candidates)
-    for rank, (score, idx, nb) in enumerate(candidates):
+            t = trust_dict.get(nb, 1.0)
+            if t >= min_trust_for_nonzero:
+                good_candidates.append((t, idx, nb))
+    good_candidates.sort(key=lambda x: x[0], reverse=True)
+    for rank, (score, idx, nb) in enumerate(good_candidates):
         if rank < gamma:
             alpha[idx] = beta
-            logger.debug("Assigning beta (%s) to neighbor %s (rank %s)", beta, nb, rank)
         else:
             alpha[idx] = 0.0
-            logger.debug("Assigning 0 weight to neighbor %s (rank %s)", nb, rank)
     total_assigned = alpha.sum()
-    logger.debug("Total assigned weight before leftover: %s", total_assigned)
-    if 0 < total_assigned < 1.0:
-        leftover = 1.0 - total_assigned
-        non_mal_indices = [idx for idx, nb in enumerate(neighbor_indices) if nb not in local_malicious]
-        logger.debug("Non-malicious indices for leftover: %s", non_mal_indices)
-        if len(non_mal_indices) > 0:
-            leftover_each = leftover / len(non_mal_indices)
-            logger.debug("Distributing leftover weight %s equally; each gets %s", leftover, leftover_each)
-            for i in non_mal_indices:
-                alpha[i] += leftover_each
-        else:
-            alpha[:] = 1.0 / n_partners
-            logger.debug("No non-malicious neighbors found; fallback to uniform distribution.")
-    elif total_assigned == 0.0:
-        alpha[:] = 1.0 / n_partners
-        logger.debug("Total assigned weight is 0; using uniform distribution.")
+    leftover = 1.0 - total_assigned
+    if leftover <= 1e-10:
+        if total_assigned > 1e-9:
+            alpha /= total_assigned
     else:
-        alpha /= total_assigned
-        logger.debug("Scaling alpha vector to sum to 1: %s", alpha)
+        active_idx = [i for i in range(n_partners) if alpha[i] > 0]
+        if len(active_idx) == 0:
+            active_idx = [i for i in range(n_partners)
+                          if trust_dict.get(neighbor_indices[i],1.0) >= min_trust_for_nonzero]
+        if len(active_idx) == 0:
+            alpha[:] = 1.0 / n_partners
+        else:
+            leftover_each = leftover / len(active_idx)
+            for i in active_idx:
+                alpha[i] += leftover_each
+    sum_alpha = alpha.sum()
+    if sum_alpha > 1e-9:
+        alpha /= sum_alpha
+    else:
+        alpha[:] = 1.0 / n_partners
     new_trades = trades_array * alpha
-    logger.debug("Final alpha vector: %s", alpha)
-    logger.debug("New trades before weighting: %s", trades_array)
-    logger.debug("New trades after weighting: %s", new_trades)
-    logger.debug("apply_beta_gamma_weights finished")
     return new_trades, alpha
 
 class Prosumer:
@@ -138,7 +151,9 @@ class Prosumer:
             self.iter_update_method = self._iter_update_method2
         else:
             raise ValueError("Unknown iter_update_method in config: " + method)
-        return
+        self.simulator = None
+        if 'simulator' in self.config:
+            self.simulator = self.config['simulator']
 
     def optimize(self, trade):
         self.iter_update_method(trade)
@@ -175,7 +190,6 @@ class Prosumer:
         self._build_constraints()
         self._build_objective()
         self.model.update()
-        return
 
     def _build_variables(self):
         m = self.model
@@ -183,44 +197,58 @@ class Prosumer:
         self.variables.t = np.array([m.addVar(lb=-gb.GRB.INFINITY, name='t') for i in range(self.data.num_partners)])
         self.variables.t_pos = np.array([m.addVar(name='t_pos') for i in range(self.data.num_partners)])
         m.update()
-        return
 
     def _build_constraints(self):
         self.constraints.pow_bal = self.model.addConstr(sum(self.variables.p) == sum(self.variables.t))
         for i in range(self.data.num_partners):
             self.model.addConstr(self.variables.t[i] <= self.variables.t_pos[i])
             self.model.addConstr(self.variables.t[i] >= -self.variables.t_pos[i])
-        return
 
     def _build_objective(self):
         self.obj_assets = (sum(self.data.b * self.variables.p + self.data.a * self.variables.p * self.variables.p / 2) + sum(self.data.pref * self.variables.t_pos))
-        return
 
     def _update_objective(self):
         augm_lag = (-sum(self.y * (self.variables.t - self.t_average)) + self.data.rho / 2 * sum((self.variables.t - self.t_average) ** 2))
         self.model.setObjective(self.obj_assets + augm_lag)
         self.model.update()
-        return
 
     def _iter_update_method1(self, trade):
         self.t_average = (self.t_old - trade[self.data.partners]) / 2
         self.y -= self.data.rho * (self.t_old - self.t_average)
-        return
 
     def _iter_update_method2(self, trade):
+        sim = self.simulator
+        if sim is None:
+            trust_dict = {}
+        else:
+            trust_dict = sim.trust_scores[self.data.id]
         beta_cfg = self.config.get("beta_admissible", 0.15)
         gamma_cfg = self.config.get("gamma_admissible", 4)
-        weighted_trade, _ = apply_beta_gamma_weights(trade[self.data.partners], self.data.partners, {}, set(), beta=beta_cfg, gamma=gamma_cfg)
-        self.t_average = (self.t_old - weighted_trade) / 2
+        weighted_trade, _ = apply_beta_gamma_weights(
+            trade[self.data.partners],
+            self.data.partners,
+            trust_dict=trust_dict,
+            local_malicious=set(),
+            beta=beta_cfg,
+            gamma=gamma_cfg,
+            outlier_factor=3.0,
+            trust_penalty=0.1,
+            min_trust_for_nonzero=0.2
+        )
+        eta = self.config.get("beta_mix", 0.1)
+        blended_trade = (1 - eta) * trade[self.data.partners] + eta * weighted_trade
+        self.t_average = (self.t_old - blended_trade) / 2
         if self.model.Status == gb.GRB.Status.OPTIMAL:
             t_new = np.array([self.variables.t[i].X for i in range(self.data.num_partners)])
         else:
             t_new = self.t_old.copy()
-        alpha = self.config.get("alpha", 0)
-        t_relaxed = alpha * t_new + (1 - alpha) * self.t_old
-        self.y -= self.data.rho * (t_relaxed - self.t_average)
+        with open("weighted_trade.txt", "a") as f:
+            f.write(str(blended_trade))
+            f.write("---")
+            f.write(str(trade[self.data.partners]))
+            f.write("\n")
+        self.y -= self.data.rho * (self.t_old - self.t_average)
         self.t_old = t_new.copy()
-        return
 
     def _opti_status(self, trade):
         for i in range(self.data.num_partners):
@@ -229,13 +257,10 @@ class Prosumer:
         self.Res_primal = sum((self.t_new + trade[self.data.partners]) ** 2)
         self.Res_dual = sum((self.t_new - self.t_old) ** 2)
         self.t_old = np.copy(self.t_new)
-        return
 
     def Who(self):
         self.who = 'Prosumer'
-        return
 
 class Manager(Prosumer):
     def Who(self):
         self.who = 'Manager'
-        return
