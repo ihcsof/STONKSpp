@@ -23,6 +23,7 @@ class Simulator(Simulation):
         self.simulation_on = False
         self.simulation_message = ""
         self.force_stop = False
+
         self.MGraph = Graph.Load('graphs/examples/P2P_model_reduced.pyp2p', format='picklez')
         self.timeout = 3600
         self.Interval = 3
@@ -35,10 +36,10 @@ class Simulator(Simulation):
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 200
+        self.maximum_iteration = 500
         self.penaltyfactor = 0.001
-        self.residual_primal = 1e-5
-        self.residual_dual = 1e-5
+        self.residual_primal = 1e-4
+        self.residual_dual = 1e-4
         self.communications = 'Synchronous'
         self.isLatency = False
         self.latency_times = []
@@ -50,6 +51,7 @@ class Simulator(Simulation):
         self.trust_scores = {}
         for i in range(len(self.MGraph.vs)):
             self.trust_scores[i] = {}
+        self.players = {}  # <-- Added initialization of players dictionary
         self.Trades = 0
         self.Opti_LocDec_Init()
         self.Opti_LocDec_InitModel()
