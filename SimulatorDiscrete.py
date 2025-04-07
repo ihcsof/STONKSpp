@@ -38,8 +38,8 @@ class Simulator(Simulation):
         self.Registered_Token()
         self.maximum_iteration = 500
         self.penaltyfactor = 0.001
-        self.residual_primal = 1e-4
-        self.residual_dual = 1e-4
+        self.residual_primal = 1e-3
+        self.residual_dual = 1e-3
         self.communications = 'Synchronous'
         self.isLatency = False
         self.latency_times = []

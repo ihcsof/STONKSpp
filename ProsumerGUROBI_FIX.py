@@ -28,8 +28,8 @@ def apply_beta_gamma_weights(
     local_malicious,
     beta=0.15,
     gamma=4,
-    outlier_factor=1.5,
-    trust_penalty=0.2,
+    outlier_factor=1.0,      # More aggressive
+    trust_penalty=0.3,       # Penalize outliers faster
     min_trust_for_nonzero=0.2,
     max_trade=30.0
 ):
@@ -64,11 +64,13 @@ def apply_beta_gamma_weights(
         if diff > threshold:
             new_t = max(0.0, old_t - trust_penalty)
             trust_dict[nb] = new_t
-            logger.debug("Outlier detected for neighbor %d: trade=%.3f, old_trust=%.3f -> new_trust=%.3f", nb, cur_trade, old_t, new_t)
+            logger.debug("Outlier detected for neighbor %d: trade=%.3f, old_trust=%.3f -> new_trust=%.3f",
+                         nb, cur_trade, old_t, new_t)
         else:
             new_t = min(1.0, old_t + 0.01)
             trust_dict[nb] = new_t
-            logger.debug("Neighbor %d within threshold: trade=%.3f, old_trust=%.3f -> new_trust=%.3f", nb, cur_trade, old_t, new_t)
+            logger.debug("Neighbor %d within threshold: trade=%.3f, old_trust=%.3f -> new_trust=%.3f",
+                         nb, cur_trade, old_t, new_t)
 
     alpha = np.zeros(n_partners, dtype=float)
     good_candidates = []
@@ -120,7 +122,7 @@ def apply_beta_gamma_weights(
     return new_trades, alpha
 
 class Prosumer:
-    def __init__(self, agent=None, partners=None, preferences=None, rho=1e-5, config=None):
+    def __init__(self, agent=None, partners=None, preferences=None, rho=1e-3, config=None):
         self.data = expando()
         self.Who()
         self.config = config if config is not None else {}
@@ -208,7 +210,8 @@ class Prosumer:
                 if random.random() < chance:
                     self.data.tampered += 1
                     val *= upper
-                    logger.warning("Byzantine agent %s tampered trades by %.3f multiplier", str(self.data.id), upper)
+                    logger.warning("Byzantine agent %s tampered trades by %.3f multiplier",
+                                   str(self.data.id), upper)
             logger.info("Finalize trade for ID=%s: %s", str(self.data.id), val.tolist())
             trade[self.data.partners] = val
         else:
@@ -236,9 +239,14 @@ class Prosumer:
 
     def _build_variables(self):
         m = self.model
-        self.variables.p = np.array([m.addVar(lb=self.data.Pmin[i], ub=self.data.Pmax[i], name='p') for i in range(self.data.num_assets)])
-        self.variables.t = np.array([m.addVar(lb=-gb.GRB.INFINITY, name='t') for i in range(self.data.num_partners)])
-        self.variables.t_pos = np.array([m.addVar(name='t_pos') for i in range(self.data.num_partners)])
+        self.variables.p = np.array([m.addVar(lb=self.data.Pmin[i],
+                                             ub=self.data.Pmax[i],
+                                             name='p')
+                                     for i in range(self.data.num_assets)])
+        self.variables.t = np.array([m.addVar(lb=-gb.GRB.INFINITY, name='t')
+                                     for i in range(self.data.num_partners)])
+        self.variables.t_pos = np.array([m.addVar(name='t_pos')
+                                         for i in range(self.data.num_partners)])
         m.update()
 
     def _build_constraints(self):
@@ -248,8 +256,9 @@ class Prosumer:
             self.model.addConstr(self.variables.t[i] >= -self.variables.t_pos[i])
 
     def _build_objective(self):
-        self.obj_assets = sum(self.data.b * self.variables.p + self.data.a * self.variables.p * self.variables.p / 2) \
-                          + sum(self.data.pref * self.variables.t_pos)
+        self.obj_assets = (sum(self.data.b * self.variables.p
+                               + self.data.a * self.variables.p * self.variables.p / 2)
+                           + sum(self.data.pref * self.variables.t_pos))
 
     def _update_objective(self):
         augm_lag = -sum(self.y * (self.variables.t - self.t_average)) \
@@ -281,8 +290,8 @@ class Prosumer:
 
         beta_cfg = self.config.get("beta_admissible", 0.15)
         gamma_cfg = self.config.get("gamma_admissible", 4)
-        outlier_factor = 1.5
-        trust_penalty = 0.2
+        outlier_factor = 1.0
+        trust_penalty = 0.3
         min_trust = 0.2
         max_trade = 30.0
 
@@ -299,7 +308,7 @@ class Prosumer:
             max_trade=max_trade
         )
 
-        eta = self.config.get("beta_mix", 0.02)
+        eta = self.config.get("beta_mix", 0.1)  # bigger than 0.02 to speed up updates
         blended_trade = (1 - eta) * trade[self.data.partners] + eta * weighted_trade
         blended_trade = np.clip(blended_trade, -max_trade, max_trade)
 
