@@ -1,3 +1,4 @@
+# simulator_simple_trust.py
 # -*- coding: utf-8 -*-
 """
 @originalAuthor: Thomas
@@ -12,7 +13,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 from igraph import Graph, plot
-from ProsumerGUROBI_FIX import Prosumer, Manager  # Updated prosumer file
+from ProsumerGUROBI_FIX import Prosumer, Manager  # The same Prosumer file
 from discrete_event_sim import Simulation, Event
 
 
@@ -27,12 +28,11 @@ class Simulator(Simulation):
         # Load graph
         self.MGraph = Graph.Load('graphs/examples/P2P_model_reduced.pyp2p', format='picklez')
 
-        self.timeout = 3600  # UNUSED
-        self.Interval = 3  # in s
-        # Default optimization parameters
+        self.timeout = 3600
+        self.Interval = 3
         self.Add_Commission_Fees = 'Yes'
-        self.Commission_Fees_P2P = 1  # in c$/kWh
-        self.Commission_Fees_Community = 0  # in c$/kWh
+        self.Commission_Fees_P2P = 1  # c$/kWh
+        self.Commission_Fees_Community = 0
         self.algorithm = 'Decentralized'
         self.target = 'CPU'
         self.location = 'local'
@@ -48,37 +48,43 @@ class Simulator(Simulation):
         # Latency
         self.isLatency = False
         self.latency_times = []
- 
-        self.log_mitigation_file = "log_mitigation.txt"
-        self.iter_update_method = "method2"  # default method for _iter_update
 
-        # Optimization model initialization
+        self.log_mitigation_file = "log_mitigation.txt"
+        self.iter_update_method = "method2"
+
+        # Initialize optimization
         self.players = {}
         self.Trades = 0
         self.Opti_LocDec_Init()
         self.Opti_LocDec_InitModel()
-        self.temps = np.zeros([self.nag, self.nag])  # Temporary trades matrix
+        self.temps = np.zeros([self.nag, self.nag])
 
         self.partners = {}
-        self.npartners = {}  # Number of partners for each player
-        self.n_optimized_partners = {}  # Number of partners that have optimized for each player
-        self.n_updated_partners = {}  # Number of partners that have updated for each player
+        self.npartners = {}
+        self.n_optimized_partners = {}
+        self.n_updated_partners = {}
         self.initialize_partners()
 
+        # Optionally plot the graph
         plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
 
-        self.Opti_LocDec_Start()
+        # ---------------
+        # Score for repeated byzantine flags
+        self.trust_threshold = self.config.get("trust_threshold", 3)
+        # byz_score[i][j] = how many times player i has flagged j for suspicious big deviation
+        self.byz_score = {}
+        for i in range(self.nag):
+            self.byz_score[i] = {}
 
+        self.Opti_LocDec_Start()
         return
     
     def load_config(self, config_file):
         try:
             with open(config_file, 'r') as f:
                 config_data = json.load(f)
-            # Store the entire config for later use
             self.config = config_data
 
-            # Update simulator attributes if they exist in the config
             for key, value in config_data.items():
                 if hasattr(self, key):
                     setattr(self, key, value)
@@ -91,23 +97,21 @@ class Simulator(Simulation):
             print("Invalid JSON format in config file.")
     
     def Parameters_Test(self):
-        if not self.location == 'local':
+        if self.location != 'local':
             print("Simulation on an external server is not possible yet. Using local")
             self.location = 'local'
-        if not self.algorithm == 'Decentralized':
+        if self.algorithm != 'Decentralized':
             print("Centralized simulation is not possible yet. Using decentralized")
             self.algorithm = 'Decentralized'
-        if not self.target == 'CPU':
+        if self.target != 'CPU':
             print("Simulation on GPU is not possible yet. Using CPU")
             self.target = 'CPU'
     
     def Registered_Token(self, account='AWS'):
-        # Look into pre-registered tokens
         if self.account_token == '':
             self.account_token = ''
         return
     
-    #%% Optimization
     def Opti_LocDec_Init(self):
         nag = len(self.MGraph.vs)
         self.nag = nag
@@ -119,7 +123,7 @@ class Simulator(Simulation):
         self.prim = float("inf")
         self.dual = float("inf")
         self.Price_avg = 0
-        self.simulation_time = 0  # NOW UNUSED
+        self.simulation_time = 0
         self.opti_progress = []
         return
     
@@ -131,10 +135,9 @@ class Simulator(Simulation):
         pref = np.zeros(self.Trades.shape)
         for es in self.MGraph.es:
             part[es.source][es.target] = 1
+            # Commission logic
             if self.MGraph.vs[es.target]['ID'] in self.MGraph.vs[es.source]['Partners']:
                 pref[es.source][es.target] = es['weight'] + max(self.Commission_Fees_P2P / 100, 0)
-                if self.MGraph.vs[es.source]['Type'] == 'Manager' and self.MGraph.vs[es.source]['CommGoal'] == 'Autonomy':
-                    pref[es.source][es.target] += max(self.MGraph.vs[self.AgentID]['ImpFee'], 0)
             elif self.MGraph.vs[es.target]['ID'] in self.MGraph.vs[es.source]['Community']:
                 if self.MGraph.vs[es.source]['Type'] == 'Manager':
                     self.Communities[es.source].append(es.target)
@@ -142,8 +145,8 @@ class Simulator(Simulation):
                     pref[es.source][es.target] = es['weight'] + max(self.Commission_Fees_Community / 100, 0)
             else:
                 pref[es.source][es.target] = es['weight']
+        # Create the Prosumer or Manager
         for x in self.MGraph.vs:
-            # Pass the simulator's config to each agent so they can read the iter_update_method and byzantine_ids.
             if x['Type'] == 'Manager':
                 self.players[x.index] = Manager(
                     agent=x,
@@ -167,10 +170,8 @@ class Simulator(Simulation):
     def initialize_partners(self):
         for vertex in self.MGraph.vs:
             self.partners[vertex.index] = []
-
         for edge in self.MGraph.es:
             self.partners[edge.source].append(edge.target)
-
         for vertex in self.MGraph.vs:
             self.npartners[vertex.index] = len(self.partners[vertex.index])
             self.n_optimized_partners[vertex.index] = 0
@@ -179,22 +180,20 @@ class Simulator(Simulation):
     def Opti_LocDec_Start(self):
         for i in range(self.nag):
             self.schedule(0, PlayerUpdateMsg(i))
-
         self.schedule(0, CheckStateEvent())
     
     def Opti_LocDec_State(self, out):
         self.iteration += 1
-        
         if self.Prices[self.Prices != 0].size != 0:
             self.Price_avg = self.Prices[self.Prices != 0].mean()
         else:
             self.Price_avg = 0
         self.SW = sum([self.players[i].SW for i in range(self.nag)])
-
         if self.iteration_last < self.iteration:
             self.iteration_last = self.iteration
-            print(f"Iteration: {self.iteration}, SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}")
-
+            print(f"Iteration: {self.iteration}, SW: {self.SW:.3g}, "
+                  f"Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, "
+                  f"Avg Price: {self.Price_avg * 100:.2f}")
         if out:
             print("Optimization stopped.")
 
@@ -203,7 +202,6 @@ class Simulator(Simulation):
         self.simulation_on = False
         return
     
-    #%% Results gathering
     def Infos(self):
         self.tot_trade = np.zeros(self.Trades.shape)
         for es in self.MGraph.es:
@@ -233,17 +231,14 @@ class Simulator(Simulation):
                 print("Maximum number of iterations reached.")
             else:
                 print("Something went wrong.")
-                
+    
     def ShowResults(self):
-        self.Infos()       # Ensure all totals are calculated for display
-        self.ErrorMessages()  # Display results or errors
-
-        # Check for non-interactive mode using both a direct attribute and the config
+        self.Infos()
+        self.ErrorMessages()
         if (hasattr(self, "non_interactive") and self.non_interactive) or \
-        (hasattr(self, "config") and self.config.get("non_interactive", False)):
-            print("Non-interactive mode: Exiting simulator without further prompts.")
+           (hasattr(self, "config") and self.config.get("non_interactive", False)):
+            print("Non-interactive mode: Exiting simulator.")
             return
-
         while True:
             print("What do you want to do next?")
             print("1. Save results")
@@ -258,14 +253,12 @@ class Simulator(Simulation):
                 print("Exiting the simulator.")
                 return
             else:
-                print("Invalid option. Please enter a valid choice.")
-
+                print("Invalid option.")
+    
     def SaveResults(self):
-        # NOT IMPLEMENTED: saving results logic here (e.g., save to a file or database)
         print("\tNot implemented yet")
-
+    
     def CreateReport(self):
-        # MOCK EXAMPLE: Displaying some report data
         Perceived = np.zeros([self.nag, self.nag])
         for i in range(self.nag):
             for j in range(self.players[i].data.num_partners):
@@ -281,7 +274,7 @@ class Simulator(Simulation):
         if Perceived[self.Trades > 0].size > 0:
             Buying_avg = Perceived[self.Trades > 0].mean()
             print(f"\tAverage buying price: {Buying_avg * 100:.2f} c$/kWh")
-
+    
     def ConfirmAction(self, action):
         confirmation = input(f"Are you sure you want to {action}? (yes/no): ").lower()
         if confirmation == "yes":
@@ -291,6 +284,9 @@ class Simulator(Simulation):
                 self.SaveResults()
         else:
             print("Action canceled.")
+
+# -------------- EVENT CLASSES --------------
+
 
 class PlayerOptimizationMsg(Event):
     def __init__(self, player_i):
@@ -302,60 +298,71 @@ class PlayerOptimizationMsg(Event):
     def process(self, sim: Simulator):
         if sim.n_optimized_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
             return
-
         if random.random() < self.wait_more:
             return
-          
+        
         sim.n_optimized_partners[self.i] = 0
+        
+        # We'll skip any complicated partial rewriting. We'll keep normal ADMM flow:
+        # Just adopt the newly optimized trades from temps, except for any "simple trust" ignoring.
+        new_trades = np.copy(sim.temps)
 
-        original_values = np.copy(sim.Trades)
-        proposed_trades = np.copy(sim.temps)
+        # For safety, restore rows that do not belong to self.i
+        for row_i in range(sim.nag):
+            if row_i != self.i:
+                new_trades[row_i] = sim.Trades[row_i]
 
-        for j in range(len(proposed_trades)):
-            if j not in sim.partners[self.i]:
-                proposed_trades[j] = original_values[j]
+        partner_list = list(sim.partners[self.i])  # make a copy
+        if partner_list:
+            row_values = new_trades[self.i, partner_list]
+            median_val = np.median(row_values)
+            mad_val = np.median(np.abs(row_values - median_val))
+            # threshold: if mad < some # => inf, else scale * mad
+            scale_factor = sim.config.get("scale_factor", 15.0)
+            min_threshold = sim.config.get("min_threshold", 0.01)
+            mad_threshold = sim.config.get("mad_threshold", 4.1)
 
-        row_values = proposed_trades[self.i, sim.partners[self.i]]
-
-        if len(row_values) > 0:
-            row_median = np.median(row_values)
-            row_mad = np.median(np.abs(row_values - row_median))
-
-            scale_factor = 15.0
-            min_threshold = 0.01
-
-            if row_mad < 4.1:
-                adaptive_threshold = float('inf')
+            if mad_val < mad_threshold:
+                dev_threshold = float('inf')
             else:
-                adaptive_threshold = max(scale_factor * row_mad, min_threshold)
+                dev_threshold = max(scale_factor * mad_val, min_threshold)
 
-            for idx, j in enumerate(sim.partners[self.i]):
-                deviation = abs(row_values[idx] - row_median)
-                if deviation > adaptive_threshold:
-                    weight = min((deviation - adaptive_threshold)/deviation, 0.83)
-                    new_value = (1 - weight)*row_values[idx] + weight*row_median
-                    row_values[idx] = new_value
-                    with open("log_mitigation.txt", "a") as f:
-                        f.write((
-                            f"[Mitigation in PlayerOptimizationMsgMitigated] Agent {self.i} -> Partner {j}"
-                            f": deviation={deviation:.2f}, median={row_median:.2f}, "
-                            f"threshold={adaptive_threshold:.2f}, corrected={new_value:.2f}\n"
-                        ))
+            # Now for each partner, if we exceed dev_threshold, increment byz_score and if it hits trust_threshold, remove them
+            for idx, partner_j in enumerate(partner_list):
+                this_trade = row_values[idx]
+                deviation = abs(this_trade - median_val)
+                if deviation > dev_threshold:
+                    # increment score
+                    old_score = sim.byz_score[self.i].get(partner_j, 0)
+                    new_score = old_score + 1
+                    sim.byz_score[self.i][partner_j] = new_score
+                    
+                    if new_score >= sim.trust_threshold:
+                        # remove partner_j from i's partner list
+                        if partner_j in sim.partners[self.i]:
+                            sim.partners[self.i].remove(partner_j)
+                            sim.npartners[self.i] = len(sim.partners[self.i])
+                            # log removal
+                            with open(sim.log_mitigation_file, "a") as ff:
+                                ff.write(f"Agent {self.i} removed partner {partner_j} from trust for repeated suspicious trades.\n")
+                        # we set the trade to 0
+                        new_trades[self.i, partner_j] = 0.0
+        
+        sim.Trades = new_trades
+        
+        # Recompute primal/dual for those partners
+        sim.prim = sum([sim.players[p].Res_primal for p in sim.partners[self.i]])
+        sim.dual = sum([sim.players[p].Res_dual for p in sim.partners[self.i]])
 
-            proposed_trades[self.i, sim.partners[self.i]] = row_values
-
-        sim.Trades = proposed_trades
-
-        sim.prim = sum([sim.players[j].Res_primal for j in sim.partners[self.i]])
-        sim.dual = sum([sim.players[j].Res_dual for j in sim.partners[self.i]])
-
-        max_delay = 10 + random.randint(0, 2) if sim.isLatency else 10
-        for j in sim.partners[self.i]:
-            sim.n_updated_partners[j] += 1
-            ratio = sim.n_updated_partners[j] / sim.npartners[j]
+        # schedule next updates
+        max_delay = 10
+        for p_j in sim.partners[self.i]:
+            sim.n_updated_partners[p_j] += 1
+            ratio = sim.n_updated_partners[p_j] / sim.npartners[p_j] if sim.npartners[p_j]>0 else 1.0
             delay = max_delay - (ratio * (max_delay - 6))
             sim.latency_times.append(delay)
-            sim.schedule(int(delay), PlayerUpdateMsg(j))
+            sim.schedule(int(delay), PlayerUpdateMsg(p_j))
+
 
 class PlayerUpdateMsg(Event):
     def __init__(self, player_i):
@@ -368,71 +375,50 @@ class PlayerUpdateMsg(Event):
         if sim.n_updated_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
             return
 
-        # Reset the counter for updated partners
         sim.n_updated_partners[self.i] = 0
 
-        robust_trade = np.copy(sim.Trades[self.i, :])
-        partner_indices = sim.partners[self.i]
+        # If i has no partners, skip
+        if len(sim.partners[self.i]) == 0:
+            return
+
+        # We'll do normal ADMM call
+        # trades_i => used in prosumer optimize
+        trades_i = np.copy(sim.Trades[self.i, :])
         
-        if partner_indices:
-            # Gather all trade values from partners
-            partner_trades = [sim.Trades[self.i, j] for j in partner_indices]
-            median_trade = np.median(partner_trades)
-            mad = np.median(np.abs(np.array(partner_trades) - median_trade))
-            # Use configurable parameters for robust filtering:
-            min_threshold = 0.01  # Absolute minimum threshold (could also be made configurable if needed)
-            scale_factor = sim.config.get("scale_factor", 15.0)
-            mad_threshold = sim.config.get("mad_threshold", 4.1)
-            
-            if mad < mad_threshold:
-                adaptive_threshold = float('inf')
-            else:
-                adaptive_threshold = max(scale_factor * mad, min_threshold)
-            
-            for j in partner_indices:
-                deviation = abs(sim.Trades[self.i, j] - median_trade)
-                if deviation > adaptive_threshold:
-                    weight = min((deviation - adaptive_threshold) / deviation, 0.9)
-                    new_value = (1 - weight) * sim.Trades[self.i, j] + weight * median_trade
-                    robust_trade[j] = new_value
-                    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                    log_line = (
-                        f"{timestamp} - Mitigated agent {j}: deviation={deviation:.2f}, "
-                        f"median={median_trade:.2f}, weight={weight:.2f}, "
-                        f"threshold={adaptive_threshold:.2f}, original={sim.Trades[self.i, j]:.2f}, "
-                        f"new={new_value:.2f}\n"
-                    )
-                    with open(sim.log_mitigation_file, "a") as f:
-                        f.write(log_line)
+        # let the prosumer i do the local solve
+        sim.temps[:, self.i] = sim.players[self.i].optimize(trades_i)
+        # store the new prices
+        for p_j in sim.partners[self.i]:
+            sim.Prices[p_j, self.i] = sim.players[self.i].y[p_j]  # or sim.players[i].y ?
 
-        sim.temps[:, self.i] = sim.players[self.i].optimize(robust_trade)
-        sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
-
-        maxval = 10 + random.randint(0, 2) if sim.isLatency else 10
-        for j in sim.partners[self.i]:
-            sim.n_optimized_partners[j] += 1
-            ratio = sim.n_optimized_partners[j] / sim.npartners[j]
-            delay = maxval - (ratio * (maxval - 6))
+        # schedule next optimization
+        max_delay = 10
+        for p_j in sim.partners[self.i]:
+            sim.n_optimized_partners[p_j] += 1
+            ratio = sim.n_optimized_partners[p_j] / sim.npartners[p_j] if sim.npartners[p_j] > 0 else 1.0
+            delay = max_delay - (ratio * (max_delay - 6))
             sim.latency_times.append(delay)
-            sim.schedule(int(delay), PlayerOptimizationMsg(j))
+            sim.schedule(int(delay), PlayerOptimizationMsg(p_j))
+
 
 class CheckStateEvent(Event):
     def __init__(self):
         super().__init__()
-    
+
     def process(self, sim: Simulator):
+        # same stopping condition
         if sim.prim <= sim.residual_primal and sim.dual <= sim.residual_dual:
             sim.simulation_message = 1
         elif sim.iteration >= sim.maximum_iteration:
             sim.simulation_message = -1
         else:
             sim.simulation_message = 0
-
+        
         if sim.simulation_message:
             sim.Opti_LocDec_Stop()
             sim.Opti_LocDec_State(True)
             sim.ShowResults()
-            sim.events = []  # End simulation gracefully
+            sim.events = []
             return
         else:
             sim.Opti_LocDec_State(False)
@@ -440,14 +426,12 @@ class CheckStateEvent(Event):
 
 def main():
     sim = Simulator()
-    
     if len(sys.argv) > 1:
         config_file = sys.argv[1]
         sim.load_config(config_file)
         sim.Parameters_Test()
     else:
         print("No configuration file provided. Using default parameters.")
-    
     sim.run()
 
 if __name__ == "__main__":
