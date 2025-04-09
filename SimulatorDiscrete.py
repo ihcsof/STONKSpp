@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 @originalAuthor: Thomas
+Modified approach to flagging truly bad (Byzantine) agents only after repeated suspicious trades.
 """
 
 import copy
@@ -13,8 +14,12 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 from igraph import Graph, plot
-from ProsumerGUROBI_FIX import Prosumer, Manager
+from ProsumerGUROBI_FIX import Prosumer, Manager  # The same Prosumer file
 from discrete_event_sim import Simulation, Event
+import logging
+
+# Setup logging with only the message (no time stamps)
+logging.basicConfig(filename="debug_log.txt", level=logging.DEBUG, format="%(message)s", filemode="w")
 
 
 class Simulator(Simulation):
@@ -27,6 +32,7 @@ class Simulator(Simulation):
 
         # Load graph
         self.MGraph = Graph.Load('graphs/examples/P2P_model_reduced.pyp2p', format='picklez')
+        logging.info("Loaded graph from file.")
 
         self.timeout = 3600
         self.Interval = 3
@@ -39,7 +45,7 @@ class Simulator(Simulation):
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 500
+        self.maximum_iteration = 80
         self.penaltyfactor = 0.01
         self.residual_primal = 1e-4
         self.residual_dual = 1e-4
@@ -64,17 +70,23 @@ class Simulator(Simulation):
         self.n_optimized_partners = {}
         self.n_updated_partners = {}
         self.initialize_partners()
+        logging.info("Initialization complete: created %d agents.", self.nag)
 
+        # Plot the graph
         plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
+        logging.info("Graph plotted and saved to graph.png.")
 
-        # Simple trust approach: we track a suspicion score
-        self.trust_threshold = self.config.get("trust_threshold", 10)
-        # byz_score[i][j] = how many times player i has flagged j for suspicious trades
+        # Simple trust approach: keep suspicion scores for (agent, partner)
+        self.trust_threshold = self.config.get("trust_threshold", 30)
+        #  byz_score[i][j] = how many times agent i sees j do suspicious trades
         self.byz_score = {}
         for i in range(self.nag):
             self.byz_score[i] = {}
+        logging.info("Trust parameters set: trust_threshold=%d", self.trust_threshold)
 
+        # Start the simulation
         self.Opti_LocDec_Start()
+        logging.info("Initial events scheduled. Starting simulation.")
         return
 
     def load_config(self, config_file):
@@ -88,10 +100,13 @@ class Simulator(Simulation):
                 else:
                     print(f"Ignoring unknown parameter: {key}")
             print("Parameters updated from config file successfully.")
+            logging.info("Config file loaded and parameters updated.")
         except FileNotFoundError:
             print("Config file not found.")
+            logging.error("Config file not found.")
         except json.JSONDecodeError:
             print("Invalid JSON format in config file.")
+            logging.error("Invalid JSON format in config file.")
 
     def Parameters_Test(self):
         if self.location != 'local':
@@ -103,6 +118,7 @@ class Simulator(Simulation):
         if self.target != 'CPU':
             print("Simulation on GPU is not possible yet. Using CPU")
             self.target = 'CPU'
+        logging.info("Parameters_Test completed.")
 
     def Registered_Token(self, account='AWS'):
         if self.account_token == '':
@@ -122,6 +138,7 @@ class Simulator(Simulation):
         self.Price_avg = 0
         self.simulation_time = 0
         self.opti_progress = []
+        logging.info("Opti_LocDec_Init: Initialized trades, prices, and iteration counters.")
         return
 
     def Opti_LocDec_InitModel(self):
@@ -143,23 +160,16 @@ class Simulator(Simulation):
                 pref[es.source][es.target] = es['weight']
         for x in self.MGraph.vs:
             if x['Type'] == 'Manager':
-                self.players[x.index] = Manager(
-                    agent=x,
-                    partners=part[x.index],
-                    preferences=pref[x.index],
-                    rho=self.penaltyfactor,
-                    config=self.config
-                )
+                self.players[x.index] = Manager(agent=x, partners=part[x.index],
+                                                preferences=pref[x.index],
+                                                rho=self.penaltyfactor, config=self.config)
             else:
-                self.players[x.index] = Prosumer(
-                    agent=x,
-                    partners=part[x.index],
-                    preferences=pref[x.index],
-                    rho=self.penaltyfactor,
-                    config=self.config
-                )
+                self.players[x.index] = Prosumer(agent=x, partners=part[x.index],
+                                                 preferences=pref[x.index],
+                                                 rho=self.penaltyfactor, config=self.config)
         self.part = part
         self.pref = pref
+        logging.info("Opti_LocDec_InitModel: Model built for %d players.", self.nag)
         return
 
     def initialize_partners(self):
@@ -171,11 +181,13 @@ class Simulator(Simulation):
             self.npartners[vertex.index] = len(self.partners[vertex.index])
             self.n_optimized_partners[vertex.index] = 0
             self.n_updated_partners[vertex.index] = len(self.partners[vertex.index])
-
+        logging.info("initialize_partners: Partners initialized.")
+    
     def Opti_LocDec_Start(self):
         for i in range(self.nag):
             self.schedule(0, PlayerUpdateMsg(i))
         self.schedule(0, CheckStateEvent())
+        logging.info("Opti_LocDec_Start: Initial scheduling done.")
 
     def Opti_LocDec_State(self, out):
         self.iteration += 1
@@ -186,15 +198,15 @@ class Simulator(Simulation):
         self.SW = sum([self.players[i].SW for i in range(self.nag)])
         if self.iteration_last < self.iteration:
             self.iteration_last = self.iteration
-            print(f"Iteration: {self.iteration}, SW: {self.SW:.3g}, "
-                  f"Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, "
-                  f"Avg Price: {self.Price_avg * 100:.2f}")
+            print(f"Iteration: {self.iteration}, SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}")
         if out:
             print("Optimization stopped.")
+            logging.info("Opti_LocDec_State: Simulation stopping at iteration %d.", self.iteration)
 
     def Opti_LocDec_Stop(self):
         self.simulation_on_tab = False
         self.simulation_on = False
+        logging.info("Opti_LocDec_Stop: Simulation stopped.")
         return
 
     def Infos(self):
@@ -211,6 +223,7 @@ class Simulator(Simulation):
             prod, cons = self.players[i].production_consumption()
             self.tot_prod[i] = prod
             self.tot_cons[i] = cons
+        logging.info("Infos: Totals computed for trade, production, and consumption.")
 
     def ErrorMessages(self):
         if self.simulation_message == 1:
@@ -221,18 +234,23 @@ class Simulator(Simulation):
             print(f"The total amount of power produced is {self.tot_prod.sum():.0f} kW.")
             print(f"The total amount of power consumed is {self.tot_cons.sum():.0f} kW.")
             print(f"With an average energy/trading price of {self.Price_avg * 100:.2f} c$/kWh.")
+            logging.info("ErrorMessages: Simulation converged.")
         else:
             if self.simulation_message == -1:
                 print("Maximum number of iterations reached.")
+                logging.info("ErrorMessages: Maximum iterations reached.")
             else:
                 print("Something went wrong.")
+                logging.error("ErrorMessages: Unknown error.")
 
     def ShowResults(self):
         self.Infos()
         self.ErrorMessages()
+        # Possibly skip the interactive menu if 'non_interactive' is set
         if (hasattr(self, "non_interactive") and self.non_interactive) or \
            (hasattr(self, "config") and self.config.get("non_interactive", False)):
             print("Non-interactive mode: Exiting simulator.")
+            logging.info("ShowResults: Non-interactive mode - exit.")
             return
         while True:
             print("What do you want to do next?")
@@ -246,12 +264,14 @@ class Simulator(Simulation):
                 self.CreateReport()
             elif choice == "3":
                 print("Exiting the simulator.")
+                logging.info("ShowResults: Exiting simulator after user request.")
                 return
             else:
                 print("Invalid option.")
 
     def SaveResults(self):
         print("\tNot implemented yet")
+        logging.info("SaveResults: Not implemented yet.")
 
     def CreateReport(self):
         Perceived = np.zeros([self.nag, self.nag])
@@ -262,13 +282,13 @@ class Simulator(Simulation):
                     Perceived[i][m] = self.Prices[i][m] + self.players[i].data.pref[j]
                 elif self.Trades[i][m] > 0:
                     Perceived[i][m] = self.Prices[i][m] - self.players[i].data.pref[j]
-
         if Perceived[self.Trades < 0].size > 0:
             Selling_avg = Perceived[self.Trades < 0].mean()
             print(f"\tAverage selling price: {Selling_avg * 100:.2f} c$/kWh")
         if Perceived[self.Trades > 0].size > 0:
             Buying_avg = Perceived[self.Trades > 0].mean()
             print(f"\tAverage buying price: {Buying_avg * 100:.2f} c$/kWh")
+        logging.info("CreateReport: Report generated.")
 
     def ConfirmAction(self, action):
         confirmation = input(f"Are you sure you want to {action}? (yes/no): ").lower()
@@ -279,9 +299,10 @@ class Simulator(Simulation):
                 self.SaveResults()
         else:
             print("Action canceled.")
+            logging.info("ConfirmAction: Action canceled by user.")
 
 
-# ----------------- Event Classes ------------------
+# -------------- EVENT CLASSES --------------
 
 class PlayerOptimizationMsg(Event):
     def __init__(self, player_i):
@@ -299,48 +320,34 @@ class PlayerOptimizationMsg(Event):
         sim.n_optimized_partners[self.i] = 0
 
         new_trades = np.copy(sim.temps)
-
-        # restore rows not belonging to self.i
         for row_i in range(sim.nag):
             if row_i != self.i:
                 new_trades[row_i] = sim.Trades[row_i]
 
         partner_list = sim.partners[self.i]
         if partner_list:
+            # Compute median and MAD over the trades received from partners.
             row_values = new_trades[self.i, partner_list]
             median_val = np.median(row_values)
             mad_val = np.median(np.abs(row_values - median_val))
-
             scale_factor = sim.config.get("scale_factor", 15.0)
             min_threshold = sim.config.get("min_threshold", 0.01)
             mad_threshold = sim.config.get("mad_threshold", 4.1)
-
             if mad_val < mad_threshold:
                 dev_threshold = float('inf')
             else:
                 dev_threshold = max(scale_factor * mad_val, min_threshold)
-
-            # Instead of removing them from adjacency,
-            # we "ignore" their trade by setting it to 0 if they pass the threshold times
+            logging.debug(f"[PlayerOptMsg] Agent {self.i} median={median_val:.2f}, mad={mad_val:.2f}, threshold={dev_threshold:.2f}")
             for idx, partner_j in enumerate(partner_list):
                 deviation = abs(row_values[idx] - median_val)
                 if deviation > dev_threshold:
-                    old_score = sim.byz_score[self.i].get(partner_j, 0)
-                    new_score = old_score + 1
-                    sim.byz_score[self.i][partner_j] = new_score
-                    if new_score >= sim.trust_threshold:
-                        # log that we are ignoring
-                        with open(sim.log_mitigation_file, "a") as ff:
-                            ff.write(f"[Ignore] Agent {self.i} ignoring partner {partner_j} trades (score={new_score})\n")
-
-                        # Force the trade to 0 from i's perspective:
-                        new_trades[self.i, partner_j] = 0.0
-
+                    # Immediately mark partner_j's trade as suspicious -> ignore
+                    sim.players[partner_j].data.flagged_byzantine = True
+                    logging.info(f"[Flag] Agent {self.i} flags partner {partner_j} as Byzantine (deviation={deviation:.2f} > {dev_threshold:.2f}).")
+                    new_trades[self.i, partner_j] = 0.0  # ignoring suspicious trade
         sim.Trades = new_trades
-
         sim.prim = sum([sim.players[p].Res_primal for p in sim.partners[self.i]])
         sim.dual = sum([sim.players[p].Res_dual for p in sim.partners[self.i]])
-
         max_delay = 10
         for p_j in sim.partners[self.i]:
             sim.n_updated_partners[p_j] += 1
@@ -348,7 +355,7 @@ class PlayerOptimizationMsg(Event):
             delay = max_delay - (ratio * (max_delay - 6))
             sim.latency_times.append(delay)
             sim.schedule(int(delay), PlayerUpdateMsg(p_j))
-
+        logging.debug(f"PlayerOptimizationMsg: Agent {self.i} processed optimization.")
 
 class PlayerUpdateMsg(Event):
     def __init__(self, player_i):
@@ -360,24 +367,15 @@ class PlayerUpdateMsg(Event):
     def process(self, sim: Simulator):
         if sim.n_updated_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
             return
-
         sim.n_updated_partners[self.i] = 0
-
-        # if i has no partners, skip
         if len(sim.partners[self.i]) == 0:
             return
-
         trades_i = np.copy(sim.Trades[self.i, :])
-
-        # local solve
         sim.temps[:, self.i] = sim.players[self.i].optimize(trades_i)
-
-        # store new prices
         for p_j in sim.partners[self.i]:
             partner_array = sim.players[self.i].data.partners
             loc_idx = np.where(partner_array == p_j)[0][0]
             sim.Prices[p_j, self.i] = sim.players[self.i].y[loc_idx]
-
         max_delay = 10
         for p_j in sim.partners[self.i]:
             sim.n_optimized_partners[p_j] += 1
@@ -385,7 +383,7 @@ class PlayerUpdateMsg(Event):
             delay = max_delay - (ratio * (max_delay - 6))
             sim.latency_times.append(delay)
             sim.schedule(int(delay), PlayerOptimizationMsg(p_j))
-
+        logging.debug(f"PlayerUpdateMsg: Agent {self.i} updated and scheduled optimization for partners.")
 
 class CheckStateEvent(Event):
     def __init__(self):
@@ -404,6 +402,7 @@ class CheckStateEvent(Event):
             sim.Opti_LocDec_State(True)
             sim.ShowResults()
             sim.events = []
+            logging.info("CheckStateEvent: Simulation terminated.")
             return
         else:
             sim.Opti_LocDec_State(False)
@@ -419,6 +418,7 @@ def main():
     else:
         print("No configuration file provided. Using default parameters.")
     sim.run()
+
 
 if __name__ == "__main__":
     main()
