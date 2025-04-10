@@ -128,6 +128,7 @@ class Simulator(Simulation):
     def Opti_LocDec_Init(self):
         nag = len(self.MGraph.vs)
         self.nag = nag
+        self.trust_flags = [False for _ in range(nag)]
         self.Trades = np.zeros([nag, nag])
         self.Prices = np.zeros([nag, nag])
         self.iteration = 0
@@ -303,7 +304,6 @@ class Simulator(Simulation):
 
 
 # -------------- EVENT CLASSES --------------
-
 class PlayerOptimizationMsg(Event):
     def __init__(self, player_i):
         super().__init__()
@@ -326,28 +326,50 @@ class PlayerOptimizationMsg(Event):
 
         partner_list = sim.partners[self.i]
         if partner_list:
-            # Compute median and MAD over the trades received from partners.
             row_values = new_trades[self.i, partner_list]
             median_val = np.median(row_values)
             mad_val = np.median(np.abs(row_values - median_val))
+            
             scale_factor = sim.config.get("scale_factor", 15.0)
             min_threshold = sim.config.get("min_threshold", 0.01)
             mad_threshold = sim.config.get("mad_threshold", 4.1)
+            
             if mad_val < mad_threshold:
                 dev_threshold = float('inf')
             else:
                 dev_threshold = max(scale_factor * mad_val, min_threshold)
-            logging.debug(f"[PlayerOptMsg] Agent {self.i} median={median_val:.2f}, mad={mad_val:.2f}, threshold={dev_threshold:.2f}")
+                
+            logging.debug(
+                f"[PlayerOptMsg] Agent {self.i}: median={median_val:.2f}, mad={mad_val:.2f}, threshold={dev_threshold:.2f}"
+            )
+            
             for idx, partner_j in enumerate(partner_list):
+                if sim.trust_flags[partner_j]:
+                    logging.debug(f"Agent {self.i} skipping already flagged partner {partner_j}.")
+                    new_trades[self.i, partner_j] = 0.0
+                    continue
+
                 deviation = abs(row_values[idx] - median_val)
                 if deviation > dev_threshold:
-                    # Immediately mark partner_j's trade as suspicious -> ignore
-                    sim.players[partner_j].data.flagged_byzantine = True
-                    logging.info(f"[Flag] Agent {self.i} flags partner {partner_j} as Byzantine (deviation={deviation:.2f} > {dev_threshold:.2f}).")
-                    new_trades[self.i, partner_j] = 0.0  # ignoring suspicious trade
+                    # Instead of directly flagging the partner, increment the suspicion score
+                    if partner_j not in sim.byz_score[self.i]:
+                        sim.byz_score[self.i][partner_j] = 1
+                    else:
+                        sim.byz_score[self.i][partner_j] += 1
+                    logging.info(
+                        f"Agent {self.i} increases suspicion score for partner {partner_j} to {sim.byz_score[self.i][partner_j]}"
+                    )
+                    if sim.byz_score[self.i][partner_j] >= sim.trust_threshold:
+                        sim.trust_flags[partner_j] = True
+                        logging.info(
+                            f"[Flag] Agent {self.i} flags partner {partner_j} as Byzantine "
+                            f"after repeated suspicious trades (score={sim.byz_score[self.i][partner_j]} >= threshold={sim.trust_threshold})."
+                        )
+                        new_trades[self.i, partner_j] = 0.0
         sim.Trades = new_trades
         sim.prim = sum([sim.players[p].Res_primal for p in sim.partners[self.i]])
         sim.dual = sum([sim.players[p].Res_dual for p in sim.partners[self.i]])
+
         max_delay = 10
         for p_j in sim.partners[self.i]:
             sim.n_updated_partners[p_j] += 1
@@ -356,6 +378,7 @@ class PlayerOptimizationMsg(Event):
             sim.latency_times.append(delay)
             sim.schedule(int(delay), PlayerUpdateMsg(p_j))
         logging.debug(f"PlayerOptimizationMsg: Agent {self.i} processed optimization.")
+
 
 class PlayerUpdateMsg(Event):
     def __init__(self, player_i):
@@ -367,15 +390,62 @@ class PlayerUpdateMsg(Event):
     def process(self, sim: Simulator):
         if sim.n_updated_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
             return
+        
         sim.n_updated_partners[self.i] = 0
         if len(sim.partners[self.i]) == 0:
             return
+
         trades_i = np.copy(sim.Trades[self.i, :])
+        partner_list = sim.partners[self.i]
+        
+        if partner_list:
+            row_values = trades_i[partner_list]
+            median_val = np.median(row_values)
+            mad_val = np.median(np.abs(row_values - median_val))
+
+            scale_factor = sim.config.get("scale_factor", 15.0)
+            min_threshold = sim.config.get("min_threshold", 0.01)
+            mad_threshold = sim.config.get("mad_threshold", 4.1)
+            
+            if mad_val < mad_threshold:
+                dev_threshold = float('inf')
+            else:
+                dev_threshold = max(scale_factor * mad_val, min_threshold)
+
+            logging.debug(
+                f"[PlayerUpdateMsg] Agent {self.i}: median={median_val:.2f}, MAD={mad_val:.2f}, threshold={dev_threshold:.2f}"
+            )
+
+            for idx, partner_j in enumerate(partner_list):
+                if sim.trust_flags[partner_j]:
+                    logging.debug(f"Agent {self.i} skipping already flagged partner {partner_j} in update.")
+                    trades_i[partner_j] = 0.0
+                    continue
+
+                deviation = abs(row_values[idx] - median_val)
+                if deviation > dev_threshold:
+                    # Increment the suspicion score instead of immediate flagging
+                    if partner_j not in sim.byz_score[self.i]:
+                        sim.byz_score[self.i][partner_j] = 1
+                    else:
+                        sim.byz_score[self.i][partner_j] += 1
+                    logging.info(
+                        f"Agent {self.i} increases suspicion score for partner {partner_j} to {sim.byz_score[self.i][partner_j]} (update)"
+                    )
+                    if sim.byz_score[self.i][partner_j] >= sim.trust_threshold:
+                        sim.trust_flags[partner_j] = True
+                        logging.info(
+                            f"[Flag] Agent {self.i} flags partner {partner_j} as Byzantine after repeated suspicious trades "
+                            f"(score={sim.byz_score[self.i][partner_j]} >= threshold={sim.trust_threshold}) (update)."
+                        )
+                        trades_i[partner_j] = 0.0
         sim.temps[:, self.i] = sim.players[self.i].optimize(trades_i)
+
         for p_j in sim.partners[self.i]:
             partner_array = sim.players[self.i].data.partners
             loc_idx = np.where(partner_array == p_j)[0][0]
             sim.Prices[p_j, self.i] = sim.players[self.i].y[loc_idx]
+
         max_delay = 10
         for p_j in sim.partners[self.i]:
             sim.n_optimized_partners[p_j] += 1
@@ -383,6 +453,7 @@ class PlayerUpdateMsg(Event):
             delay = max_delay - (ratio * (max_delay - 6))
             sim.latency_times.append(delay)
             sim.schedule(int(delay), PlayerOptimizationMsg(p_j))
+
         logging.debug(f"PlayerUpdateMsg: Agent {self.i} updated and scheduled optimization for partners.")
 
 class CheckStateEvent(Event):
