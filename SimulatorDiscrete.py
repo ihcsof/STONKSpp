@@ -324,27 +324,34 @@ class PlayerOptimizationMsg(Event):
             if row_i != self.i:
                 new_trades[row_i] = sim.Trades[row_i]
 
-        partner_list = sim.partners[self.i]
+        # Filter out the self index from the partners list.
+        partner_list = [p for p in sim.partners[self.i] if p != self.i]
         if partner_list:
-            # Compute median and MAD over the trades received from partners.
-            row_values = new_trades[self.i, partner_list]
+            row_values = new_trades[partner_list, self.i]
             median_val = np.median(row_values)
             mad_val = np.median(np.abs(row_values - median_val))
             scale_factor = sim.config.get("scale_factor", 15.0)
             min_threshold = sim.config.get("min_threshold", 0.01)
-            mad_threshold = sim.config.get("mad_threshold", 4.1)
-            if mad_val < mad_threshold:
-                dev_threshold = float('inf')
+            # If mad is zero, use a fallback default threshold.
+            if mad_val == 0:
+                dev_threshold = sim.config.get("default_trade_deviation_threshold", 0.1)
             else:
                 dev_threshold = max(scale_factor * mad_val, min_threshold)
             logging.debug(f"[PlayerOptMsg] Agent {self.i} median={median_val:.2f}, mad={mad_val:.2f}, threshold={dev_threshold:.2f}")
+            
             for idx, partner_j in enumerate(partner_list):
                 deviation = abs(row_values[idx] - median_val)
                 if deviation > dev_threshold:
-                    # Immediately mark partner_j's trade as suspicious -> ignore
-                    sim.players[partner_j].data.flagged_byzantine = True
-                    logging.info(f"[Flag] Agent {self.i} flags partner {partner_j} as Byzantine (deviation={deviation:.2f} > {dev_threshold:.2f}).")
-                    new_trades[self.i, partner_j] = 0.0  # ignoring suspicious trade
+                    # (Optional) accumulate suspicion over multiple rounds
+                    old_score = sim.byz_score[self.i].get(partner_j, 0)
+                    new_score = old_score + 1
+                    sim.byz_score[self.i][partner_j] = new_score
+                    if new_score >= sim.config.get("trust_threshold", 30):
+                        sim.players[partner_j].data.flagged_byzantine = True
+                        logging.info(f"[Flag] Agent {self.i} flags partner {partner_j} as Byzantine (score={new_score}, deviation={deviation:.2f} > {dev_threshold:.2f}).")
+                    # Ignore the suspicious incoming trade
+                    new_trades[partner_j, self.i] = 0.0
+
         sim.Trades = new_trades
         sim.prim = sum([sim.players[p].Res_primal for p in sim.partners[self.i]])
         sim.dual = sum([sim.players[p].Res_dual for p in sim.partners[self.i]])
