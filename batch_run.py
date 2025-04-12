@@ -179,7 +179,7 @@ def main():
     attack_probs = [0.01, 0.1, 0.5]
     multipliers = [(0.5, 1.1), (0.5, 1.5)]
     # If you want infinite tampering, we might store float('inf') or a large number
-    tampering_counts = [1, 10, 30, float('inf')]
+    tampering_counts = [1, 25, float('inf')]
 
     results = []
 
@@ -207,7 +207,7 @@ def main():
                                             f"_prob{prob}_mult{upper}_tcount{tamplimit}.txt"
                                         ),
                                         "non_interactive": True,
-                                        "maximum_iteration": 500,
+                                        "maximum_iteration": 1000,
                                         "penaltyfactor": 0.01,
                                         "residual_primal": 4e-3,
                                         "residual_dual": 4e-3
@@ -241,7 +241,7 @@ def main():
                                         f"_prob{prob}_mult{upper}_tcount{tamplimit}.txt"
                                     ),
                                     "non_interactive": True,
-                                    "maximum_iteration": 500,
+                                    "maximum_iteration": 1000,
                                     "penaltyfactor": 0.01,
                                     "residual_primal": 4e-3,
                                     "residual_dual": 4e-3
