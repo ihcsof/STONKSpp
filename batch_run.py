@@ -251,8 +251,8 @@ def main():
         group_col="alpha",
         value_col="iterations",
         ylabel="Average Iterations",
-        title="Iterations vs. Tampering Count (Relaxed ADMM, varying alpha)",
-        filename="iterations_vs_tamperingcount_relaxed.png"
+        title="Iterations vs. Tampering Count (faster ADMM, varying alpha)",
+        filename="iterations_vs_tamperingcount_faster.png"
     )
 
     # 2) For method2, group by alpha, x-axis = tampering_count, y=mitigation_count
@@ -262,8 +262,8 @@ def main():
         group_col="alpha",
         value_col="mitigation_count",
         ylabel="Average Mitigation Events",
-        title="Mitigation Events vs. Tampering Count (Relaxed ADMM, varying alpha)",
-        filename="mitigations_vs_tamperingcount_relaxed.png"
+        title="Mitigation Events vs. Tampering Count (faster ADMM, varying alpha)",
+        filename="mitigations_vs_tamperingcount_faster.png"
     )
 
     # 3) For classical ADMM, show iterations vs. tampering_count (simple bar)

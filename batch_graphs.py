@@ -5,7 +5,13 @@ process_logs.py
 
 This script processes existing log files (without re-running simulations) and produces:
   1) "simulation_results.csv" with all raw runs
-  2) Several grouped bar charts (histogram style)
+  2) Several grouped bar charts (histogram style) for:
+       - Iterations vs. Tampering Count
+       - Mitigations vs. Tampering Count
+       - Iterations vs. Attack Probability
+       - Mitigations vs. Attack Probability
+       - Iterations vs. Multiplier
+       - Mitigations vs. Multiplier
   3) A "simulation_summary_table.csv" pivot with aggregated data
 """
 
@@ -14,7 +20,11 @@ import re
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Import plotting helpers from batch_run.py (ensure batch_run.py is in the same folder)
+# Import the plotting helpers from batch_run.py (ensure batch_run.py is in the same folder)
+# The following must contain definitions of:
+#   - plot_bar_chart
+#   - plot_grouped_bar_chart
+#   - clamp_errorbars_at_zero
 from batch_run import plot_bar_chart, plot_grouped_bar_chart
 
 def parse_log_file(file_name):
@@ -48,26 +58,13 @@ def parse_log_file(file_name):
     avg_deviation = total_deviation / count if count > 0 else 0
     return {"mitigation_count": count, "avg_weight": avg_weight, "avg_deviation": avg_deviation}
 
-def clamp_errorbars_at_zero(means, errs):
-    """
-    Helper for clamping error bars so that they never dip below 0.
-    """
-    import numpy as np
-    lower = means - errs
-    upper = means + errs
-    lower = np.maximum(lower, 0)
-    negative_error = means - lower
-    positive_error = upper - means
-    return [negative_error, positive_error]
-
-# Main extraction process
 def main():
     """
     1) Scans all log_*.txt files
     2) Extracts method, alpha, etc. from the filename via regex
     3) Reads line counts and mitigation stats
     4) Saves the combined results to 'simulation_results.csv'
-    5) Plots grouped bar charts
+    5) Plots all relevant bar/grouped-bar charts
     6) Builds a pivoted summary table, saved to 'simulation_summary_table.csv'
     """
     # Find all log files matching our naming scheme
@@ -94,9 +91,10 @@ def main():
             mult = float(mult_str)
             tcount = int(tcount_str)
 
+            # Parse log file for mitigation stats
             mitigation_data = parse_log_file(log_file)
-            # Example assumption: # of "iterations" = # of lines in log 
-            # (assuming 1 line per iteration in method logs)
+
+            # For "iterations," we'll assume one log line per iteration
             iterations = len(open(log_file).readlines())
 
             results.append({
@@ -106,6 +104,7 @@ def main():
                 "byzantine_attack_probability": prob,
                 "byzantine_multiplier_upper": mult,
                 "tampering_count": tcount,
+                "iterations": iterations,
                 "mitigation_count": mitigation_data["mitigation_count"],
                 "avg_weight": mitigation_data["avg_weight"],
                 "avg_deviation": mitigation_data["avg_deviation"]
@@ -117,7 +116,8 @@ def main():
     print("simulation_results.csv saved")
     print(df.head())
 
-    # Create grouped bar charts
+    # We will now generate all the same plots that appear in batch_run.py
+    # ------------------------------------------------------------------------------------------
     # 1) For method2, group by alpha, x-axis = tampering_count, y=iterations
     df_method2 = df[df["method"] == "method2"]
     if not df_method2.empty:
@@ -127,8 +127,8 @@ def main():
             group_col="alpha",
             value_col="iterations",
             ylabel="Average Iterations",
-            title="Iterations vs. Tampering Count (Relaxed ADMM, varying alpha)",
-            filename="iterations_vs_tamperingcount_relaxed.png"
+            title="Iterations vs. Tampering Count (faster ADMM, varying alpha)",
+            filename="iterations_vs_tamperingcount_faster.png"
         )
 
         # 2) For method2, group by alpha, x-axis = tampering_count, y=mitigation_count
@@ -138,11 +138,11 @@ def main():
             group_col="alpha",
             value_col="mitigation_count",
             ylabel="Average Mitigation Events",
-            title="Mitigation Events vs. Tampering Count (Relaxed ADMM, varying alpha)",
-            filename="mitigations_vs_tamperingcount_relaxed.png"
+            title="Mitigation Events vs. Tampering Count (faster ADMM, varying alpha)",
+            filename="mitigations_vs_tamperingcount_faster.png"
         )
 
-    # 3) For classical ADMM, show iterations vs. tampering_count (simple bar)
+    # 3) For classical ADMM (method1), show iterations vs. tampering_count (simple bar)
     df_method1 = df[df["method"] == "method1"]
     if not df_method1.empty:
         plot_bar_chart(
@@ -154,6 +154,56 @@ def main():
             filename="iterations_vs_tamperingcount_classical.png"
         )
 
+    # ---- Additional Charts (mirroring batch_run.py) ----
+    # 4) Iterations vs. Attack Probability (Grouped by tampering_count)
+    df_method2_ap = df_method2  # only method2 for these plots, as per batch_run
+    if not df_method2_ap.empty:
+        plot_grouped_bar_chart(
+            df=df_method2_ap,
+            x_col="byzantine_attack_probability",
+            group_col="tampering_count",
+            value_col="iterations",
+            ylabel="Average Iterations",
+            title="Iterations vs. Attack Probability (faster ADMM)",
+            filename="iterations_vs_attackprob_faster.png"
+        )
+
+        # 5) Mitigations vs. Attack Probability (Grouped by tampering_count)
+        plot_grouped_bar_chart(
+            df=df_method2_ap,
+            x_col="byzantine_attack_probability",
+            group_col="tampering_count",
+            value_col="mitigation_count",
+            ylabel="Average Mitigation Events",
+            title="Mitigations vs. Attack Probability (faster ADMM)",
+            filename="mitigations_vs_attackprob_faster.png"
+        )
+
+        # 6) Iterations vs. Multiplier (Grouped by tampering_count)
+        plot_grouped_bar_chart(
+            df=df_method2_ap,
+            x_col="byzantine_multiplier_upper",
+            group_col="tampering_count",
+            value_col="iterations",
+            ylabel="Average Iterations",
+            title="Iterations vs. Multiplier (faster ADMM)",
+            filename="iterations_vs_multiplier_faster.png"
+        )
+
+    # 7) Mitigations vs. Multiplier (Grouped by tampering_count) - for method1 (classical ADMM)
+    df_method1_mult = df_method1
+    if not df_method1_mult.empty:
+        plot_grouped_bar_chart(
+            df=df_method1_mult,
+            x_col="byzantine_multiplier_upper",
+            group_col="tampering_count",
+            value_col="mitigation_count",
+            ylabel="Average Mitigation Events",
+            title="Mitigations vs. Multiplier (Classical ADMM)",
+            filename="mitigations_vs_multiplier_classical.png"
+        )
+
+    # ------------------------------------------------------------------------------------------
     # Build a summary pivot table that includes both method1 and method2
     # Group by method, alpha, probability, and tampering_count
     summary_table = df.groupby(["method", "alpha", "byzantine_attack_probability", "tampering_count"]).agg({
