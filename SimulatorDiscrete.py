@@ -40,7 +40,7 @@ class Simulator(Simulation):
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 80
+        self.maximum_iteration = 500
         self.penaltyfactor = 0.01
         self.residual_primal = 1e-3
         self.residual_dual = 1e-3
@@ -311,7 +311,7 @@ class PlayerOptimizationMsg(Event):
             scale_factor = sim.config.get("scale_factor", 15.0)
             min_threshold = sim.config.get("min_threshold", 0.01)
             mad_threshold = sim.config.get("mad_threshold", 4.1)
-            smoothing_factor = sim.config.get("smoothing_factor", 0.8)
+            smoothing_factor = sim.config.get("smoothing_factor", 0.4)
             if mad_val < mad_threshold:
                 dev_threshold = float('inf')
             else:
@@ -376,7 +376,7 @@ class PlayerUpdateMsg(Event):
             scale_factor = sim.config.get("scale_factor", 15.0)
             min_threshold = sim.config.get("min_threshold", 0.01)
             mad_threshold = sim.config.get("mad_threshold", 4.1)
-            smoothing_factor = sim.config.get("smoothing_factor", 0.2)
+            smoothing_factor = sim.config.get("smoothing_factor", 0.4)
             if mad_val < mad_threshold:
                 dev_threshold = float('inf')
             else:
