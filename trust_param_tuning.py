@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 try:
-    from ProsumerGUROBI_FIX import Simulator
+    from SimulatorDiscrete import Simulator
 except ImportError:
     pass
 

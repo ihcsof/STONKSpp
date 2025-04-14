@@ -229,10 +229,10 @@ class Simulator(Simulation):
     def ShowResults(self):
         self.Infos()
         self.ErrorMessages()
-        if (hasattr(self, "non_interactive") and self.non_interactive) or (hasattr(self, "config") and self.config.get("non_interactive", False)):
-            print("Non-interactive mode: Exiting simulator.")
-            logging.info("ShowResults: Non-interactive mode - exit.")
-            return
+        #if (hasattr(self, "non_interactive") and self.non_interactive) or (hasattr(self, "config") and self.config.get("non_interactive", False)):
+        print("Non-interactive mode: Exiting simulator.")
+        logging.info("ShowResults: Non-interactive mode - exit.")
+        return
         while True:
             print("What do you want to do next?")
             print("1. Save results")
