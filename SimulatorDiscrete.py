@@ -474,6 +474,37 @@ def main():
         print("No configuration file provided. Using default parameters.")
     sim.run()
 
+        # --- automatic β‑γ diagnostics ---------------------------------
+    try:
+        import pandas as pd, numpy as np, textwrap
+        beta = pd.read_csv("beta_gamma_log.csv")
+        alpha = pd.read_csv("alpha_log.csv")
+
+        def analyse(alpha_df, beta_df, label):
+            rows=[]
+            beta_star = beta_df['beta_star'].iloc[0]
+            gamma_star = int(beta_df['gamma_star'].iloc[0])
+
+            for t,grp in alpha_df.groupby('iter'):
+                vec = grp.groupby('j')['alpha_ij'].sum()
+                gamma_emp = (vec >= beta_star).sum()
+                min_alpha = vec.min() if not vec.empty else np.nan
+                rows.append([t, gamma_emp, min_alpha])
+
+            emp = pd.DataFrame(rows, columns=['iter','gamma_emp','min_alpha'])
+            pct_ok = (emp['gamma_emp'] >= gamma_star).mean()*100
+            print(f"\n=== β‑γ check for {label} ===")
+            print(f"Theoretical  γ*= {gamma_star}   β*= {beta_star:.4f}")
+            print(emp[['gamma_emp','min_alpha']].describe())
+            print(f"% iterations with γ_emp ≥ γ*: {pct_ok:.1f}%\n")
+
+        analyse(alpha, beta, "current run")
+
+    except Exception as e:
+        print("β‑γ analysis skipped:", e)
+    # ----------------------------------------------------------------
+
+
 
 if __name__ == "__main__":
     main()
