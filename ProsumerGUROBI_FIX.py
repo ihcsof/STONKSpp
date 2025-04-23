@@ -33,7 +33,7 @@ class Prosumer:
                 print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
             else:
                 # Default fallback if no byzantine list provided
-                self.data.isByzantine = (self.data.id == 2)
+                self.data.isByzantine = (self.data.id == 200)
                 print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
             
             # Track how many times we tampered for repeated tampering
@@ -64,16 +64,16 @@ class Prosumer:
             self.data.partners = np.zeros([0])
         self.data.num_partners = len(self.data.partners)
         
-        # Data -- Preferences
+        # Data -- Preferences (γ weights)
         if preferences is not None:
             self.data.pref = preferences[partners.nonzero()]
         else:
             self.data.pref = np.zeros([0])
         
-        # Data -- Penalty factor
+        # Data -- Penalty factor for ADMM
         self.data.rho = rho
         
-        # Data -- Progress
+        # Data -- Progress metrics
         self.SW = 0
         self.Res_primal = 0
         self.Res_dual = 0
@@ -90,7 +90,7 @@ class Prosumer:
         self.y = np.zeros(self.data.num_partners)
         self.y0 = np.zeros(self.data.num_partners)
         
-        # Decide iteration update method
+        # Choose iteration update method
         method = self.config.get("iter_update_method", "method2")
         if method == "method1":
             self.iter_update_method = self._iter_update_method1
@@ -101,24 +101,23 @@ class Prosumer:
         return
 
     def optimize(self, trade):
-        # Use the chosen iterative update method
+        # Perform the chosen ADMM update
         self.iter_update_method(trade)
+        # Update objective with augmented term
         self._update_objective()
         self.model.optimize()
         if self.model.Status == gb.GRB.Status.OPTIMAL:
             self._opti_status(trade)
             
             val = self.t_old.copy()
-            # Possibly tamper if byzantine
+            # Byzantine tampering if enabled
             if self.data.isByzantine and (self.data.tampered < self.data.max_tampering):
                 chance = self.config.get("byzantine_attack_probability", 0.05)
                 lower = self.config.get("byzantine_multiplier_lower", 0.5)
                 upper = self.config.get("byzantine_multiplier_upper", 1.2)
 
-                # Only tamper with some probability each iteration
                 if random.random() < chance:
                     self.data.tampered += 1
-                    # Tamper by multiplying by the "upper" factor
                     multiplier = upper
                     val *= multiplier
 
@@ -127,12 +126,16 @@ class Prosumer:
     
     def production_consumption(self):
         if self.model.Status == gb.GRB.Status.OPTIMAL:
-            prod = abs(np.array([self.variables.p[i].X for i in range(self.data.num_assets) if self.variables.p[i].X > 0]).sum())
-            cons = abs(np.array([self.variables.p[i].X for i in range(self.data.num_assets) if self.variables.p[i].X < 0]).sum())
+            prod = abs(np.array([self.variables.p[i].X 
+                                 for i in range(self.data.num_assets) 
+                                 if self.variables.p[i].X > 0]).sum())
+            cons = abs(np.array([self.variables.p[i].X 
+                                 for i in range(self.data.num_assets) 
+                                 if self.variables.p[i].X < 0]).sum())
         else:
             prod = 0
             cons = 0
-            print("Cannot compute production and consumption because the model did not solve optimally.")
+            print("Model not optimal; cannot compute production/consumption.")
         return prod, cons
 
     # -------------------------------------------------------
@@ -149,31 +152,43 @@ class Prosumer:
 
     def _build_variables(self):
         m = self.model
-        self.variables.p = np.array([m.addVar(lb=self.data.Pmin[i], ub=self.data.Pmax[i], name='p') 
-                                     for i in range(self.data.num_assets)])
-        self.variables.t = np.array([m.addVar(lb=-gb.GRB.INFINITY, name='t') 
-                                     for i in range(self.data.num_partners)])
-        self.variables.t_pos = np.array([m.addVar(name='t_pos') 
-                                         for i in range(self.data.num_partners)])
+        # Generation variables
+        self.variables.p = np.array([
+            m.addVar(lb=self.data.Pmin[i],
+                     ub=self.data.Pmax[i],
+                     name=f"p_{i}")
+            for i in range(self.data.num_assets)
+        ])
+        # Trade variables (can be positive or negative)
+        self.variables.t = np.array([
+            m.addVar(lb=-gb.GRB.INFINITY,
+                     name=f"t_{k}")
+            for k in range(self.data.num_partners)
+        ])
         m.update()
         return
         
     def _build_constraints(self):
-        # Force power balance
-        self.constraints.pow_bal = self.model.addConstr(sum(self.variables.p) == sum(self.variables.t))
-        # Limit trades by t_pos to handle both directions
-        for i in range(self.data.num_partners):
-            self.model.addConstr(self.variables.t[i] <= self.variables.t_pos[i])
-            self.model.addConstr(self.variables.t[i] >= -self.variables.t_pos[i])
+        # Power balance: total generation = total trade
+        self.constraints.pow_bal = self.model.addConstr(
+            sum(self.variables.p) == sum(self.variables.t),
+            name="power_balance"
+        )
+        # No more t_pos constraints, since we square t directly in objective
         return
         
     def _build_objective(self):
-        # Cost of assets plus linear pref cost of trade magnitude
-        self.obj_assets = (
-            sum(self.data.b * self.variables.p 
-                + self.data.a * self.variables.p * self.variables.p / 2)
-            + sum(self.data.pref * self.variables.t_pos)
+        # Quadratic generation cost
+        gen_cost = sum(
+            self.data.b * self.variables.p
+            + 0.5 * self.data.a * self.variables.p * self.variables.p
         )
+        # **Replace γ·|t| with γ·t²**
+        trade_penalty = sum(
+            self.data.pref * self.variables.t * self.variables.t
+        )
+        # Store for later use (augmented term added in _update_objective)
+        self.obj_assets = gen_cost + trade_penalty
         return
         
     def _update_objective(self):
@@ -199,7 +214,8 @@ class Prosumer:
         # Relaxed ADMM update (alpha from config, default 0.95)
         self.t_average = (self.t_old - trade[self.data.partners]) / 2
         if self.model.Status == gb.GRB.Status.OPTIMAL:
-            t_new = np.array([self.variables.t[i].X for i in range(self.data.num_partners)])
+            t_new = np.array([self.variables.t[i].X 
+                              for i in range(self.data.num_partners)])
         else:
             t_new = self.t_old.copy()
         alpha = self.config.get("alpha", 0.95)
@@ -214,7 +230,6 @@ class Prosumer:
     def _opti_status(self, trade):
         for i in range(self.data.num_partners):
             self.t_new[i] = self.variables.t[i].X
-        # Social welfare is negative of objVal (if that's how you define it)
         self.SW = -self.model.objVal
         self.Res_primal = sum((self.t_new + trade[self.data.partners]) ** 2)
         self.Res_dual = sum((self.t_new - self.t_old) ** 2)
