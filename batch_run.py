@@ -7,12 +7,8 @@ batch_run.py
 This script:
   - Sweeps over multiple parameter configurations (method, tampering_count, attack_prob, etc.).
   - Runs each configuration N times, saving raw results to "simulation_results.csv."
+  - Writes mitigation logs into logs/mitigation and local-convergence logs into logs/local_conv.
   - Produces bar charts and grouped-bar charts (iterations vs. tampering_count, etc.).
-  - Produces additional charts for:
-      1) Iterations vs. Attack Probability
-      2) Mitigations vs. Attack Probability
-      3) Iterations vs. Multiplier
-      4) Mitigations vs. Multiplier
   - Saves a pivot summary table to "simulation_summary_table.csv."
 """
 
@@ -25,14 +21,17 @@ import matplotlib.pyplot as plt
 import local_conv
 from local_conv import Simulator
 
+# Ensure our two log directories exist once, up front
+os.makedirs("logs/mitigation", exist_ok=True)
+os.makedirs("logs/local_conv",  exist_ok=True)
+
 ############################################
 # Helper Functions
 ############################################
 
 def parse_log_file(file_name):
     """
-    Parse the log file generated during simulation.
-    Extract the number of mitigation events, average mitigation weight, and average deviation.
+    Parse the mitigation log file.
     """
     count = 0
     total_weight = 0.0
@@ -45,38 +44,41 @@ def parse_log_file(file_name):
             try:
                 parts = line.split("deviation=")
                 if len(parts) > 1:
-                    deviation_str = parts[1].split(",")[0]
-                    total_deviation += float(deviation_str)
+                    total_deviation += float(parts[1].split(",")[0])
                 parts = line.split("weight=")
                 if len(parts) > 1:
-                    weight_str = parts[1].split(",")[0]
-                    total_weight += float(weight_str)
+                    total_weight += float(parts[1].split(",")[0])
             except Exception:
                 continue
-    avg_weight = total_weight / count if count > 0 else 0
+    avg_weight    = total_weight   / count if count > 0 else 0
     avg_deviation = total_deviation / count if count > 0 else 0
-    return {"mitigation_count": count, "avg_weight": avg_weight, "avg_deviation": avg_deviation}
+    return {"mitigation_count": count,
+            "avg_weight":     avg_weight,
+            "avg_deviation":  avg_deviation}
 
 def run_simulation(config):
     """
-    Instantiate the Simulator with the given config (wrapped by local_conv),
-    run it, and then parse its log file(s).
+    Instantiate and run the Simulator (wrapped by local_conv),
+    clear both log files, then parse mitigation logs.
     """
-    # Override default subgraph nodes in the wrapper if provided
+    # Update wrapper defaults if needed
     if "subgraph_nodes" in config:
         local_conv.DEFAULT_SUBGRAPH_NODES = config["subgraph_nodes"]
 
-    # Prepare/clear the local-convergence log file if specified
+    # Clear the local‐convergence log file (ensure its dir exists)
     if "local_conv_log_file" in config:
-        try:
-            open(config["local_conv_log_file"], 'w').close()
-        except IOError:
-            pass
+        d = os.path.dirname(config["local_conv_log_file"])
+        os.makedirs(d, exist_ok=True)
+        open(config["local_conv_log_file"], 'w').close()
 
-    # Instantiate the already-patched Simulator
+    # Clear the mitigation log file (ensure its dir exists)
+    if "log_mitigation_file" in config:
+        d = os.path.dirname(config["log_mitigation_file"])
+        os.makedirs(d, exist_ok=True)
+        open(config["log_mitigation_file"], 'w').close()
+
+    # Instantiate and configure simulator
     sim = Simulator(config=config)
-
-    # Mirror any top-level config keys into simulator attrs
     for key, value in config.items():
         if hasattr(sim, key):
             setattr(sim, key, value)
@@ -85,8 +87,7 @@ def run_simulation(config):
 
     # Gather results
     result = {"iterations": sim.iteration}
-    log_file = config.get("log_mitigation_file", "log_mitigation.txt")
-    mitigation_data = parse_log_file(log_file)
+    mitigation_data = parse_log_file(config["log_mitigation_file"])
     result.update(mitigation_data)
     return result
 
@@ -95,9 +96,7 @@ def clamp_errorbars_at_zero(means, errs):
     lower = means - errs
     upper = means + errs
     lower = np.maximum(lower, 0)
-    negative_error = means - lower
-    positive_error = upper - means
-    return [negative_error, positive_error]
+    return [means - lower, upper - means]
 
 def plot_grouped_bar_chart(df, x_col, group_col, value_col, ylabel, title, filename):
     import numpy as np
@@ -108,18 +107,15 @@ def plot_grouped_bar_chart(df, x_col, group_col, value_col, ylabel, title, filen
         pass
     df[group_col] = df[group_col].astype(str)
 
-    grouped = df.groupby([x_col, group_col])[value_col].agg(['mean','std']).reset_index()
-    grouped = grouped.sort_values(by=x_col)
-
-    pivot_mean = grouped.pivot(index=x_col, columns=group_col, values='mean')
-    pivot_std  = grouped.pivot(index=x_col, columns=group_col, values='std')
-    pivot_mean = pivot_mean.sort_index()
-    pivot_std  = pivot_std.sort_index()
+    grouped    = df.groupby([x_col, group_col])[value_col].agg(['mean','std']).reset_index()
+    grouped    = grouped.sort_values(by=x_col)
+    pivot_mean = grouped.pivot(index=x_col, columns=group_col, values='mean').sort_index()
+    pivot_std  = grouped.pivot(index=x_col, columns=group_col, values='std').sort_index()
 
     fig, ax = plt.subplots(figsize=(8,6))
     num_groups = len(pivot_mean.columns)
-    x_vals = np.arange(len(pivot_mean.index))
-    bar_width = 0.8 / num_groups
+    x_vals     = np.arange(len(pivot_mean.index))
+    bar_width  = 0.8 / num_groups
 
     for i, col in enumerate(pivot_mean.columns):
         means = pivot_mean[col].values
@@ -147,9 +143,9 @@ def plot_bar_chart(df, group_col, value_col, ylabel, title, filename):
     except:
         pass
     grouped = df.groupby(group_col)[value_col].agg(['mean','std']).reset_index().sort_values(by=group_col)
-    means = grouped['mean'].values
-    errs  = grouped['std'].values
-    yerr  = clamp_errorbars_at_zero(means, errs)
+    means   = grouped['mean'].values
+    errs    = grouped['std'].values
+    yerr    = clamp_errorbars_at_zero(means, errs)
 
     plt.figure()
     plt.bar(range(len(means)), means, yerr=yerr, capsize=5)
@@ -165,16 +161,16 @@ def plot_bar_chart(df, group_col, value_col, ylabel, title, filename):
 ############################################
 def main():
     # Number of executions per configuration
-    N = 10
+    N = 1
 
     # Parameter sweeps
-    methods               = ["method1", "method2"]
-    subgraph_nodes_list   = [[2, 3, 4]]
-    alphas                = [0.15, 0.5, 0.9]  # only for method2
-    byzantine_ids_list    = [[2]]
-    attack_probs          = [0.01, 0.1, 0.5]
-    multipliers           = [(0.5, 1.1), (0.5, 1.5)]
-    tampering_counts      = [1, 25, float('inf')]
+    methods             = ["method1", "method2"]
+    subgraph_nodes_list = [[2, 3, 4]]
+    alphas              = [0.15, 0.5, 0.9]       # only for method2
+    byzantine_ids_list  = [[2]]
+    attack_probs        = [0.01, 0.1, 0.5]
+    multipliers         = [(0.5, 1.1), (0.5, 1.5)]
+    tampering_counts    = [1, 25, float('inf')]
 
     results = []
 
@@ -185,93 +181,112 @@ def main():
                     for tamplimit in tampering_counts:
                         for nodes in subgraph_nodes_list:
                             if method == "method2":
-                                # Relxed ADMM: vary alpha
+                                # Relaxed ADMM: vary alpha
                                 for alpha in alphas:
                                     for run in range(N):
+                                        mit_log = os.path.join(
+                                            "logs","mitigation",
+                                            f"log_{method}_alpha{alpha}"
+                                            f"_ids{'-'.join(map(str,byz_ids))}"
+                                            f"_prob{prob}_mult{upper}"
+                                            f"_tcount{tamplimit}.txt"
+                                        )
+                                        lc_log = os.path.join(
+                                            "logs","local_conv",
+                                            f"local_conv_{method}_alpha{alpha}"
+                                            f"_nodes{'-'.join(map(str,nodes))}"
+                                            f"_prob{prob}_mult{upper}"
+                                            f"_tcount{tamplimit}.log"
+                                        )
                                         config = {
-                                            "iter_update_method": method,
-                                            "alpha": alpha,
-                                            "byzantine_ids": byz_ids,
+                                            "iter_update_method":            method,
+                                            "alpha":                         alpha,
+                                            "byzantine_ids":                 byz_ids,
                                             "byzantine_attack_probability": prob,
-                                            "byzantine_multiplier_lower": lower,
-                                            "byzantine_multiplier_upper": upper,
-                                            "tampering_count": tamplimit,
-                                            "subgraph_nodes": nodes,
-                                            "local_conv_log_file":
-                                                f"local_conv_{method}_alpha{alpha}"
-                                                f"_nodes{'-'.join(map(str,nodes))}"
-                                                f"_prob{prob}_mult{upper}"
-                                                f"_tcount{tamplimit}.log",
-                                            "scale_factor": 15.0,
-                                            "mad_threshold": 4.1,
-                                            "non_interactive": True,
-                                            "maximum_iteration": 1000,
-                                            "penaltyfactor": 0.01,
-                                            "residual_primal": 4e-3,
-                                            "residual_dual": 4e-3
+                                            "byzantine_multiplier_lower":   lower,
+                                            "byzantine_multiplier_upper":   upper,
+                                            "tampering_count":               tamplimit,
+                                            "subgraph_nodes":                nodes,
+                                            "local_conv_log_file":           lc_log,
+                                            "log_mitigation_file":           mit_log,
+                                            "scale_factor":                  15.0,
+                                            "mad_threshold":                 4.1,
+                                            "non_interactive":               True,
+                                            "maximum_iteration":             1000,
+                                            "penaltyfactor":                 0.01,
+                                            "residual_primal":               4e-3,
+                                            "residual_dual":                 4e-3
                                         }
-                                        print(f"Running: method={method}, alpha={alpha}, "
-                                              f"tampering_count={tamplimit}, prob={prob}, "
-                                              f"mult={upper}, nodes={nodes}")
-                                        sim_result = run_simulation(config)
-                                        sim_result.update({
-                                            "method": method,
-                                            "alpha": alpha,
-                                            "byzantine_ids": str(byz_ids),
+                                        print(f"Running: {method}, α={alpha}, tamper={tamplimit}, "
+                                              f"prob={prob}, mult={upper}, nodes={nodes}")
+                                        result = run_simulation(config)
+                                        result.update({
+                                            "method":                       method,
+                                            "alpha":                        alpha,
+                                            "byzantine_ids":                str(byz_ids),
                                             "byzantine_attack_probability": prob,
-                                            "byzantine_multiplier_upper": upper,
-                                            "tampering_count": tamplimit,
-                                            "nodes": str(nodes),
-                                            "run": run
+                                            "byzantine_multiplier_upper":   upper,
+                                            "tampering_count":              tamplimit,
+                                            "nodes":                        str(nodes),
+                                            "run":                          run
                                         })
-                                        results.append(sim_result)
+                                        results.append(result)
                             else:
                                 # Classical ADMM: no alpha
                                 for run in range(N):
+                                    mit_log = os.path.join(
+                                        "logs","mitigation",
+                                        f"log_{method}_ids{'-'.join(map(str,byz_ids))}"
+                                        f"_prob{prob}_mult{upper}"
+                                        f"_tcount{tamplimit}.txt"
+                                    )
+                                    lc_log = os.path.join(
+                                        "logs","local_conv",
+                                        f"local_conv_{method}"
+                                        f"_nodes{'-'.join(map(str,nodes))}"
+                                        f"_prob{prob}_mult{upper}"
+                                        f"_tcount{tamplimit}.log"
+                                    )
                                     config = {
-                                        "iter_update_method": method,
-                                        "byzantine_ids": byz_ids,
+                                        "iter_update_method":            method,
+                                        "byzantine_ids":                 byz_ids,
                                         "byzantine_attack_probability": prob,
-                                        "byzantine_multiplier_lower": lower,
-                                        "byzantine_multiplier_upper": upper,
-                                        "tampering_count": tamplimit,
-                                        "subgraph_nodes": nodes,
-                                        "local_conv_log_file":
-                                            f"local_conv_{method}"
-                                            f"_nodes{'-'.join(map(str,nodes))}"
-                                            f"_prob{prob}_mult{upper}"
-                                            f"_tcount{tamplimit}.log",
-                                        "scale_factor": 15.0,
-                                        "mad_threshold": 4.1,
-                                        "non_interactive": True,
-                                        "maximum_iteration": 1000,
-                                        "penaltyfactor": 0.01,
-                                        "residual_primal": 4e-3,
-                                        "residual_dual": 4e-3
+                                        "byzantine_multiplier_lower":   lower,
+                                        "byzantine_multiplier_upper":   upper,
+                                        "tampering_count":               tamplimit,
+                                        "subgraph_nodes":                nodes,
+                                        "local_conv_log_file":           lc_log,
+                                        "log_mitigation_file":           mit_log,
+                                        "scale_factor":                  15.0,
+                                        "mad_threshold":                 4.1,
+                                        "non_interactive":               True,
+                                        "maximum_iteration":             1000,
+                                        "penaltyfactor":                 0.01,
+                                        "residual_primal":               4e-3,
+                                        "residual_dual":                 4e-3
                                     }
-                                    print(f"Running: method={method}, tampering_count={tamplimit}, "
+                                    print(f"Running: {method}, tamper={tamplimit}, "
                                           f"prob={prob}, mult={upper}, nodes={nodes}")
-                                    sim_result = run_simulation(config)
-                                    sim_result.update({
-                                        "method": method,
-                                        "alpha": "0",
-                                        "byzantine_ids": str(byz_ids),
+                                    result = run_simulation(config)
+                                    result.update({
+                                        "method":                       method,
+                                        "alpha":                        "0",
+                                        "byzantine_ids":                str(byz_ids),
                                         "byzantine_attack_probability": prob,
-                                        "byzantine_multiplier_upper": upper,
-                                        "tampering_count": tamplimit,
-                                        "nodes": str(nodes),
-                                        "run": run
+                                        "byzantine_multiplier_upper":   upper,
+                                        "tampering_count":              tamplimit,
+                                        "nodes":                        str(nodes),
+                                        "run":                          run
                                     })
-                                    results.append(sim_result)
+                                    results.append(result)
 
-    # Convert results to DataFrame and save
+    # Save and display results
     df = pd.DataFrame(results)
     df.to_csv("simulation_results.csv", index=False)
     print("Results saved to simulation_results.csv")
     print(df)
 
     # ----- Standard Plots -----
-
     plot_grouped_bar_chart(
         df=df[df["method"]=="method2"],
         x_col="tampering_count",
@@ -281,7 +296,6 @@ def main():
         title="Iterations vs. Tampering Count (Relaxed ADMM, varying alpha)",
         filename="iterations_vs_tamperingcount_relaxed.png"
     )
-
     plot_grouped_bar_chart(
         df=df[df["method"]=="method2"],
         x_col="tampering_count",
@@ -291,7 +305,6 @@ def main():
         title="Mitigation Events vs. Tampering Count (Relaxed ADMM, varying alpha)",
         filename="mitigations_vs_tamperingcount_relaxed.png"
     )
-
     plot_bar_chart(
         df=df[df["method"]=="method1"],
         group_col="tampering_count",
@@ -301,12 +314,10 @@ def main():
         filename="iterations_vs_tamperingcount_classical.png"
     )
 
-    # Additional charts...
-
     # ----- Summary Table -----
-    pivot_cols = ["method", "alpha", "byzantine_attack_probability", "tampering_count"]
+    pivot_cols    = ["method", "alpha", "byzantine_attack_probability", "tampering_count"]
     summary_table = df.groupby(pivot_cols).agg({
-        "iterations": ["mean","std"],
+        "iterations":       ["mean","std"],
         "mitigation_count": ["mean","std"]
     }).reset_index()
     summary_table.columns = [
