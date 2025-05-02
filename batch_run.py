@@ -126,8 +126,8 @@ def main():
                                     "non_interactive":              True,
                                     "maximum_iteration":            1000,
                                     "penaltyfactor":                0.01,
-                                    "residual_primal":              4e-3,
-                                    "residual_dual":                4e-3
+                                    "residual_primal":              1e-3,
+                                    "residual_dual":                1e-3
                                 }
                                 base.update(extra)
                                 return base
