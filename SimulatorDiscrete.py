@@ -59,14 +59,16 @@ class Simulator(Simulation):
         self.n_optimized_partners = {}
         self.n_updated_partners = {}
         self.initialize_partners()
+
         logging.info("Initialization complete: created %d agents.", self.nag)
-        plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
+        #plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
         logging.info("Graph plotted and saved to graph.png.")
         self.trust_threshold = self.config.get("trust_threshold", 30)
         self.byz_score = {}
         for i in range(self.nag):
             self.byz_score[i] = {}
         logging.info("Trust parameters set: trust_threshold=%d", self.trust_threshold)
+
         self.Opti_LocDec_Start()
         logging.info("Initial events scheduled. Starting simulation.")
         return
@@ -106,7 +108,34 @@ class Simulator(Simulation):
         if self.account_token == '':
             self.account_token = ''
         return
+    
+    def SaveBinaryState(self, filename):
+        """
+        Store all the heavy data we might want later, compressed.
+        """
+        import gzip, pickle
 
+        payload = {
+            "config":    self.config,
+            "iteration": self.iteration,
+            "Trades":    self.Trades,
+            "Prices":    self.Prices,
+            "progress":  self.opti_progress,
+            "players": {
+                i: {
+                    "Res_primal": p.Res_primal,
+                    "Res_dual":   p.Res_dual,
+                    "SW":         p.SW
+                }
+                for i, p in self.players.items()
+            }
+        }
+
+        with gzip.open(filename, "wb") as f:
+            pickle.dump(payload, f, protocol=pickle.HIGHEST_PROTOCOL)
+        return
+    
+    #%% Optimization
     def Opti_LocDec_Init(self):
         nag = len(self.MGraph.vs)
         self.nag = nag
@@ -173,12 +202,29 @@ class Simulator(Simulation):
         logging.info("Opti_LocDec_Start: Initial scheduling done.")
 
     def Opti_LocDec_State(self, out):
+        if self.iteration >= self.maximum_iteration:
+            return
+            
         self.iteration += 1
         if self.Prices[self.Prices != 0].size != 0:
             self.Price_avg = self.Prices[self.Prices != 0].mean()
         else:
             self.Price_avg = 0
         self.SW = sum([self.players[i].SW for i in range(self.nag)])
+
+        iter_log = self.config.get("iter_log_file", None)
+        if iter_log:
+            header = "iter,SW,avg_price,prim,dual\n"
+            line = (
+                f"{self.iteration},{self.SW:.6g},{self.Price_avg:.6g},"
+                f"{self.prim:.6g},{self.dual:.6g}\n"
+            )
+            mode = "a" if self.iteration > 1 else "w"
+            with open(iter_log, mode) as f:
+                if self.iteration == 1:
+                    f.write(header)
+                f.write(line)
+
         if self.iteration_last < self.iteration:
             self.iteration_last = self.iteration
             print(f"Iteration: {self.iteration}, SW: {self.SW:.3g}, Primal: {self.prim:.3g}, Dual: {self.dual:.3g}, Avg Price: {self.Price_avg * 100:.2f}")
