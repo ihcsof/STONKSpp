@@ -107,6 +107,32 @@ class Simulator(Simulation):
             self.account_token = ''
         return
     
+    def SaveBinaryState(self, filename):
+        """
+        Store all the heavy data we might want later, compressed.
+        """
+        import gzip, pickle
+
+        payload = {
+            "config":    self.config,
+            "iteration": self.iteration,
+            "Trades":    self.Trades,
+            "Prices":    self.Prices,
+            "progress":  self.opti_progress,
+            "players": {
+                i: {
+                    "Res_primal": p.Res_primal,
+                    "Res_dual":   p.Res_dual,
+                    "SW":         p.SW
+                }
+                for i, p in self.players.items()
+            }
+        }
+
+        with gzip.open(filename, "wb") as f:
+            pickle.dump(payload, f, protocol=pickle.HIGHEST_PROTOCOL)
+        return
+    
     #%% Optimization
     def Opti_LocDec_Init(self):
         nag = len(self.MGraph.vs)
@@ -193,6 +219,19 @@ class Simulator(Simulation):
         else:
             self.Price_avg = 0
         self.SW = sum([self.players[i].SW for i in range(self.nag)])
+
+        iter_log = self.config.get("iter_log_file", None)
+        if iter_log:
+            header = "iter,SW,avg_price,prim,dual\n"
+            line = (
+                f"{self.iteration},{self.SW:.6g},{self.Price_avg:.6g},"
+                f"{self.prim:.6g},{self.dual:.6g}\n"
+            )
+            mode = "a" if self.iteration > 1 else "w"
+            with open(iter_log, mode) as f:
+                if self.iteration == 1:
+                    f.write(header)
+                f.write(line)
 
         if self.iteration_last < self.iteration:
             self.iteration_last = self.iteration
