@@ -92,7 +92,7 @@ def run_simulation(config):
 ############################################
 def main():
     # Number of executions per configuration
-    N = 1
+    N = 2
 
     # Parameter sweeps
     methods             = ["method1", "method2"]

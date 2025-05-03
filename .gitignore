@@ -6,3 +6,7 @@ log_*
 *lic
 *.txt
 myenv
+venv
+*.txt
+*.gz
+*.log
