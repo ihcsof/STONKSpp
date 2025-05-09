@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 batch_graphs.py  –  analytics + plotting + binary deep-dive
-2025-05-10   (syntax-clean: no semicolon ‘if’ one-liners)
+2025-05-10  (extended visual suite – fixed final_SW column name)
 
  • simulation_results.csv       ← mitigation logs
  • simulation_summary_table.csv ← pivot of means/stds
@@ -36,13 +36,13 @@ def grouped_bar(df, x, g, y, ylab, ttl, fname):
     with pd.option_context("mode.chained_assignment", None):
         try: df[x] = df[x].astype(float)
         except: pass
-    tab = df.groupby([x, g])[y].agg(['mean','std']).reset_index()
+    tab = df.groupby([x, g])[y].agg(['mean', 'std']).reset_index()
     mtab = tab.pivot(index=x, columns=g, values='mean')
     stab = tab.pivot(index=x, columns=g, values='std')
     X = np.arange(len(mtab)); bw = 0.8/len(mtab.columns)
 
-    fig, ax = plt.subplots(figsize=(8,6))
-    for i,col in enumerate(mtab.columns):
+    fig, ax = plt.subplots(figsize=(8, 6))
+    for i, col in enumerate(mtab.columns):
         pos = X + (i-len(mtab.columns)/2)*bw + bw/2
         ax.bar(pos, mtab[col], yerr=clamp_err(mtab[col], stab[col]),
                width=bw, capsize=4, label=str(col))
@@ -56,7 +56,7 @@ def simple_bar(df, x, y, ylab, ttl, fname):
     with pd.option_context("mode.chained_assignment", None):
         try: df[x] = df[x].astype(float)
         except: pass
-    tab = df.groupby(x)[y].agg(['mean','std']).reset_index().sort_values(x)
+    tab = df.groupby(x)[y].agg(['mean', 'std']).reset_index().sort_values(x)
     fig, ax = plt.subplots()
     ax.bar(tab.index, tab['mean'],
            yerr=clamp_err(tab['mean'], tab['std']), capsize=4)
@@ -66,8 +66,8 @@ def simple_bar(df, x, y, ylab, ttl, fname):
 
 def mean_curve(df, x, y, hue, ttl, fname):
     df = _copy(df); fig, ax = plt.subplots()
-    for k,g in df.groupby(hue):
-        ln = g.groupby(x)[y].agg(['mean','std']).reset_index()
+    for k, g in df.groupby(hue):
+        ln = g.groupby(x)[y].agg(['mean', 'std']).reset_index()
         ax.plot(ln[x], ln['mean'], label=str(k))
         ax.fill_between(ln[x], ln['mean']-ln['std'], ln['mean']+ln['std'], alpha=.25)
     ax.set_xlabel(x); ax.set_ylabel(y); ax.set_title(ttl); ax.legend(title=hue)
@@ -76,51 +76,73 @@ def mean_curve(df, x, y, hue, ttl, fname):
 def boxplots(df, x, y, ttl, fname):
     df = _copy(df)
     def sk(v):
-        if v is np.inf or (isinstance(v,float) and np.isinf(v)): return (2,np.inf)
-        try:  return (0,float(v))
-        except: return (1,str(v))
+        if v is np.inf or (isinstance(v, float) and np.isinf(v)):
+            return (2, np.inf)
+        try:  return (0, float(v))
+        except: return (1, str(v))
     cats = sorted(df[x].unique(), key=sk)
-    data = [df[df[x]==c][y].values for c in cats]
+    data = [df[df[x] == c][y].values for c in cats]
 
     fig, ax = plt.subplots()
     ax.boxplot(data, positions=np.arange(len(cats)), showfliers=False)
-    for i,d in enumerate(data):
-        if len(d)<=3:
+    for i, d in enumerate(data):
+        if len(d) <= 3:
             ax.scatter(np.full(len(d), i), d, color="tab:orange", zorder=3)
-    labels=[]
+    labels = []
     for c in cats:
-        if c is np.inf or (isinstance(c,float) and np.isinf(c)): labels.append("inf")
-        elif isinstance(c,(int,float)) and float(c).is_integer(): labels.append(str(int(c)))
-        else: labels.append(str(c))
+        if c is np.inf or (isinstance(c, float) and np.isinf(c)):
+            labels.append("inf")
+        elif isinstance(c, (int, float)) and float(c).is_integer():
+            labels.append(str(int(c)))
+        else:
+            labels.append(str(c))
     ax.set_xticks(range(len(cats))); ax.set_xticklabels(labels)
     ax.set_xlabel(x); ax.set_ylabel(y); ax.set_title(ttl)
     plt.tight_layout(); plt.savefig(f"{PLOT_DIR}/{fname}"); plt.close(fig)
 
-# ═══════════════════ per-run iteration PNGs ══════════════════
-def gen_iter_plots(csv_p):
-    df = pd.read_csv(csv_p); df["Price"]=df["avg_price"]*100
-    tag=os.path.splitext(os.path.basename(csv_p))[0][5:]
-    def sv(fig,stem):
-        plt.tight_layout(); fig.savefig(f"{PLOT_DIR}/{stem}_{tag}.png"); plt.close(fig)
+def overlaid_hists(df, x, cat, bins, ttl, fname, alpha=0.35):
+    df = _copy(df)
+    fig, ax = plt.subplots()
+    for c, g in df.groupby(cat):
+        ax.hist(g[x], bins=bins, alpha=alpha, label=str(c), density=True)
+    ax.set_xlabel(x); ax.set_ylabel("Density"); ax.set_title(ttl)
+    ax.legend(title=cat); plt.tight_layout()
+    plt.savefig(f"{PLOT_DIR}/{fname}"); plt.close(fig)
 
-    for col,ttl in [("SW","SW vs Iter"), ("Price","Price vs Iter")]:
-        fig,ax=plt.subplots(); ax.plot(df["iter"],df[col])
-        ax.set_xlabel("Iteration"); ax.set_ylabel(col); ax.set_title(ttl); sv(fig,col)
-    fig,ax=plt.subplots(); ax.plot(df["iter"],df["prim"],label="prim")
-    ax.plot(df["iter"],df["dual"],label="dual")
+def cdf_plot(df, x, cat, ttl, fname):
+    df = _copy(df); fig, ax = plt.subplots()
+    for c, g in df.groupby(cat):
+        data = np.sort(g[x].values)
+        yvals = np.arange(1, len(data)+1) / float(len(data))
+        ax.step(data, yvals, where="post", label=str(c))
+    ax.set_xlabel(x); ax.set_ylabel("CDF"); ax.set_title(ttl)
+    ax.legend(title=cat); plt.tight_layout()
+    plt.savefig(f"{PLOT_DIR}/{fname}"); plt.close(fig)
+
+# ═══════════════════ per-run iteration PNGs (unchanged) ════════════════════
+def gen_iter_plots(csv_p):
+    df = pd.read_csv(csv_p); df["Price"] = df["avg_price"]*100
+    tag = os.path.splitext(os.path.basename(csv_p))[0][5:]
+    def sv(fig, stem):
+        plt.tight_layout(); fig.savefig(f"{PLOT_DIR}/{stem}_{tag}.png"); plt.close(fig)
+    for col, ttl in [("SW", "SW vs Iter"), ("Price", "Price vs Iter")]:
+        fig, ax = plt.subplots(); ax.plot(df["iter"], df[col])
+        ax.set_xlabel("Iteration"); ax.set_ylabel(col); ax.set_title(ttl); sv(fig, col)
+    fig, ax = plt.subplots(); ax.plot(df["iter"], df["prim"], label="prim")
+    ax.plot(df["iter"], df["dual"], label="dual")
     ax.set_xlabel("Iteration"); ax.set_ylabel("Residual"); ax.legend()
-    ax.set_title("Primal & Dual vs Iter"); sv(fig,"Residuals")
+    ax.set_title("Primal & Dual vs Iter"); sv(fig, "Residuals")
 
 def iter_df(csv_p):
-    df = pd.read_csv(csv_p); df["Price"]=df["avg_price"]*100
-    tag  = os.path.splitext(os.path.basename(csv_p))[0][5:]
-    parts= dict(re.findall(r"([a-z]+)([^_]+)", tag))
-    df["tag"]=tag
-    df["method"]=parts.get("method","")
-    df["tamper"]=np.inf if parts.get("t")=="inf" else float(parts.get("t",0))
+    df = pd.read_csv(csv_p); df["Price"] = df["avg_price"]*100
+    tag = os.path.splitext(os.path.basename(csv_p))[0][5:]
+    parts = dict(re.findall(r"([a-z]+)([^_]+)", tag))
+    df["tag"] = tag
+    df["method"] = parts.get("method","")
+    df["tamper"] = np.inf if parts.get("t")=="inf" else float(parts.get("t",0))
     return df
 
-# ═══════════════════ extract residual history ═══════════════
+# ═════════════════ residual-history extraction + classify (unchanged) ══════
 def _norm_progress(obj):
     import numpy as _np, pandas as _pd
     rows=[]
@@ -144,10 +166,7 @@ def extract_progress(bd):
                 pts=_norm_progress(bd[k])
                 if pts:
                     return pts
-    # shallow dive
-    def _shallow(v):
-        pts=_norm_progress(v)
-        return pts
+    def _shallow(v): return _norm_progress(v)
     if isinstance(bd,dict):
         for v in bd.values():
             pts=_shallow(v)
@@ -158,16 +177,15 @@ def extract_progress(bd):
             pts=_shallow(v)
             if pts:
                 return pts
-    # parallel arrays
     if isinstance(bd,dict):
         kmap={k.lower():k for k in bd}
         req=["sw","price","prim","dual"]
         if all(any(r in k for k in kmap) for r in req):
             try:
-                sw=np.asarray(bd[next(k for k in kmap if "sw" in k)],float)
-                prc=np.asarray(bd[next(k for k in kmap if "price" in k)],float)
-                prim=np.asarray(bd[next(k for k in kmap if "prim" in k)],float)
-                dual=np.asarray(bd[next(k for k in kmap if "dual" in k)],float)
+                sw   = np.asarray(bd[next(k for k in kmap if "sw" in k)],float)
+                prc  = np.asarray(bd[next(k for k in kmap if "price" in k)],float)
+                prim = np.asarray(bd[next(k for k in kmap if "prim" in k)],float)
+                dual = np.asarray(bd[next(k for k in kmap if "dual" in k)],float)
                 if len({len(sw),len(prc),len(prim),len(dual)})==1:
                     return [(i,sw[i],prc[i],prim[i],dual[i]) for i in range(len(sw))]
             except Exception:
@@ -218,22 +236,16 @@ def build_sim_results():
     print(f"simulation_results.csv saved ({len(df)})")
     return df
 
-# ───────────── local-conv log parser ─────────────
+# ───────────── local-conv log parser (unchanged) ────────────────────
 def local_conv_items(path: str):
-    """
-    Parse a local-convergence log and yield (subgraph, iter_number)
-    for every line like
-        "Sub-graph [2,3,4] locally converged at iter 123"
-    """
-    out = []
-    rg = r"Sub-graph\s+(\[.*?\])\s+locally converged at iter (\d+)"
+    out=[]
+    rg=r"Sub-graph\s+(\[.*?\])\s+locally converged at iter (\d+)"
     with open(path) as f:
         for ln in f:
-            m = re.search(rg, ln)
+            m=re.search(rg,ln)
             if m:
-                sub = m.group(1).replace(" ", "")
-                it  = int(m.group(2))
-                out.append((sub, it))
+                sub=m.group(1).replace(" ",""); it=int(m.group(2))
+                out.append((sub,it))
     return out
 
 # ═════════════ binaries → binary_summary.csv ═════════════════════════
@@ -269,20 +281,33 @@ def analyse_binaries():
                          final_prim=fp,final_dual=fd,final_SW=fsw,
                          slope_prim=sp,slope_dual=sd))
 
-    if rows:
-        bdf=pd.DataFrame(rows)
-        bdf.to_csv("binary_summary.csv",index=False)
-        print("binary_summary.csv saved")
-    else:
+    if not rows:
         print("No binary yielded history ≥1000 iterations.")
+        return None
+
+    bdf=pd.DataFrame(rows)
+    bdf.to_csv("binary_summary.csv",index=False)
+    print("binary_summary.csv saved")
+
+    # ── additional visuals ─────────────────────────────────────────
+    overlaid_hists(bdf,"final_prim","conv_class",bins=30,
+                   ttl="Prim residual distribution by class",
+                   fname="prim_hist_by_class.png")
+    cdf_plot(bdf,"final_prim","conv_class",
+             ttl="CDF of prim residuals by class",
+             fname="prim_cdf_by_class.png")
+    boxplots(bdf,"conv_class","final_SW",
+             "Final SW by Convergence Class","finalSW_box_class.png")
+    return bdf
 
 # ═════════════════════════════════ main ══════════════════════════════
 def main():
-    df=build_sim_results()
+    df = build_sim_results()
     if df.empty:
         return
 
-    df2,df1=df[df.method=="method2"], df[df.method=="method1"]
+    # aggregated plots on mitigation logs
+    df2, df1 = df[df.method=="method2"], df[df.method=="method1"]
     if not df2.empty:
         grouped_bar(df2,"tampering","alpha","iterations",
                     "Avg Iterations","Iterations vs Tampering (Relaxed)",
@@ -292,24 +317,48 @@ def main():
                     "mitig_vs_tamper_relaxed.png")
     if not df1.empty:
         simple_bar(df1,"tampering","iterations","Avg Iterations",
-                   "Iterations vs Tampering (Classic)","iter_vs_tamper_classic.png")
+                   "Iterations vs Tampering (Classic)",
+                   "iter_vs_tamper_classic.png")
 
-    csvs=glob.glob(f"{ITER_DIR}/iter_*.csv")
+    # per-run iteration logs
+    csvs = glob.glob(f"{ITER_DIR}/iter_*.csv")
     if csvs:
-        for p in csvs: gen_iter_plots(p)
-        all_it=pd.concat([iter_df(p) for p in csvs], ignore_index=True)
-        last=all_it.sort_values("iter").groupby("tag").tail(1)
-        boxplots(last,"tamper","SW","Final SW by Tampering","finalSW_box_tamper.png")
+        for p in csvs:
+            gen_iter_plots(p)
+        all_it = pd.concat([iter_df(p) for p in csvs], ignore_index=True)
+        last   = all_it.sort_values("iter").groupby("tag").tail(1)
+
+        boxplots(last,"tamper","SW","Final SW by Tampering",
+                 "finalSW_box_tamper.png")
         mean_curve(all_it,"iter","SW","method",
                    "SW Convergence (Mean±Std)","SW_conv_meanstd.png")
 
+        overlaid_hists(last,"SW","tamper",bins=25,
+                       ttl="Final SW distribution by tampering",
+                       fname="sw_hist_by_tamper.png")
+        cdf_plot(last,"SW","tamper",
+                 ttl="CDF of final SW by tampering",
+                 fname="sw_cdf_by_tamper.png")
+
         boxplots(df,"tampering","iterations",
                  "Iterations by Tampering","iterations_box_tamper.png")
-        boxplots(last,"method","Price","Final Price by Method","price_box_method.png")
-        boxplots(last,"method","prim","Prim Final by Method","prim_box_method.png")
-        boxplots(last,"method","dual","Dual Final by Method","dual_box_method.png")
-        boxplots(df,"tampering","avg_weight","Avg Weight by Tampering","avgWeight_box_tamper.png")
+        boxplots(last,"method","Price","Final Price by Method",
+                 "price_box_method.png")
+        boxplots(last,"method","prim","Prim Final by Method",
+                 "prim_box_method.png")
+        boxplots(last,"method","dual","Dual Final by Method",
+                 "dual_box_method.png")
+        boxplots(df,"tampering","avg_weight",
+                 "Avg Weight by Tampering","avgWeight_box_tamper.png")
 
+        overlaid_hists(df,"iterations","tampering",bins=30,
+                       ttl="Iterations distribution by tampering",
+                       fname="iter_hist_by_tampering.png")
+        cdf_plot(df,"iterations","tampering",
+                 ttl="CDF of iterations by tampering",
+                 fname="iter_cdf_by_tampering.png")
+
+    # local convergence quicklook
     lc_pat=(r"local_conv_(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)"
             r"_mult([\d\.]+)_t(\S+)\.log")
     lc_rows=[]
@@ -329,8 +378,10 @@ def main():
                     "Avg Local-Conv Iter","LocalConv Iter vs Tampering",
                     "localConv_iter_vs_tamper.png")
 
-    analyse_binaries()
+    # binaries
+    bdf = analyse_binaries()
 
+    # summary pivot
     summ=(df.groupby(["method","alpha","attack_prob","tampering"])
              .agg(iter_mean=("iterations","mean"),
                   iter_std=("iterations","std")).reset_index())
