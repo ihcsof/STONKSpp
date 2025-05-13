@@ -363,10 +363,11 @@ class PlayerOptimizationMsg(Event):
             row_median = np.median(row_values)
             row_mad = np.median(np.abs(row_values - row_median))
 
-            scale_factor = 15.0
+            scale_factor = sim.config.get("scale_factor", 15.0)
+            mad_threshold = sim.config.get("mad_threshold", 4.1)
             min_threshold = 0.01
 
-            if row_mad < 4.1:
+            if row_mad < mad_threshold:
                 adaptive_threshold = float('inf')
             else:
                 adaptive_threshold = max(scale_factor * row_mad, min_threshold)

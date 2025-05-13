@@ -97,11 +97,13 @@ def main():
     # Parameter sweeps
     methods             = ["method1", "method2"]
     subgraph_nodes_list = [[2, 3, 4]]
-    alphas              = [0.15, 0.5, 0.9]       # only for method2
+    alphas              = [0.15, 0.5, 0.9] # only for method2
     byzantine_ids_list  = [[2]]
     attack_probs        = [0.01, 0.1, 0.5]
     multipliers         = [(0.5, 1.1), (0.5, 1.5)]
     tampering_counts    = [1, 25, float('inf')]
+    mad_options         = {"yes": 4.1,
+                            "no":  1e12}
 
     results = []
 
@@ -110,42 +112,69 @@ def main():
             for prob in attack_probs:
                 for lower, upper in multipliers:
                     for tamplimit in tampering_counts:
-                        for nodes in subgraph_nodes_list:
+                        for mad_label, mad_thr in mad_options.items(): 
+                            for nodes in subgraph_nodes_list:
 
-                            def build_common_config(**extra):
-                                base = {
-                                    "iter_update_method":           method,
-                                    "byzantine_ids":                byz_ids,
-                                    "byzantine_attack_probability": prob,
-                                    "byzantine_multiplier_lower":   lower,
-                                    "byzantine_multiplier_upper":   upper,
-                                    "tampering_count":              tamplimit,
-                                    "subgraph_nodes":               nodes,
-                                    "scale_factor":                 15.0,
-                                    "mad_threshold":                4.1,
-                                    "non_interactive":              True,
-                                    "maximum_iteration":            1000,
-                                    "penaltyfactor":                0.01,
-                                    "residual_primal":              1e-3,
-                                    "residual_dual":                1e-3
-                                }
-                                base.update(extra)
-                                return base
+                                def build_common_config(**extra):
+                                    base = {
+                                        "iter_update_method":           method,
+                                        "byzantine_ids":                byz_ids,
+                                        "byzantine_attack_probability": prob,
+                                        "byzantine_multiplier_lower":   lower,
+                                        "byzantine_multiplier_upper":   upper,
+                                        "tampering_count":              tamplimit,
+                                        "subgraph_nodes":               nodes,
+                                        "scale_factor":                 15.0,
+                                        "mad_threshold":                mad_thr,
+                                        "non_interactive":              True,
+                                        "maximum_iteration":            1000,
+                                        "penaltyfactor":                0.01,
+                                        "residual_primal":              1e-3,
+                                        "residual_dual":                1e-3
+                                    }
+                                    base.update(extra)
+                                    return base
 
-                            def tags(alpha_tag=""):
-                                return (
-                                    f"{method}{alpha_tag}"
-                                    f"_prob{prob}_mult{upper}_t{tamplimit}"
-                                )
+                                def tags(alpha_tag=""):
+                                    mad_tag = "_MAD" if mad_label == "yes" else ""
+                                    return (
+                                        f"{mad_tag}{method}{alpha_tag}"
+                                        f"_prob{prob}_mult{upper}_t{tamplimit}"
+                                    )
 
-                            if method == "method2":
-                                for alpha in alphas:
+                                if method == "method2":
+                                    for alpha in alphas:
+                                        for run in range(N):
+                                            tag = tags(f"_alpha{alpha}")
+                                            mit_log = os.path.join("logs", "mitigation", f"log_{tag}.txt")
+                                            lc_log  = os.path.join("logs", "local_conv", f"local_conv_{tag}.log")
+                                            cfg = build_common_config(
+                                                alpha=alpha,
+                                                local_conv_log_file=lc_log,
+                                                log_mitigation_file=mit_log,
+                                                iter_log_file=os.path.join("logs", "iter_stats", f"iter_{tag}.csv"),
+                                                binary_state_file=os.path.join("logs", "binaries", f"state_{tag}.pkl.gz")
+                                            )
+                                            print(f"Running simulation {tag} (run {run})")
+                                            res = run_simulation(cfg)
+                                            res.update({
+                                                "MAD":               mad_label,
+                                                "method":            method,
+                                                "alpha":             alpha,
+                                                "byzantine_ids":     str(byz_ids),
+                                                "attack_prob":       prob,
+                                                "multiplier_upper":  upper,
+                                                "tampering_count":   tamplimit,
+                                                "nodes":             str(nodes),
+                                                "run":               run
+                                            })
+                                            results.append(res)
+                                else:  # method1
                                     for run in range(N):
-                                        tag = tags(f"_alpha{alpha}")
+                                        tag = tags()
                                         mit_log = os.path.join("logs", "mitigation", f"log_{tag}.txt")
                                         lc_log  = os.path.join("logs", "local_conv", f"local_conv_{tag}.log")
                                         cfg = build_common_config(
-                                            alpha=alpha,
                                             local_conv_log_file=lc_log,
                                             log_mitigation_file=mit_log,
                                             iter_log_file=os.path.join("logs", "iter_stats", f"iter_{tag}.csv"),
@@ -154,8 +183,9 @@ def main():
                                         print(f"Running simulation {tag} (run {run})")
                                         res = run_simulation(cfg)
                                         res.update({
+                                            "MAD":               mad_label,
                                             "method":            method,
-                                            "alpha":             alpha,
+                                            "alpha":             0,
                                             "byzantine_ids":     str(byz_ids),
                                             "attack_prob":       prob,
                                             "multiplier_upper":  upper,
@@ -164,30 +194,6 @@ def main():
                                             "run":               run
                                         })
                                         results.append(res)
-                            else:  # method1
-                                for run in range(N):
-                                    tag = tags()
-                                    mit_log = os.path.join("logs", "mitigation", f"log_{tag}.txt")
-                                    lc_log  = os.path.join("logs", "local_conv", f"local_conv_{tag}.log")
-                                    cfg = build_common_config(
-                                        local_conv_log_file=lc_log,
-                                        log_mitigation_file=mit_log,
-                                        iter_log_file=os.path.join("logs", "iter_stats", f"iter_{tag}.csv"),
-                                        binary_state_file=os.path.join("logs", "binaries", f"state_{tag}.pkl.gz")
-                                    )
-                                    print(f"Running simulation {tag} (run {run})")
-                                    res = run_simulation(cfg)
-                                    res.update({
-                                        "method":            method,
-                                        "alpha":             0,
-                                        "byzantine_ids":     str(byz_ids),
-                                        "attack_prob":       prob,
-                                        "multiplier_upper":  upper,
-                                        "tampering_count":   tamplimit,
-                                        "nodes":             str(nodes),
-                                        "run":               run
-                                    })
-                                    results.append(res)
 
     # Save raw results
     df = pd.DataFrame(results)
@@ -196,7 +202,7 @@ def main():
     print(df)
 
     # ----- Summary Table -----
-    pivot_cols = ["method", "alpha", "attack_prob", "tampering_count"]
+    pivot_cols = ["MAD", "method", "alpha", "attack_prob", "tampering_count"]
     summary_table = (
         df.groupby(pivot_cols)
           .agg(iterations_mean=("iterations", "mean"),
