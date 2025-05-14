@@ -107,6 +107,42 @@ def main():
 
     results = []
 
+    default_tag  = "default"
+    default_cfg  = {
+        "iter_update_method": "method1",
+        "byzantine_ids":      [],
+        "mad_threshold":      1e12,
+        "non_interactive":    True,
+
+        # keep the generic convergence / solver settings
+        "maximum_iteration":  1000,
+        "penaltyfactor":      0.01,
+        "residual_primal":    1e-3,
+        "residual_dual":      1e-3,
+
+        # log / dump filenames
+        "log_mitigation_file": f"logs/mitigation/log_{default_tag}.txt",
+        "local_conv_log_file": f"logs/local_conv/local_conv_{default_tag}.log",
+        "iter_log_file":       f"logs/iter_stats/iter_{default_tag}.csv",
+        "binary_state_file":   f"logs/binaries/state_{default_tag}.pkl.gz",
+    }
+
+    print(f"Running default simulation {default_tag}")
+    res = run_simulation(default_cfg)
+    # annotate result – irrelevant params set to placeholder values
+    res.update({
+        "MAD":               "no",
+        "method":            "method1",
+        "alpha":             0,
+        "byzantine_ids":     "[]",
+        "attack_prob":       0,
+        "multiplier_upper":  0,
+        "tampering_count":   0,
+        "nodes":             "[]",
+        "run":               0,
+    })
+    results.append(res)
+
     for method in methods:
         for byz_ids in byzantine_ids_list:
             for prob in attack_probs:
