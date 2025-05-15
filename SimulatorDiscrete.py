@@ -25,7 +25,9 @@ class Simulator(Simulation):
         self.force_stop = False
 
         # Load graph
-        self.MGraph = Graph.Load('graphs/examples/P2P_model_reduced.pyp2p', format='picklez')
+        default_graph = "graphs/examples/P2P_model.pyp2p"
+        graph_path    = self.config.get("graph_file", default_graph)
+        self.MGraph = Graph.Load(graph_path, format='picklez')
 
         self.timeout = 3600  # UNUSED
         self.Interval = 3  # in s
