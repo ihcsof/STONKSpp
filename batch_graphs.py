@@ -208,8 +208,8 @@ def classify_run(prog, eps=1e-3):
 
 # ═══════════ mitigation logs → simulation_results.csv ════════════════
 def build_sim_results():
-    pat=(r"log_(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)"
-         r"_mult([\d\.]+)_t(\S+)\.txt")
+    pat = (r"log_.*?(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)"
+           r"_mult([\d\.]+)_t(\S+)\.txt")
     rows=[]
     for p in glob.glob(f"{MIT_DIR}/log_*.txt"):
         m=re.match(pat,os.path.basename(p))
@@ -250,8 +250,8 @@ def local_conv_items(path: str):
 
 # ═════════════ binaries → binary_summary.csv ═════════════════════════
 def analyse_binaries():
-    pat=(r"state_(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)"
-         r"_mult([\d\.]+)_t(\S+)\.pkl\.gz")
+    pat = (r"state_.*?(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)"
+       r"_mult([\d\.]+)_t(\S+)\.pkl\.gz")
     rows=[]
     for bp in glob.glob(f"{BIN_DIR}/state_*.pkl.gz"):
         m=re.match(pat,os.path.basename(bp))
@@ -359,8 +359,8 @@ def main():
                  fname="iter_cdf_by_tampering.png")
 
     # local convergence quicklook
-    lc_pat=(r"local_conv_(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)"
-            r"_mult([\d\.]+)_t(\S+)\.log")
+    lc_pat = (r"local_conv_.*?(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)"
+          r"_mult([\d\.]+)_t(\S+)\.log")
     lc_rows=[]
     for lp in glob.glob(f"{LC_DIR}/local_conv_*.log"):
         m=re.match(lc_pat,os.path.basename(lp))
