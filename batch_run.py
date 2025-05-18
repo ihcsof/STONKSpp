@@ -96,7 +96,7 @@ def main():
 
     # Parameter sweeps
     methods             = ["method1", "method2"]
-    subgraph_nodes_list = [[2, 3, 4]]
+    subgraph_nodes_list = [[0, 2, 3]]
     alphas              = [0.15, 0.5] # only for method2
     byzantine_ids_list  = [[2]]
     attack_probs        = [0.01, 0.1, 0.5]
@@ -105,51 +105,60 @@ def main():
     mad_options         = {"yes": 4.1,
                             "no":  1e12}
     graph_files = {
-        #"short_p2p":  "graphs/examples/P2P_model_reduced.pyp2p",
+        "short_p2p":  "graphs/examples/P2P_model_reduced.pyp2p",
         #"denser_p2p":  "graphs/examples/P2P_model.pyp2p",
-        "dense_p2p":  "graphs/examples/P2P_model_2.pyp2p",
-        "medium_p2p": "graphs/examples/Pool_3.pyp2p",
-        "sparse_p2p": "graphs/examples/Pool_4.pyp2p",
+        #"dense_p2p":  "graphs/examples/P2P_model_2.pyp2p",
+        #"medium_p2p": "graphs/examples/P2P_model_3.pyp2p",
+        #"sparse_p2p": "graphs/examples/PoolP2P_model_4.pyp2p",
     }
 
     results = []
 
-    default_tag  = "default"
-    default_cfg  = {
-        "iter_update_method": "method1",
-        "byzantine_ids":      [],
-        "mad_threshold":      1e12,
-        "non_interactive":    True,
+    # ------------------------------------------------------------------
+    # DEFAULT (baseline) RUNS
+    # ------------------------------------------------------------------
+    for g_label, g_path in graph_files.items():
 
-        # keep the generic convergence / solver settings
-        "maximum_iteration":  1000,
-        "penaltyfactor":      0.01,
-        "residual_primal":    1e-3,
-        "residual_dual":      1e-3,
+        default_tag = f"default_{g_label}"
 
-        # log / dump filenames
-        "log_mitigation_file": f"logs/mitigation/log_{default_tag}.txt",
-        "local_conv_log_file": f"logs/local_conv/local_conv_{default_tag}.log",
-        "iter_log_file":       f"logs/iter_stats/iter_{default_tag}.csv",
-        "binary_state_file":   f"logs/binaries/state_{default_tag}.pkl.gz",
-    }
+        default_cfg = {
+            "graph_file":        g_path,
+            "iter_update_method": "method1",
+            "byzantine_ids":      [],
+            "mad_threshold":      1e12,
+            "non_interactive":    True,
 
-    print(f"Running default simulation {default_tag}")
-    res = run_simulation(default_cfg)
-    # annotate result – irrelevant params set to placeholder values
-    res.update({
-        "graph":             "default",
-        "MAD":               "no",
-        "method":            "method1",
-        "alpha":             0,
-        "byzantine_ids":     "[]",
-        "attack_prob":       0,
-        "multiplier_upper":  0,
-        "tampering_count":   0,
-        "nodes":             "[]",
-        "run":               0,
-    })
-    results.append(res)
+            # convergence / solver settings
+            "maximum_iteration":  1000,
+            "penaltyfactor":      0.01,
+            "residual_primal":    1e-3,
+            "residual_dual":      1e-3,
+
+            # log / dump filenames
+            "log_mitigation_file": f"logs/mitigation/log_{default_tag}.txt",
+            "local_conv_log_file": f"logs/local_conv/local_conv_{default_tag}.log",
+            "iter_log_file":       f"logs/iter_stats/iter_{default_tag}.csv",
+            "binary_state_file":   f"logs/binaries/state_{default_tag}.pkl.gz",
+        }
+
+        print(f"Running default simulation {default_tag}")
+        res = run_simulation(default_cfg)
+
+        # annotate result
+        res.update({
+            "graph":             g_label,
+            "MAD":               "no",
+            "method":            "method1",
+            "alpha":             0,
+            "byzantine_ids":     "[]",
+            "attack_prob":       0,
+            "multiplier_upper":  0,
+            "tampering_count":   0,
+            "nodes":             "[]",
+            "run":               0,
+        })
+        results.append(res)
+    # ------------------------------------------------------------------
 
     for g_label, g_path in graph_files.items():
         for method in methods:
