@@ -114,9 +114,26 @@ def mean_curve(df, x, y, hue, ttl, fname, *, desc: str | None = None):
     plt.savefig(out_path); plt.close(fig)
     _add_caption(fname, desc)
 
+def boxplots(
+        df, x, y, ttl, fname,
+        *, desc: str | None = None,
+        log_if_span: bool = True,
+        jitter: float = 0.08,
+        show_n: bool = True,
+):
+    """
+    A robust replacement for the old `boxplots()`:
 
-def boxplots(df, x, y, ttl, fname, *, desc: str | None = None):
-    df = _copy(df)
+    • skips empty categories completely  
+    • if a group is constant-valued, draws a horizontal line + dot  
+    • overlays jittered raw points so you can see *n*  
+    • auto-switches to log-scale when data span > 1 000×  
+    """
+    import random
+
+    d = df[[x, y]].dropna().copy()
+
+    # ── category ordering identical to the original helper ──────────
     def sk(v):
         if v is np.inf or (isinstance(v, float) and np.isinf(v)):
             return (2, np.inf)
@@ -124,98 +141,79 @@ def boxplots(df, x, y, ttl, fname, *, desc: str | None = None):
             return (0, float(v))
         except Exception:
             return (1, str(v))
-    cats = sorted(df[x].unique(), key=sk)
-    data = [df[df[x] == c][y].values for c in cats]
+    cats = sorted(d[x].unique(), key=sk)
 
-    fig, ax = plt.subplots()
-    ax.boxplot(data, positions=np.arange(len(cats)), showfliers=False)
-    for i, d in enumerate(data):
-        if len(d) <= 3:
-            ax.scatter(np.full(len(d), i), d, color="tab:orange", zorder=3)
-    labels = []
-    for c in cats:
-        if c is np.inf or (isinstance(c, float) and np.isinf(c)):
-            labels.append("inf")
-        elif isinstance(c, (int, float)) and float(c).is_integer():
-            labels.append(str(int(c)))
-        else:
-            labels.append(str(c))
-    ax.set_xticks(range(len(cats))); ax.set_xticklabels(labels)
-    ax.set_xlabel(x); ax.set_ylabel(y); ax.set_title(ttl)
-    plt.tight_layout();
-    out_path = f"{PLOT_DIR}/{fname}"
-    plt.savefig(out_path); plt.close(fig)
-    _add_caption(fname, desc)
-
-def violin_plots(df, x, y, ttl, fname, *, desc: str | None = None):
-    """
-    Draw a violin plot of `y` grouped by column `x`, duplicating
-    any single-value group so KDE can run without error.
-    """
-    df2 = df.copy(deep=True)
-    # same sorting logic as boxplots()
-    def sk(v):
-        if v is np.inf or (isinstance(v, float) and np.isinf(v)):
-            return (2, np.inf)
-        try:
-            return (0, float(v))
-        except:
-            return (1, str(v))
-    cats = sorted(df2[x].unique(), key=sk)
-
-    # build data lists, duplicating singletons
-    data = []
-    for c in cats:
-        arr = df2[df2[x] == c][y].values
+    # ── assemble data buckets & bookkeeping ─────────────────────────
+    data, labels, consts, pts, counts = [], [], [], [], []
+    for i, c in enumerate(cats):
+        arr = d[d[x] == c][y].values
         if arr.size == 0:
-            arr2 = np.array([0.0, 0.0])          # empty category → flat at zero
-        elif arr.size == 1:
-            arr2 = np.repeat(arr, 2)             # duplicate to allow KDE
+            continue                      # skip empty category entirely
+        counts.append(arr.size)
+        # jittered points
+        pts.extend([(i + random.uniform(-jitter, jitter), v) for v in arr])
+
+        # constant bucket?
+        if np.allclose(arr, arr[0]):
+            consts.append((i, arr[0]))
+            # supply a “fake” 3-point spread so boxplot still draws sth.
+            data.append([arr[0], arr[0], arr[0]])
         else:
-            arr2 = arr
-        data.append(arr2)
+            data.append(arr)
 
-    fig, ax = plt.subplots(figsize=(8,6))
-    vp = ax.violinplot(
-        data,
-        positions   = np.arange(len(cats)),
-        showmeans   = False,
-        showmedians = True,
-        showextrema = True
-    )
-
-    # style the violin bodies
-    for body in vp['bodies']:
-        body.set_edgecolor('black')
-        body.set_facecolor('none')
-        body.set_linewidth(1)
-
-    # style the median & extrema lines
-    for part in ('cbars','cmins','cmaxes','cmedians'):
-        coll = vp.get(part)
-        if coll is not None:
-            coll.set_color('black')
-            coll.set_linewidth(1)
-
-    # x-tick labels
-    ax.set_xticks(range(len(cats)))
-    labels = []
-    for c in cats:
+        # pretty x-tick labels
         if c is np.inf or (isinstance(c, float) and np.isinf(c)):
             labels.append("inf")
         elif isinstance(c, (int, float)) and float(c).is_integer():
             labels.append(str(int(c)))
         else:
             labels.append(str(c))
-    ax.set_xticklabels(labels)
 
+    # ── plot ─────────────────────────────────────────────────────────
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    bp = ax.boxplot(
+        data,
+        positions = range(len(data)),
+        showfliers = False,
+        patch_artist = True
+    )
+    # outline only (white fill)
+    for patch in bp["boxes"]:
+        patch.set_facecolor("none")
+        patch.set_edgecolor("black")
+
+    # jittered raw points for context
+    if pts:
+        xs, ys = zip(*pts)
+        ax.scatter(xs, ys, s=8, alpha=0.4, color="grey", zorder=0)
+
+    # constant groups: emphasise with a thicker line + dot
+    for pos, val in consts:
+        ax.hlines(val, pos-0.3, pos+0.3, color="black", lw=1.5)
+        ax.plot(pos, val, "o", color="black")
+
+    # annotate n if requested
+    if show_n:
+        for pos, n in enumerate(counts):
+            ax.text(pos, ax.get_ylim()[0], f" n={n}", ha="center",
+                    va="bottom", fontsize=8, rotation=90)
+
+    # x-ticks
+    ax.set_xticks(range(len(labels)))
+    ax.set_xticklabels(labels)
     ax.set_xlabel(x)
     ax.set_ylabel(y)
     ax.set_title(ttl)
-    plt.tight_layout()
 
-    out = f"{PLOT_DIR}/{fname}"
-    plt.savefig(out)
+    # optional log scale
+    if log_if_span and not d[y].empty:
+        span = d[y].max() / max(d[y].min(), 1e-12)
+        if span > 1e3:
+            ax.set_yscale("log")
+
+    plt.tight_layout()
+    plt.savefig(f"{PLOT_DIR}/{fname}")
     plt.close(fig)
     _add_caption(fname, desc)
 
@@ -472,7 +470,7 @@ def analyse_binaries():
              fname="prim_cdf_by_class.png",
              desc="Cumulative distribution of final primal residuals across convergence classes.")
 
-    violin_plots(bdf, "conv_class", "final_SW",
+    boxplots(bdf, "conv_class", "final_SW",
              ttl="Final SW by Convergence Class",
              fname="finalSW_box_class.png",
              desc="Box‑plot of final social‑welfare for each detected convergence class.")
@@ -484,6 +482,16 @@ def main():
     df = build_sim_results()
     if df.empty:
         return
+    
+    # Remove rows where tampering is genuinely missing
+    df = df[df["tampering"] != "unknown"]
+
+    # Convert tampering `"inf"` → np.inf  and make it numeric
+    df["tampering"] = df["tampering"].replace({"inf": np.inf}).astype(float)
+
+    # (same trick for multiplier / attack_prob if you filled them with "unknown")
+    for col in ("multiplier", "attack_prob"):
+        df[col] = pd.to_numeric(df[col], errors="coerce")
 
     # Split by method
     df2 = df[df.method == "method2"]   # Relaxed ADMM
@@ -571,7 +579,7 @@ def main():
         all_it = pd.concat([iter_df(p) for p in csvs], ignore_index=True)
         last   = all_it.sort_values("iter").groupby("tag").tail(1)
 
-        violin_plots(last, "tamper", "SW",
+        boxplots(last, "tamper", "SW",
                  ttl="Final SW by Tampering",
                  fname="finalSW_box_tamper.png",
                  desc="Distribution of final social‑welfare values grouped by tampering count (per‑run view).")
@@ -591,27 +599,27 @@ def main():
                  fname="sw_cdf_by_tamper.png",
                  desc="Empirical CDF of final social‑welfare across tamper counts.")
 
-        violin_plots(df, "tampering", "iterations",
+        boxplots(df, "tampering", "iterations",
                  ttl="Iterations by Tampering",
                  fname="iterations_box_tamper.png",
                  desc="Box‑plot of total iterations across all runs, grouped by tampering count.")
 
-        violin_plots(last, "method", "Price",
+        boxplots(last, "method", "Price",
                  ttl="Final Price by Method",
                  fname="price_box_method.png",
                  desc="Distribution of final average price outcomes split by optimisation method.")
 
-        violin_plots(last, "method", "prim",
+        boxplots(last, "method", "prim",
                  ttl="Prim Final by Method",
                  fname="prim_box_method.png",
                  desc="Final primal residual distribution per method.")
 
-        violin_plots(last, "method", "dual",
+        boxplots(last, "method", "dual",
                  ttl="Dual Final by Method",
                  fname="dual_box_method.png",
                  desc="Final dual residual distribution per method.")
 
-        violin_plots(df, "tampering", "avg_weight",
+        boxplots(df, "tampering", "avg_weight",
                  ttl="Avg Weight by Tampering",
                  fname="avgWeight_box_tamper.png",
                  desc="Average (mean) weight parameter recorded in mitigation logs vs tampering.")
