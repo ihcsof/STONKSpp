@@ -127,6 +127,7 @@ def main():
             "byzantine_ids":      [],
             "mad_threshold":      1e12,
             "non_interactive":    True,
+            "subgraph_nodes":     subgraph_nodes_list[0],
 
             # convergence / solver settings
             "maximum_iteration":  1000,
