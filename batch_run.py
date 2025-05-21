@@ -127,6 +127,7 @@ def main():
             "byzantine_ids":      [],
             "mad_threshold":      1e12,
             "non_interactive":    True,
+            "subgraph_nodes":     subgraph_nodes_list[0],
 
             # convergence / solver settings
             "maximum_iteration":  1000,
@@ -150,6 +151,7 @@ def main():
             "MAD":               "no",
             "method":            "method1",
             "alpha":             0,
+            "subgraph_nodes":    subgraph_nodes_list[0],
             "byzantine_ids":     "[]",
             "attack_prob":       0,
             "multiplier_upper":  0,
