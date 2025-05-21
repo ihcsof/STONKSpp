@@ -435,8 +435,22 @@ def analyse_binaries():
         with gzip.open(bp, "rb") as f:
             bd = pickle.load(f)
 
-        if bd.get("iteration", 0) < 1000:
-            print(f"BIN  {os.path.basename(bp)}  →  iteration {bd.get('iteration', 0)} (<1000)  SKIP")
+        iters = bd.get("iteration", 0)
+        # Tag short runs as converged instead of skipping
+        if iters < 1000:
+            print(f"BIN  {os.path.basename(bp)}  →  iteration {iters} (<1000)  TAGGED as Converged")
+            # attempt to extract final values
+            prog = extract_progress(bd)
+            if prog:
+                # last recorded values
+                _, fsw, _, fp, fd = prog[-1]
+                sp = sd = np.nan
+            else:
+                fp = fd = fsw = sp = sd = np.nan
+            rows.append(dict(method=meth, alpha=alpha, attack_prob=prob,
+                             multiplier=mult, tampering=tam, conv_class="Converged",
+                             final_prim=fp, final_dual=fd, final_SW=fsw,
+                             slope_prim=sp, slope_dual=sd))
             continue
 
         prog = extract_progress(bd)
