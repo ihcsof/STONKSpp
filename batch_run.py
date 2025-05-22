@@ -13,7 +13,6 @@ This script:
 """
 
 import os
-import random
 import pandas as pd
 
 import local_conv
@@ -56,6 +55,7 @@ def parse_log_file(file_name):
             "avg_weight":     avg_weight,
             "avg_deviation":  avg_deviation}
 
+
 def run_simulation(config):
     """
     Instantiate and run the Simulator, clear both log files, then parse mitigation logs.
@@ -65,7 +65,7 @@ def run_simulation(config):
         local_conv.DEFAULT_SUBGRAPH_NODES = config["subgraph_nodes"]
 
     # Prepare/clear log files
-    for key in ("local_conv_log_file", "log_mitigation_file"):
+    for key in ("local_conv_log_file", "log_mitigation_file"):  
         if key in config:
             path = config[key]
             os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -97,19 +97,15 @@ def main():
     # Parameter sweeps
     methods             = ["method1", "method2"]
     subgraph_nodes_list = [[0, 2, 3]]
-    alphas              = [0.15, 0.5] # only for method2
+    alphas              = [0.15, 0.5]  # only for method2
     byzantine_ids_list  = [[2]]
     attack_probs        = [0.01, 0.1, 0.5]
-    multipliers         = [(0.5, 1.5)] # (0.5, 1.1)
+    multipliers         = [(0.5, 1.5)]  # (0.5, 1.1)
     tampering_counts    = [1, 25, float('inf')]
     mad_options         = {"yes": 4.1,
                             "no":  1e12}
     graph_files = {
         "short_p2p":  "graphs/examples/P2P_model_reduced.pyp2p",
-        #"denser_p2p":  "graphs/examples/P2P_model.pyp2p",
-        #"dense_p2p":  "graphs/examples/P2P_model_2.pyp2p",
-        #"medium_p2p": "graphs/examples/P2P_model_3.pyp2p",
-        #"sparse_p2p": "graphs/examples/PoolP2P_model_4.pyp2p",
     }
 
     results = []
@@ -151,7 +147,6 @@ def main():
             "MAD":               "no",
             "method":            "method1",
             "alpha":             0,
-            "subgraph_nodes":    subgraph_nodes_list[0],
             "byzantine_ids":     "[]",
             "attack_prob":       0,
             "multiplier_upper":  0,
@@ -192,7 +187,7 @@ def main():
                                         base.update(extra)
                                         return base
 
-                                    def tags(alpha_tag=""):
+                                    def tags(alpha_tag=""):  
                                         mad_tag = "_MAD" if mad_label == "yes" else ""
                                         return (
                                             f"{g_label}{mad_tag}_{method}{alpha_tag}"
@@ -203,14 +198,29 @@ def main():
                                         for alpha in alphas:
                                             for run in range(N):
                                                 tag = tags(f"_alpha{alpha}")
-                                                mit_log = os.path.join("logs", "mitigation", f"log_{tag}.txt")
-                                                lc_log  = os.path.join("logs", "local_conv", f"local_conv_{tag}.log")
+                                                # include run index in filenames
+                                                mit_log = os.path.join(
+                                                    "logs", "mitigation",
+                                                    f"log_{tag}_run{run}.txt"
+                                                )
+                                                lc_log  = os.path.join(
+                                                    "logs", "local_conv",
+                                                    f"local_conv_{tag}_run{run}.log"
+                                                )
+                                                iter_csv = os.path.join(
+                                                    "logs", "iter_stats",
+                                                    f"iter_{tag}_run{run}.csv"
+                                                )
+                                                bin_file = os.path.join(
+                                                    "logs", "binaries",
+                                                    f"state_{tag}_run{run}.pkl.gz"
+                                                )
                                                 cfg = build_common_config(
                                                     alpha=alpha,
                                                     local_conv_log_file=lc_log,
                                                     log_mitigation_file=mit_log,
-                                                    iter_log_file=os.path.join("logs", "iter_stats", f"iter_{tag}.csv"),
-                                                    binary_state_file=os.path.join("logs", "binaries", f"state_{tag}.pkl.gz")
+                                                    iter_log_file=iter_csv,
+                                                    binary_state_file=bin_file
                                                 )
                                                 print(f"Running simulation {tag} (run {run})")
                                                 res = run_simulation(cfg)
@@ -230,13 +240,28 @@ def main():
                                     else:  # method1
                                         for run in range(N):
                                             tag = tags()
-                                            mit_log = os.path.join("logs", "mitigation", f"log_{tag}.txt")
-                                            lc_log  = os.path.join("logs", "local_conv", f"local_conv_{tag}.log")
+                                            # include run index in filenames
+                                            mit_log = os.path.join(
+                                                "logs", "mitigation",
+                                                f"log_{tag}_run{run}.txt"
+                                            )
+                                            lc_log  = os.path.join(
+                                                "logs", "local_conv",
+                                                f"local_conv_{tag}_run{run}.log"
+                                            )
+                                            iter_csv = os.path.join(
+                                                "logs", "iter_stats",
+                                                f"iter_{tag}_run{run}.csv"
+                                            )
+                                            bin_file = os.path.join(
+                                                "logs", "binaries",
+                                                f"state_{tag}_run{run}.pkl.gz"
+                                            )
                                             cfg = build_common_config(
                                                 local_conv_log_file=lc_log,
                                                 log_mitigation_file=mit_log,
-                                                iter_log_file=os.path.join("logs", "iter_stats", f"iter_{tag}.csv"),
-                                                binary_state_file=os.path.join("logs", "binaries", f"state_{tag}.pkl.gz")
+                                                iter_log_file=iter_csv,
+                                                binary_state_file=bin_file
                                             )
                                             print(f"Running simulation {tag} (run {run})")
                                             res = run_simulation(cfg)

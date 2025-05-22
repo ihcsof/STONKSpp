@@ -47,10 +47,6 @@ def _copy(df):
     return df.copy(deep=True)
 
 def clamp_err(m, s, upper=1000):
-    """
-    Return asymmetric error so that (m-err_low, m+err_high) stays ≥0
-    and ≤ `upper` if provided.
-    """
     low = np.maximum(0, m - s)
     if upper is None:
         return [m - low, s]
@@ -346,61 +342,86 @@ def classify_run(prog, eps=1e-3):
 # ═══════════ mitigation logs → simulation_results.csv ════════════════
 
 def build_sim_results() -> pd.DataFrame:
-    """
-    • Reads every iter_*.csv  →  true final iteration per run.
-    • Reads every mitigation log_*.txt
-    • Produces one row per *tag* (run), merging the two sources.
-    """
-    # ---- 1) collect final_iter from iter_stats ----
+    # ---- 1) collect final_iter & run from iter_stats ----
     iter_rows = []
     for p in glob.glob(f"{ITER_DIR}/iter_*.csv"):
-        tag = os.path.splitext(os.path.basename(p))[0][5:]
-        df  = pd.read_csv(p, usecols=["iter"])
-        iter_rows.append((tag, int(df["iter"].max())))
-    iter_df = pd.DataFrame(iter_rows, columns=["tag", "iterations"])
+        fn       = os.path.splitext(os.path.basename(p))[0]  # e.g. 'iter_tag_run3'
+        base_run = fn[5:]  # strip 'iter_'
+        if '_run' in base_run:
+            base, run_s = base_run.rsplit('_run', 1)
+            run = int(run_s)
+        else:
+            base, run = base_run, 0
+        df = pd.read_csv(p, usecols=["iter"])
+        iter_rows.append((base, run, int(df["iter"].max())))
+    iter_df = pd.DataFrame(iter_rows, columns=["tag", "run", "iterations"])
     if iter_df.empty:
         raise RuntimeError("No iter_*.csv found in logs/iter_stats – cannot continue.")
 
     # ---- 2) collect mitigation info (may be missing) ----
-    mit_pat = (r"log_.*?(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)"
-               r"_mult([\d\.]+)_t(\S+)\.txt")
+    mit_pat = (r"log_(.*?)(?:_run\d+)?\.txt$")
     mit_rows = []
     for p in glob.glob(f"{MIT_DIR}/log_*.txt"):
-        fn   = os.path.basename(p)
-        tag  = os.path.splitext(fn)[0][4:]
-        m    = re.match(mit_pat, fn)
-        if not m:                      # keep going even if bad name
+        fn = os.path.basename(p)
+        full = os.path.splitext(fn)[0][4:]  # strip 'log_'
+        if '_run' in full:
+            tag, run_s = full.rsplit('_run', 1)
+            run = int(run_s)
+        else:
+            tag, run = full, 0
+        m = re.match(mit_pat, fn)
+        if not m:
             continue
-        meth, a_s, pr_s, mu_s, t_s = m.groups()
-        alpha = float(a_s) if a_s else 0.0
-        prob  = float(pr_s);  mult = float(mu_s)
-        tam   = np.inf if t_s == "inf" else float(t_s)
+        # parse tag details
+        parts = tag.split('_')
+        # find method, alpha, prob, mult, tampering via regex
+        m2 = re.match(
+            r"(.*?)(?:_run\d+)?$", tag
+        )
+        # fallback: parse individual fields
+        segs = { }
+        for seg in parts:
+            if seg.startswith('method'):
+                segs['method'] = seg
+            elif seg.startswith('alpha'):
+                segs['alpha'] = seg[5:]
+            elif seg.startswith('prob'):
+                segs['prob'] = seg[4:]
+            elif seg.startswith('mult'):
+                segs['mult'] = seg[4:]
+            elif seg.startswith('t'):
+                segs['tam'] = seg[1:]
+        meth = segs.get('method', '')
+        alpha = float(segs.get('alpha', 0))
+        prob = float(segs.get('prob', 0))
+        mult = float(segs.get('mult', 0))
+        tam_s = segs.get('tam', '0')
+        tam = np.inf if tam_s == 'inf' else float(tam_s)
         # basic per-line parsing
         cnt = w_tot = d_tot = 0.0
-        for ln in open(p, encoding="utf-8", errors="ignore"):
+        for ln in open(p, encoding='utf-8', errors='ignore'):
             cnt += 1
             try:
-                d_tot += float(ln.split("deviation=")[1].split(",")[0])
-                w_tot += float(ln.split("weight=")[1].split(",")[0])
+                d_tot += float(ln.split('deviation=')[1].split(',')[0])
+                w_tot += float(ln.split('weight=')[1].split(',')[0])
             except Exception:
                 pass
-        mit_rows.append(dict(tag=tag, method=meth, alpha=alpha,
-                             attack_prob=prob, multiplier=mult,
-                             tampering=tam, mitigation_count=cnt,
-                             avg_weight=w_tot/cnt if cnt else np.nan,
-                             avg_deviation=d_tot/cnt if cnt else np.nan))
+        mit_rows.append(dict(
+            tag=tag, run=run,
+            method=meth, alpha=alpha,
+            attack_prob=prob, multiplier=mult,
+            tampering=tam, mitigation_count=int(cnt),
+            avg_weight=w_tot/cnt if cnt else np.nan,
+            avg_deviation=d_tot/cnt if cnt else np.nan
+        ))
     mit_df = pd.DataFrame(mit_rows)
 
-    # ---- 3) merge – left join on iter_df to keep ALL runs ----
-    merged = iter_df.merge(mit_df, on="tag", how="left",
-                           suffixes=("", "_y"))
-
-    # fill missing mitigation fields for runs that had no log
-    merged["mitigation_count"] = merged["mitigation_count"].fillna(0).astype(int)
-    for col in ["method", "alpha", "attack_prob", "multiplier", "tampering"]:
-        merged[col] = merged[col].fillna("unknown")
-
-    merged.to_csv("simulation_results.csv", index=False)
+    # ---- 3) merge – join on tag and run ----
+    merged = iter_df.merge(mit_df, on=["tag", "run"], how="left")
+    merged['mitigation_count'] = merged['mitigation_count'].fillna(0).astype(int)
+    for col in ['method','alpha','attack_prob','multiplier','tampering']:
+        merged[col] = merged[col].fillna('unknown')
+    merged.to_csv('simulation_results.csv', index=False)
     print(f"simulation_results.csv saved ({len(merged)})")
     return merged
 
@@ -413,65 +434,61 @@ def local_conv_items(path: str):
         for ln in f:
             m = re.search(rg, ln)
             if m:
-                sub = m.group(1).replace(" ", ""); it = int(m.group(2))
+                sub = m.group(1).replace(" ", "")
+                it = int(m.group(2))
                 out.append((sub, it))
     return out
 
 # ═════════════ binaries → binary_summary.csv ═════════════════════════
 
 def analyse_binaries():
-    pat = (r"state_.*?(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)"
-           r"_mult([\d\.]+)_t(\S+)\.pkl\.gz")
+    pat = (
+        r"state_.*?(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)"
+        r"_mult([\d\.]+)_t([^_]+)(?:_run\d+)?\.pkl\.gz"
+    )
     rows = []
     for bp in glob.glob(f"{BIN_DIR}/state_*.pkl.gz"):
-        m = re.match(pat, os.path.basename(bp))
-        if m is None:
+        fn = os.path.basename(bp)
+        m = re.match(pat, fn)
+        if not m:
             continue
         meth, a_s, pr_s, mu_s, t_s = m.groups()
         alpha = float(a_s) if a_s else 0
         prob = float(pr_s); mult = float(mu_s)
-        tam = np.inf if t_s == "inf" else float(t_s)
-
-        with gzip.open(bp, "rb") as f:
+        tam = np.inf if t_s == 'inf' else float(t_s)
+        with gzip.open(bp, 'rb') as f:
             bd = pickle.load(f)
-
-        iters = bd.get("iteration", 0)
-        # Tag short runs as converged instead of skipping
+        iters = bd.get('iteration', 0)
         if iters < 1000:
-            print(f"BIN  {os.path.basename(bp)}  →  iteration {iters} (<1000)  TAGGED as Converged")
-            # attempt to extract final values
             prog = extract_progress(bd)
             if prog:
-                # last recorded values
                 _, fsw, _, fp, fd = prog[-1]
                 sp = sd = np.nan
             else:
                 fp = fd = fsw = sp = sd = np.nan
-            rows.append(dict(method=meth, alpha=alpha, attack_prob=prob,
-                             multiplier=mult, tampering=tam, conv_class="Converged",
-                             final_prim=fp, final_dual=fd, final_SW=fsw,
-                             slope_prim=sp, slope_dual=sd))
+            rows.append(dict(
+                method=meth, alpha=alpha, attack_prob=prob,
+                multiplier=mult, tampering=tam, conv_class='Converged',
+                final_prim=fp, final_dual=fd, final_SW=fsw,
+                slope_prim=sp, slope_dual=sd
+            ))
             continue
-
         prog = extract_progress(bd)
         if not prog:
-            print(f"BIN  {os.path.basename(bp)}  →  NO usable history (skipped)")
             continue
-
         cls, fp, fd, fsw, sp, sd = classify_run(prog)
-        print(f"BIN  {os.path.basename(bp)}  →  found {len(prog)} rows   [{cls}]")
-        rows.append(dict(method=meth, alpha=alpha, attack_prob=prob,
-                         multiplier=mult, tampering=tam, conv_class=cls,
-                         final_prim=fp, final_dual=fd, final_SW=fsw,
-                         slope_prim=sp, slope_dual=sd))
-
+        rows.append(dict(
+            method=meth, alpha=alpha, attack_prob=prob,
+            multiplier=mult, tampering=tam, conv_class=cls,
+            final_prim=fp, final_dual=fd, final_SW=fsw,
+            slope_prim=sp, slope_dual=sd
+        ))
     if not rows:
-        print("No binary yielded history ≥1000 iterations.")
+        print('No binary yielded history ≥1000 iterations.')
         return None
-
     bdf = pd.DataFrame(rows)
-    bdf.to_csv("binary_summary.csv", index=False)
-    print("binary_summary.csv saved")
+    bdf.to_csv('binary_summary.csv', index=False)
+    print('binary_summary.csv saved')
 
     # ── additional visuals ─────────────────────────────────────────
     overlaid_hists(bdf, "final_prim", "conv_class", bins=30,
@@ -584,24 +601,69 @@ def main():
                     "mitigations_vs_attackprob_relaxed.png",
                     desc="Relaxed ADMM: mitigation frequency vs attack probability for each tamper level.")
 
-    # ─────────────── per‑run iteration plots ───────────────
+        # ─────────────── per-run iteration plots ───────────────
     csvs = glob.glob(f"{ITER_DIR}/iter_*.csv")
     if csvs:
+        # 1) individual run curves
         for p in csvs:
             gen_iter_plots(p)
 
+        # 2) collect all runs into one DataFrame
         all_it = pd.concat([iter_df(p) for p in csvs], ignore_index=True)
-        last   = all_it.sort_values("iter").groupby("tag").tail(1)
+        all_it = all_it[ all_it['tag'].str.contains(r"_method[12]_") ]
+
+        # 3) per‐run overlay for Price
+        fig, ax = plt.subplots(figsize=(8,6))
+        for tag, g in all_it.groupby('tag'):
+            ax.plot(g['iter'], g['Price'], alpha=0.3, color='gray')
+        # only label the methods:
+        for method, g in all_it.groupby('method'):
+            ln = g.groupby('iter')['Price'].mean().reset_index()
+            ax.plot(ln['iter'], ln['Price'], label=f"mean, method {method}", linewidth=2)
+        ax.set_xlabel('Iteration')
+        ax.set_ylabel('Price')
+        ax.set_title('Price vs Iter (per run)')
+        ax.legend(fontsize='small', ncol=2)
+        plt.tight_layout()
+        out = f"{PLOT_DIR}/price_per_run.png"
+        fig.savefig(out)
+        plt.close(fig)
+        _add_caption('price_per_run.png',
+                     'Price trajectory for each individual run (no averaging).')
+
+        # 4) mean±std curves
+        mean_curve(
+            all_it, "iter", "Price", "method",
+            ttl="Price Convergence (Mean±Std)",
+            fname="Price_conv_meanstd.png",
+            desc="Average price trajectory with one-std-dev band, separated by method."
+        )
+        mean_curve(
+            all_it, "iter", "prim", "method",
+            ttl="Primal Residual Convergence (Mean±Std)",
+            fname="prim_conv_meanstd.png",
+            desc="Average primal residual trajectory with one-std-dev band, separated by method."
+        )
+        mean_curve(
+            all_it, "iter", "dual", "method",
+            ttl="Dual Residual Convergence (Mean±Std)",
+            fname="dual_conv_meanstd.png",
+            desc="Average dual residual trajectory with one-std-dev band, separated by method."
+        )
+        mean_curve(
+            all_it, "iter", "SW", "method",
+            ttl="SW Convergence (Mean±Std)",
+            fname="SW_conv_meanstd.png",
+            desc="Average social-welfare trajectory with one-std-dev band, separated by method."
+        )
+
+        # 5) snapshot of final values per run
+        last = all_it.sort_values("iter").groupby("tag").tail(1)
 
         boxplots(last, "tamper", "SW",
                  ttl="Final SW by Tampering",
                  fname="finalSW_box_tamper.png",
                  desc="Distribution of final social‑welfare values grouped by tampering count (per‑run view).")
-
-        mean_curve(all_it, "iter", "SW", "method",
-                   ttl="SW Convergence (Mean±Std)",
-                   fname="SW_conv_meanstd.png",
-                   desc="Average social‑welfare trajectory with one‑std‑dev band, separated by algorithmic method.")
 
         overlaid_hists(last, "SW", "tamper", bins=25,
                        ttl="Final SW distribution by tampering",
@@ -649,8 +711,11 @@ def main():
                  desc="Empirical CDF of convergence iterations under different tamper counts.")
 
     # ─────────────── local convergence quick‑look ───────────────
-    lc_pat = (r"local_conv_.*?(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)"
-              r"_mult([\d\.]+)_t(\S+)\.log")
+    lc_pat = (
+        r"local_conv_.*?(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)"
+        r"_mult([\d\.]+)_t([^_]+)(?:_run\d+)?\.log"
+    )
+
     lc_rows = []
     for lp in glob.glob(f"{LC_DIR}/local_conv_*.log"):
         m = re.match(lc_pat, os.path.basename(lp))
