@@ -5,6 +5,7 @@
 
 import copy
 import json
+import math
 import sys
 import time
 import pandas as pd
@@ -25,7 +26,7 @@ class Simulator(Simulation):
         self.force_stop = False
 
         # Load graph
-        default_graph = "graphs/examples/P2P_model.pyp2p"
+        default_graph = "graphs/examples/P2P_model_reduced.pyp2p"
         graph_path    = self.config.get("graph_file", default_graph)
         self.MGraph = Graph.Load(graph_path, format='picklez')
 
@@ -362,8 +363,21 @@ class PlayerOptimizationMsg(Event):
         row_values = proposed_trades[self.i, sim.partners[self.i]]
 
         if len(row_values) > 0:
-            row_median = np.median(row_values)
-            row_mad = np.median(np.abs(row_values - row_median))
+            m = len(row_values)
+            k = int(math.log2(m))
+            if k > m:
+                k = m
+            if (m - k) % 2 != 0:
+                k -= 1
+            if k < 1:
+                central_mean = np.median(row_values)
+            else:
+                sorted_vals = np.sort(row_values)
+                start = (m - k) // 2
+                window = sorted_vals[start:start + k]
+                central_mean = np.mean(window)
+
+            row_mad = np.median(np.abs(row_values - central_mean))
 
             scale_factor = sim.config.get("scale_factor", 15.0)
             mad_threshold = sim.config.get("mad_threshold", 4.1)
@@ -375,15 +389,15 @@ class PlayerOptimizationMsg(Event):
                 adaptive_threshold = max(scale_factor * row_mad, min_threshold)
 
             for idx, j in enumerate(sim.partners[self.i]):
-                deviation = abs(row_values[idx] - row_median)
+                deviation = abs(row_values[idx] - central_mean)
                 if deviation > adaptive_threshold:
-                    weight = min((deviation - adaptive_threshold)/deviation, 0.83)
-                    new_value = (1 - weight)*row_values[idx] + weight*row_median
+                    weight = min((deviation - adaptive_threshold) / deviation, 0.83)
+                    new_value = (1 - weight) * row_values[idx] + weight * central_mean
                     row_values[idx] = new_value
                     with open("log_mitigation.txt", "a") as f:
                         f.write((
                             f"[Mitigation in PlayerOptimizationMsgMitigated] Agent {self.i} -> Partner {j}"
-                            f": deviation={deviation:.2f}, median={row_median:.2f}, "
+                            f": deviation={deviation:.2f}, median={central_mean:.2f}, "
                             f"threshold={adaptive_threshold:.2f}, corrected={new_value:.2f}\n"
                         ))
 
@@ -391,8 +405,8 @@ class PlayerOptimizationMsg(Event):
 
         sim.Trades = proposed_trades
 
-        sim.prim = sum([sim.players[j].Res_primal for j in sim.partners[self.i]])
-        sim.dual = sum([sim.players[j].Res_dual for j in sim.partners[self.i]])
+        sim.prim = sum(sim.players[j].Res_primal for j in sim.partners[self.i])
+        sim.dual = sum(sim.players[j].Res_dual   for j in sim.partners[self.i])
 
         max_delay = 10 + random.randint(0, 2) if sim.isLatency else 10
         for j in sim.partners[self.i]:
@@ -401,6 +415,7 @@ class PlayerOptimizationMsg(Event):
             delay = max_delay - (ratio * (max_delay - 6))
             sim.latency_times.append(delay)
             sim.schedule(int(delay), PlayerUpdateMsg(j))
+
 
 class PlayerUpdateMsg(Event):
     def __init__(self, player_i):
@@ -413,37 +428,47 @@ class PlayerUpdateMsg(Event):
         if sim.n_updated_partners[self.i] < (sim.npartners[self.i] - self.wait_less):
             return
 
-        # Reset the counter for updated partners
         sim.n_updated_partners[self.i] = 0
 
         robust_trade = np.copy(sim.Trades[self.i, :])
         partner_indices = sim.partners[self.i]
         
         if partner_indices:
-            # Gather all trade values from partners
-            partner_trades = [sim.Trades[self.i, j] for j in partner_indices]
-            median_trade = np.median(partner_trades)
-            mad = np.median(np.abs(np.array(partner_trades) - median_trade))
-            # Use configurable parameters for robust filtering:
-            min_threshold = 0.01  # Absolute minimum threshold (could also be made configurable if needed)
+            trades = np.array([sim.Trades[self.i, j] for j in partner_indices])
+            m = len(trades)
+            k = int(math.log2(m))
+            if k > m:
+                k = m
+            if (m - k) % 2 != 0:
+                k -= 1
+            if k < 1:
+                central_mean = np.median(trades)
+            else:
+                sorted_vals = np.sort(trades)
+                start = (m - k) // 2
+                window = sorted_vals[start:start + k]
+                central_mean = np.mean(window)
+
+            mad = np.median(np.abs(trades - central_mean))
+            min_threshold = 0.01
             scale_factor = sim.config.get("scale_factor", 15.0)
             mad_threshold = sim.config.get("mad_threshold", 4.1)
-            
+
             if mad < mad_threshold:
                 adaptive_threshold = float('inf')
             else:
                 adaptive_threshold = max(scale_factor * mad, min_threshold)
             
             for j in partner_indices:
-                deviation = abs(sim.Trades[self.i, j] - median_trade)
+                deviation = abs(sim.Trades[self.i, j] - central_mean)
                 if deviation > adaptive_threshold:
                     weight = min((deviation - adaptive_threshold) / deviation, 0.9)
-                    new_value = (1 - weight) * sim.Trades[self.i, j] + weight * median_trade
+                    new_value = (1 - weight) * sim.Trades[self.i, j] + weight * central_mean
                     robust_trade[j] = new_value
                     timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                     log_line = (
                         f"{timestamp} - Mitigated agent {j}: deviation={deviation:.2f}, "
-                        f"median={median_trade:.2f}, weight={weight:.2f}, "
+                        f"median={central_mean:.2f}, weight={weight:.2f}, "
                         f"threshold={adaptive_threshold:.2f}, original={sim.Trades[self.i, j]:.2f}, "
                         f"new={new_value:.2f}\n"
                     )
