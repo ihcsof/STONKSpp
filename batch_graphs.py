@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-batch_graphs.py  –  analytics + plotting + binary deep‑dive
-2025‑05‑19  (extended visual suite + per‑figure explanations)
+batch_graphs.py  –  analytics + plotting + binary deep-dive
+2025-05-19  (extended visual suite + per-figure explanations)
 
  • simulation_results.csv       ← mitigation logs
  • simulation_summary_table.csv ← pivot of means/stds
- • binary_summary.csv           ← ≥1000‑iter binaries with residual history
- • PNG figures → logs/plots/   + logs/plots/plot_explanations.txt  (captions)
+ • binary_summary.csv           ← ≥1000-iter binaries with residual history
+ • PDF figures → logs/plots/    + logs/plots/plot_explanations.txt  (captions)
 """
 
 import sys
@@ -33,11 +33,11 @@ ITER_DIR = "logs/iter_stats"
 LC_DIR   = "logs/local_conv"
 BIN_DIR  = "logs/binaries"
 
-# ────────── global plot‑caption collector ──────────
+# ────────── global plot-caption collector ──────────
 PLOT_INFO: list[tuple[str,str]] = []     # (filename, description)
 
 def _add_caption(fname: str, desc: str | None):
-    """Register a description for the just‑saved figure."""
+    """Register a description for the just-saved figure."""
     if desc:
         PLOT_INFO.append((fname, desc))
 
@@ -54,7 +54,7 @@ def clamp_err(m, s, upper=1000):
     return [m - low, high]
 
 def grouped_bar(df, x, g, y, ylab, ttl, fname, *, desc: str | None = None):
-    """Grouped bar‑chart with mean±std error bars."""
+    """Grouped bar-chart with mean±std error bars."""
     df = _copy(df); df[g] = df[g].astype(str)
     with pd.option_context("mode.chained_assignment", None):
         try:
@@ -74,9 +74,10 @@ def grouped_bar(df, x, g, y, ylab, ttl, fname, *, desc: str | None = None):
     ax.set_xticks(X); ax.set_xticklabels(mtab.index.astype(str))
     ax.set_xlabel(x); ax.set_ylabel(ylab); ax.set_title(ttl)
     ax.set_ylim(bottom=0); ax.legend(title=g)
-    plt.tight_layout();
+    plt.tight_layout()
     out_path = f"{PLOT_DIR}/{fname}"
-    plt.savefig(out_path); plt.close(fig)
+    plt.savefig(out_path)  # fname now ends with .pdf
+    plt.close(fig)
     _add_caption(fname, desc)
 
 
@@ -92,9 +93,10 @@ def simple_bar(df, x, y, ylab, ttl, fname, *, desc: str | None = None):
     ax.bar(tab.index, tab['mean'], yerr=clamp_err(tab['mean'], tab['std']), capsize=4)
     ax.set_xticks(tab.index); ax.set_xticklabels(tab[x].astype(str))
     ax.set_xlabel(x); ax.set_ylabel(ylab); ax.set_title(ttl); ax.set_ylim(bottom=0)
-    plt.tight_layout();
+    plt.tight_layout()
     out_path = f"{PLOT_DIR}/{fname}"
-    plt.savefig(out_path); plt.close(fig)
+    plt.savefig(out_path)
+    plt.close(fig)
     _add_caption(fname, desc)
 
 
@@ -105,9 +107,10 @@ def mean_curve(df, x, y, hue, ttl, fname, *, desc: str | None = None):
         ax.plot(ln[x], ln['mean'], label=str(k))
         ax.fill_between(ln[x], ln['mean']-ln['std'], ln['mean']+ln['std'], alpha=.25)
     ax.set_xlabel(x); ax.set_ylabel(y); ax.set_title(ttl); ax.legend(title=hue)
-    plt.tight_layout();
+    plt.tight_layout()
     out_path = f"{PLOT_DIR}/{fname}"
-    plt.savefig(out_path); plt.close(fig)
+    plt.savefig(out_path)
+    plt.close(fig)
     _add_caption(fname, desc)
 
 def boxplots(
@@ -209,7 +212,8 @@ def boxplots(
             ax.set_yscale("log")
 
     plt.tight_layout()
-    plt.savefig(f"{PLOT_DIR}/{fname}")
+    out_path = f"{PLOT_DIR}/{fname}"
+    plt.savefig(out_path)
     plt.close(fig)
     _add_caption(fname, desc)
 
@@ -221,7 +225,8 @@ def overlaid_hists(df, x, cat, bins, ttl, fname, *, alpha=0.35, desc: str | None
     ax.set_xlabel(x); ax.set_ylabel("Density"); ax.set_title(ttl)
     ax.legend(title=cat); plt.tight_layout()
     out_path = f"{PLOT_DIR}/{fname}"
-    plt.savefig(out_path); plt.close(fig)
+    plt.savefig(out_path)
+    plt.close(fig)
     _add_caption(fname, desc)
 
 
@@ -234,26 +239,27 @@ def cdf_plot(df, x, cat, ttl, fname, *, desc: str | None = None):
     ax.set_xlabel(x); ax.set_ylabel("CDF"); ax.set_title(ttl)
     ax.legend(title=cat); plt.tight_layout()
     out_path = f"{PLOT_DIR}/{fname}"
-    plt.savefig(out_path); plt.close(fig)
+    plt.savefig(out_path)
+    plt.close(fig)
     _add_caption(fname, desc)
 
-# ═══════════════════ per‑run iteration PNGs (unchanged logic) ════════════════════
+# ═══════════════════ per-run iteration PDFs (unchanged logic) ════════════════════
 
 def gen_iter_plots(csv_p: str):
     df = pd.read_csv(csv_p); df["Price"] = df["avg_price"]*100
     tag = os.path.splitext(os.path.basename(csv_p))[0][5:]
 
     def sv(fig, stem, caption):
-        plt.tight_layout(); fname = f"{stem}_{tag}.png"
+        plt.tight_layout(); fname = f"{stem}_{tag}.pdf"
         fig.savefig(f"{PLOT_DIR}/{fname}"); plt.close(fig)
         _add_caption(fname, caption)
 
-    for col, ttl, cap in [("SW", "SW vs Iter", "Trajectory of social‑welfare across iterations for a single run."),
+    for col, ttl, cap in [("SW", "SW vs Iter", "Trajectory of social-welfare across iterations for a single run."),
                           ("Price", "Price vs Iter", "Average price evolution across iterations for a single run.")]:
         fig, ax = plt.subplots(); ax.plot(df["iter"], df[col])
         ax.set_xlabel("Iteration"); ax.set_ylabel(col); ax.set_title(ttl); sv(fig, col, cap)
 
-    fig, ax = plt.subplots();
+    fig, ax = plt.subplots()
     ax.plot(df["iter"], df["prim"], label="prim")
     ax.plot(df["iter"], df["dual"], label="dual")
     ax.set_xlabel("Iteration"); ax.set_ylabel("Residual"); ax.legend()
@@ -270,7 +276,7 @@ def iter_df(csv_p):
     df["tamper"] = np.inf if parts.get("t") == "inf" else float(parts.get("t", 0))
     return df
 
-# ═════════════════ residual‑history extraction + classify (unchanged) ══════
+# ═════════════════ residual-history extraction + classify (unchanged) ══════
 
 def _norm_progress(obj):
     import numpy as _np, pandas as _pd
@@ -285,6 +291,96 @@ def _norm_progress(obj):
         for i, (_, r) in enumerate(obj.iterrows()):
             r = r.values.tolist(); rows.append(tuple([i]+r) if len(r) == 4 else tuple(r[:5]))
     return rows
+
+# ─────────────────── trade–equilibrator with logging ───────────────────
+def _equilibrate_trades(mat: np.ndarray, *,
+                        run_id: str | None = None,
+                        logdir: str | None = None,
+                        rel_tol: float = 1e-3,
+                        scale_to_zero: float = 1e-3) -> tuple[str, int, float]:
+    """
+    Offline attempt to bring a Trades matrix to primal feasibility.
+
+    Parameters
+    ----------
+    mat : np.ndarray
+        Original Trades matrix (shape n×n, arbitrary dtype).
+    run_id : str, optional
+        Identifier of the run; if given together with *logdir* a detailed
+        .pkl.gz log is written.
+    logdir : str, optional
+        Directory for the per-run logs.
+    rel_tol : float
+        Row-sum imbalance tolerated *relative to* the largest absolute trade.
+        Default is 0.1 % (1 e-3).
+    scale_to_zero : float
+        If the uniform scaling factor needed is **below** this number,
+        the run is labelled “Forced-zero” instead of “Scaled-balanced”.
+
+    Returns
+    -------
+    cls   : str   “Balanced”, “Scaled-balanced” or “Forced-zero”
+    steps : int   Number of steps executed (1 or 2)
+    scale : float Uniform factor applied in step 2 (1.0 ⇔ none)
+    """
+    # ---- make a working copy --------------------------------------------------
+    T_orig = mat.astype(float, copy=False)
+    T      = T_orig.copy()
+
+    # diagnostics before any change
+    anti_err_init = np.abs(T + T.T).max()
+    row_err_init  = np.abs(T.sum(axis=1)).max()
+    max_trade     = np.abs(T_orig).max() if T_orig.size else 0.0
+
+    # ---- step 1: antisymmetrise ----------------------------------------------
+    for i in range(T.shape[0]):
+        for j in range(i + 1, T.shape[1]):
+            avg = 0.5 * (T[i, j] - T[j, i])
+            T[i, j] =  avg
+            T[j, i] = -avg
+    steps = 1
+
+    # errors after antisymmetrisation
+    row_err_final  = np.abs(T.sum(axis=1)).max()
+    anti_err_final = np.abs(T + T.T).max()
+
+    # ---- decide feasibility ---------------------------------------------------
+    tol_abs = max(rel_tol * max_trade, 1e3) 
+    if row_err_final <= tol_abs:
+        cls   = "Balanced"
+        scale = 1.0
+    else:
+        scale = tol_abs / row_err_final if row_err_final else 0.0
+        T    *= scale
+        steps += 1
+        cls = "Scaled-balanced" if scale >= scale_to_zero else "Forced-zero"
+
+        # recompute post-scaling metrics for the log
+        row_err_final  = np.abs(T.sum(axis=1)).max()
+        anti_err_final = np.abs(T + T.T).max()
+
+    # ---- optional detailed log -----------------------------------------------
+    if logdir and run_id:
+        os.makedirs(logdir, exist_ok=True)
+        out = os.path.join(logdir, f"{run_id}.pkl.gz")
+        with gzip.open(out, "wb") as fh:
+            pickle.dump({
+                "run_id":         run_id,
+                "eq_class":       cls,
+                "steps":          steps,
+                "scale":          scale,
+                "rel_tol":        rel_tol,
+                "scale_to_zero":  scale_to_zero,
+                "max_trade":      max_trade,
+                "row_err_init":   row_err_init,
+                "row_err_final":  row_err_final,
+                "anti_err_init":  anti_err_init,
+                "anti_err_final": anti_err_final,
+                "T_orig":         T_orig,
+                "T_balanced":     T,
+            }, fh, protocol=pickle.HIGHEST_PROTOCOL)
+
+    return cls, steps, scale
 
 KEYS_TRY = ("prog_arr", "progress", "opti_progress", "history", "iter_list", "progress_array")
 
@@ -425,7 +521,7 @@ def build_sim_results() -> pd.DataFrame:
     print(f"simulation_results.csv saved ({len(merged)})")
     return merged
 
-# ───────────── local‑conv log parser (unchanged) ────────────────────
+# ───────────── local-conv log parser (unchanged) ────────────────────
 
 def local_conv_items(path: str):
     out = []
@@ -449,6 +545,7 @@ def analyse_binaries():
     rows = []
     for bp in glob.glob(f"{BIN_DIR}/state_*.pkl.gz"):
         fn = os.path.basename(bp)
+        run_id = os.path.splitext(fn)[0]
         m = re.match(pat, fn)
         if not m:
             continue
@@ -458,6 +555,13 @@ def analyse_binaries():
         tam = np.inf if t_s == 'inf' else float(t_s)
         with gzip.open(bp, 'rb') as f:
             bd = pickle.load(f)
+
+        trd_cls, trd_steps, trd_scale = _equilibrate_trades(
+            bd.get("Trades"),          # the matrix
+            run_id=run_id,             # so the log is eq_logs/<run_id>.pkl.gz
+            logdir="eq_logs"           # pick any folder you like
+        )
+
         iters = bd.get('iteration', 0)
         if iters < 1000:
             prog = extract_progress(bd)
@@ -470,7 +574,8 @@ def analyse_binaries():
                 method=meth, alpha=alpha, attack_prob=prob,
                 multiplier=mult, tampering=tam, conv_class='Converged',
                 final_prim=fp, final_dual=fd, final_SW=fsw,
-                slope_prim=sp, slope_dual=sd
+                slope_prim=sp, slope_dual=sd,
+                eq_class=trd_cls, eq_steps=trd_steps, eq_scale=trd_scale
             ))
             continue
         prog = extract_progress(bd)
@@ -481,7 +586,8 @@ def analyse_binaries():
             method=meth, alpha=alpha, attack_prob=prob,
             multiplier=mult, tampering=tam, conv_class=cls,
             final_prim=fp, final_dual=fd, final_SW=fsw,
-            slope_prim=sp, slope_dual=sd
+            slope_prim=sp, slope_dual=sd,
+            eq_class=trd_cls, eq_steps=trd_steps, eq_scale=trd_scale
         ))
     if not rows:
         print('No binary yielded history ≥1000 iterations.')
@@ -493,18 +599,18 @@ def analyse_binaries():
     # ── additional visuals ─────────────────────────────────────────
     overlaid_hists(bdf, "final_prim", "conv_class", bins=30,
                    ttl="Prim residual distribution by class",
-                   fname="prim_hist_by_class.png",
+                   fname="prim_hist_by_class.pdf",
                    desc="Distribution of final primal residuals separated by convergence class.")
 
     cdf_plot(bdf, "final_prim", "conv_class",
              ttl="CDF of prim residuals by class",
-             fname="prim_cdf_by_class.png",
+             fname="prim_cdf_by_class.pdf",
              desc="Cumulative distribution of final primal residuals across convergence classes.")
 
     boxplots(bdf, "conv_class", "final_SW",
              ttl="Final SW by Convergence Class",
-             fname="finalSW_box_class.png",
-             desc="Box‑plot of final social‑welfare for each detected convergence class.")
+             fname="finalSW_box_class.pdf",
+             desc="Box-plot of final social-welfare for each detected convergence class.")
     return bdf
 
 # ═════════════════════════════════ main ══════════════════════════════
@@ -513,7 +619,7 @@ def main():
     df = build_sim_results()
     if df.empty:
         return
-    
+
     # Remove rows where tampering is genuinely missing
     df = df[df["tampering"] != "unknown"]
 
@@ -533,19 +639,19 @@ def main():
         grouped_bar(df2, "tampering", "alpha", "iterations",
                     "Avg Iterations",
                     "Iterations vs Tampering (Relaxed ADMM, varying alpha)",
-                    "iterations_vs_tamperingcount_relaxed.png",
+                    "iterations_vs_tamperingcount_relaxed.pdf",
                     desc="Average iterations required for convergence for the Relaxed ADMM across different tampering intensities and relaxation parameters (alpha).")
 
         grouped_bar(df2, "tampering", "alpha", "mitigation_count",
                     "Avg Mitigation Events",
                     "Mitigation Events vs Tampering Count (Relaxed ADMM, varying alpha)",
-                    "mitigations_vs_tamperingcount_relaxed.png",
-                    desc="Average number of mitigation events triggered in Relaxed ADMM under increasing tamper counts, broken‑down by alpha.")
+                    "mitigations_vs_tamperingcount_relaxed.pdf",
+                    desc="Average number of mitigation events triggered in Relaxed ADMM under increasing tamper counts, broken-down by alpha.")
     if not df1.empty:
         simple_bar(df1, "tampering", "iterations",
                    "Avg Iterations",
                    "Iterations vs Tampering Count (Classical ADMM)",
-                   "iterations_vs_tamperingcount_classical.png",
+                   "iterations_vs_tamperingcount_classical.pdf",
                    desc="Impact of tampering intensity on convergence iterations for the Classical ADMM.")
 
     # ─────────────── NEW comparative plots ───────────────
@@ -554,25 +660,25 @@ def main():
         grouped_bar(df1, "multiplier", "tampering", "mitigation_count",
                     "Average Mitigation Events",
                     "Mitigations vs. Multiplier (Classical ADMM)",
-                    "mitigations_vs_multiplier_classical.png",
+                    "mitigations_vs_multiplier_classical.pdf",
                     desc="Classical ADMM: how the upper bound on Byzantine multiplier influences the average mitigation count under different tamper settings.")
 
         grouped_bar(df1, "multiplier", "tampering", "iterations",
                     "Average Iterations",
                     "Iterations vs. Multiplier (Classical ADMM)",
-                    "iterations_vs_multiplier_classical.png",
+                    "iterations_vs_multiplier_classical.pdf",
                     desc="Classical ADMM: convergence iterations as a function of multiplier upper bound, stratified by tampering count.")
 
         grouped_bar(df1, "attack_prob", "tampering", "mitigation_count",
                     "Average Mitigation Events",
                     "Mitigations vs. Attack Probability (Classical ADMM)",
-                    "mitigations_vs_attackprob_classical.png",
+                    "mitigations_vs_attackprob_classical.pdf",
                     desc="Classical ADMM: sensitivity of mitigation frequency to the probability of a Byzantine attack, for different tamper levels.")
 
         grouped_bar(df1, "attack_prob", "tampering", "iterations",
                     "Average Iterations",
                     "Iterations vs. Attack Probability (Classical ADMM)",
-                    "iterations_vs_attackprob_classical.png",
+                    "iterations_vs_attackprob_classical.pdf",
                     desc="Classical ADMM: how convergence iterations grow with increasing likelihood of a Byzantine attack across tampering counts.")
 
     # Relaxed ADMM extra comparisons
@@ -580,28 +686,28 @@ def main():
         grouped_bar(df2, "multiplier", "tampering", "iterations",
                     "Average Iterations",
                     "Iterations vs. Multiplier (Relaxed ADMM)",
-                    "iterations_vs_multiplier_relaxed.png",
+                    "iterations_vs_multiplier_relaxed.pdf",
                     desc="Relaxed ADMM: convergence cost in iterations against the Byzantine multiplier bound, coloured by tampering intensity.")
 
         grouped_bar(df2, "multiplier", "tampering", "mitigation_count",
                     "Average Mitigation Events",
                     "Mitigations vs. Multiplier (Relaxed ADMM)",
-                    "mitigations_vs_multiplier_relaxed.png",
+                    "mitigations_vs_multiplier_relaxed.pdf",
                     desc="Relaxed ADMM: mitigation event frequency under varying multiplier bounds and tampering counts.")
 
         grouped_bar(df2, "attack_prob", "tampering", "iterations",
                     "Average Iterations",
                     "Iterations vs. Attack Probability (Relaxed ADMM)",
-                    "iterations_vs_attackprob_relaxed.png",
+                    "iterations_vs_attackprob_relaxed.pdf",
                     desc="Relaxed ADMM: how convergence iterations respond to increasing attack probabilities across tamper settings.")
 
         grouped_bar(df2, "attack_prob", "tampering", "mitigation_count",
                     "Average Mitigation Events",
                     "Mitigations vs. Attack Probability (Relaxed ADMM)",
-                    "mitigations_vs_attackprob_relaxed.png",
+                    "mitigations_vs_attackprob_relaxed.pdf",
                     desc="Relaxed ADMM: mitigation frequency vs attack probability for each tamper level.")
 
-        # ─────────────── per-run iteration plots ───────────────
+    # ─────────────── per-run iteration plots ───────────────
     csvs = glob.glob(f"{ITER_DIR}/iter_*.csv")
     if csvs:
         # 1) individual run curves
@@ -625,35 +731,35 @@ def main():
         ax.set_title('Price vs Iter (per run)')
         ax.legend(fontsize='small', ncol=2)
         plt.tight_layout()
-        out = f"{PLOT_DIR}/price_per_run.png"
+        out = f"{PLOT_DIR}/price_per_run.pdf"
         fig.savefig(out)
         plt.close(fig)
-        _add_caption('price_per_run.png',
+        _add_caption('price_per_run.pdf',
                      'Price trajectory for each individual run (no averaging).')
 
         # 4) mean±std curves
         mean_curve(
             all_it, "iter", "Price", "method",
             ttl="Price Convergence (Mean±Std)",
-            fname="Price_conv_meanstd.png",
+            fname="Price_conv_meanstd.pdf",
             desc="Average price trajectory with one-std-dev band, separated by method."
         )
         mean_curve(
             all_it, "iter", "prim", "method",
             ttl="Primal Residual Convergence (Mean±Std)",
-            fname="prim_conv_meanstd.png",
+            fname="prim_conv_meanstd.pdf",
             desc="Average primal residual trajectory with one-std-dev band, separated by method."
         )
         mean_curve(
             all_it, "iter", "dual", "method",
             ttl="Dual Residual Convergence (Mean±Std)",
-            fname="dual_conv_meanstd.png",
+            fname="dual_conv_meanstd.pdf",
             desc="Average dual residual trajectory with one-std-dev band, separated by method."
         )
         mean_curve(
             all_it, "iter", "SW", "method",
             ttl="SW Convergence (Mean±Std)",
-            fname="SW_conv_meanstd.png",
+            fname="SW_conv_meanstd.pdf",
             desc="Average social-welfare trajectory with one-std-dev band, separated by method."
         )
 
@@ -662,55 +768,55 @@ def main():
 
         boxplots(last, "tamper", "SW",
                  ttl="Final SW by Tampering",
-                 fname="finalSW_box_tamper.png",
-                 desc="Distribution of final social‑welfare values grouped by tampering count (per‑run view).")
+                 fname="finalSW_box_tamper.pdf",
+                 desc="Distribution of final social-welfare values grouped by tampering count (per-run view).")
 
         overlaid_hists(last, "SW", "tamper", bins=25,
                        ttl="Final SW distribution by tampering",
-                       fname="sw_hist_by_tamper.png",
-                       desc="Overlayed histogram of per‑run final social‑welfare for each tampering level.")
+                       fname="sw_hist_by_tamper.pdf",
+                       desc="Overlayed histogram of per-run final social-welfare for each tampering level.")
 
         cdf_plot(last, "SW", "tamper",
                  ttl="CDF of final SW by tampering",
-                 fname="sw_cdf_by_tamper.png",
-                 desc="Empirical CDF of final social‑welfare across tamper counts.")
+                 fname="sw_cdf_by_tamper.pdf",
+                 desc="Empirical CDF of final social-welfare across tamper counts.")
 
         boxplots(df, "tampering", "iterations",
                  ttl="Iterations by Tampering",
-                 fname="iterations_box_tamper.png",
-                 desc="Box‑plot of total iterations across all runs, grouped by tampering count.")
+                 fname="iterations_box_tamper.pdf",
+                 desc="Box-plot of total iterations across all runs, grouped by tampering count.")
 
         boxplots(last, "method", "Price",
                  ttl="Final Price by Method",
-                 fname="price_box_method.png",
+                 fname="price_box_method.pdf",
                  desc="Distribution of final average price outcomes split by optimisation method.")
 
         boxplots(last, "method", "prim",
                  ttl="Prim Final by Method",
-                 fname="prim_box_method.png",
+                 fname="prim_box_method.pdf",
                  desc="Final primal residual distribution per method.")
 
         boxplots(last, "method", "dual",
                  ttl="Dual Final by Method",
-                 fname="dual_box_method.png",
+                 fname="dual_box_method.pdf",
                  desc="Final dual residual distribution per method.")
 
         boxplots(df, "tampering", "avg_weight",
                  ttl="Avg Weight by Tampering",
-                 fname="avgWeight_box_tamper.png",
+                 fname="avgWeight_box_tamper.pdf",
                  desc="Average (mean) weight parameter recorded in mitigation logs vs tampering.")
 
         overlaid_hists(df, "iterations", "tampering", bins=30,
                        ttl="Iterations distribution by tampering",
-                       fname="iter_hist_by_tampering.png",
+                       fname="iter_hist_by_tampering.pdf",
                        desc="Histogram of total iterations per run for each tamper level.")
 
         cdf_plot(df, "iterations", "tampering",
                  ttl="CDF of iterations by tampering",
-                 fname="iter_cdf_by_tampering.png",
+                 fname="iter_cdf_by_tampering.pdf",
                  desc="Empirical CDF of convergence iterations under different tamper counts.")
 
-    # ─────────────── local convergence quick‑look ───────────────
+    # ─────────────── local convergence quick-look ───────────────
     lc_pat = (
         r"local_conv_.*?(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)"
         r"_mult([\d\.]+)_t([^_]+)(?:_run\d+)?\.log"
@@ -730,10 +836,10 @@ def main():
     if lc_rows:
         lcd = pd.DataFrame(lc_rows)
         grouped_bar(lcd, "tampering", "method", "conv_iter",
-                    "Avg Local‑Conv Iter",
-                    "Local‑Convergence Iterations vs Tampering",
-                    "localConv_iter_vs_tamper.png",
-                    desc="Average iterations for sub‑graph local convergence, split by method and tamper count.")
+                    "Avg Local-Conv Iter",
+                    "Local-Convergence Iterations vs Tampering",
+                    "localConv_iter_vs_tamper.pdf",
+                    desc="Average iterations for sub-graph local convergence, split by method and tamper count.")
 
     # ─────────────── binaries summary & extra visuals ───────────────
     bdf = analyse_binaries()

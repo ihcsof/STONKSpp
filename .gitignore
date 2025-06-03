@@ -6,3 +6,8 @@ log_*
 *lic
 *.txt
 myenv
+*.txt
+*.pdf
+*.png
+*.log
+*.out
