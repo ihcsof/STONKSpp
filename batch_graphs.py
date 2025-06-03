@@ -286,6 +286,96 @@ def _norm_progress(obj):
             r = r.values.tolist(); rows.append(tuple([i]+r) if len(r) == 4 else tuple(r[:5]))
     return rows
 
+# ─────────────────── trade–equilibrator with logging ───────────────────
+def _equilibrate_trades(mat: np.ndarray, *,
+                        run_id: str | None = None,
+                        logdir: str | None = None,
+                        rel_tol: float = 1e-3,
+                        scale_to_zero: float = 1e-3) -> tuple[str, int, float]:
+    """
+    Offline attempt to bring a Trades matrix to primal feasibility.
+
+    Parameters
+    ----------
+    mat : np.ndarray
+        Original Trades matrix (shape n×n, arbitrary dtype).
+    run_id : str, optional
+        Identifier of the run; if given together with *logdir* a detailed
+        .pkl.gz log is written.
+    logdir : str, optional
+        Directory for the per-run logs.
+    rel_tol : float
+        Row-sum imbalance tolerated *relative to* the largest absolute trade.
+        Default is 0.1 % (1 e-3).
+    scale_to_zero : float
+        If the uniform scaling factor needed is **below** this number,
+        the run is labelled “Forced-zero” instead of “Scaled-balanced”.
+
+    Returns
+    -------
+    cls   : str   “Balanced”, “Scaled-balanced” or “Forced-zero”
+    steps : int   Number of steps executed (1 or 2)
+    scale : float Uniform factor applied in step 2 (1.0 ⇔ none)
+    """
+    # ---- make a working copy --------------------------------------------------
+    T_orig = mat.astype(float, copy=False)
+    T      = T_orig.copy()
+
+    # diagnostics before any change
+    anti_err_init = np.abs(T + T.T).max()
+    row_err_init  = np.abs(T.sum(axis=1)).max()
+    max_trade     = np.abs(T_orig).max() if T_orig.size else 0.0
+
+    # ---- step 1: antisymmetrise ----------------------------------------------
+    for i in range(T.shape[0]):
+        for j in range(i + 1, T.shape[1]):
+            avg = 0.5 * (T[i, j] - T[j, i])
+            T[i, j] =  avg
+            T[j, i] = -avg
+    steps = 1
+
+    # errors after antisymmetrisation
+    row_err_final  = np.abs(T.sum(axis=1)).max()
+    anti_err_final = np.abs(T + T.T).max()
+
+    # ---- decide feasibility ---------------------------------------------------
+    tol_abs = max(rel_tol * max_trade, 1e3) 
+    if row_err_final <= tol_abs:
+        cls   = "Balanced"
+        scale = 1.0
+    else:
+        scale = tol_abs / row_err_final if row_err_final else 0.0
+        T    *= scale
+        steps += 1
+        cls = "Scaled-balanced" if scale >= scale_to_zero else "Forced-zero"
+
+        # recompute post-scaling metrics for the log
+        row_err_final  = np.abs(T.sum(axis=1)).max()
+        anti_err_final = np.abs(T + T.T).max()
+
+    # ---- optional detailed log -----------------------------------------------
+    if logdir and run_id:
+        os.makedirs(logdir, exist_ok=True)
+        out = os.path.join(logdir, f"{run_id}.pkl.gz")
+        with gzip.open(out, "wb") as fh:
+            pickle.dump({
+                "run_id":         run_id,
+                "eq_class":       cls,
+                "steps":          steps,
+                "scale":          scale,
+                "rel_tol":        rel_tol,
+                "scale_to_zero":  scale_to_zero,
+                "max_trade":      max_trade,
+                "row_err_init":   row_err_init,
+                "row_err_final":  row_err_final,
+                "anti_err_init":  anti_err_init,
+                "anti_err_final": anti_err_final,
+                "T_orig":         T_orig,
+                "T_balanced":     T,
+            }, fh, protocol=pickle.HIGHEST_PROTOCOL)
+
+    return cls, steps, scale
+
 KEYS_TRY = ("prog_arr", "progress", "opti_progress", "history", "iter_list", "progress_array")
 
 def extract_progress(bd):
@@ -449,6 +539,7 @@ def analyse_binaries():
     rows = []
     for bp in glob.glob(f"{BIN_DIR}/state_*.pkl.gz"):
         fn = os.path.basename(bp)
+        run_id = os.path.splitext(fn)[0]
         m = re.match(pat, fn)
         if not m:
             continue
@@ -458,6 +549,13 @@ def analyse_binaries():
         tam = np.inf if t_s == 'inf' else float(t_s)
         with gzip.open(bp, 'rb') as f:
             bd = pickle.load(f)
+
+        trd_cls, trd_steps, trd_scale = _equilibrate_trades(
+            bd.get("Trades"),          # the matrix
+            run_id=run_id,             # so the log is eq_logs/<run_id>.pkl.gz
+            logdir="eq_logs"           # pick any folder you like
+        )
+
         iters = bd.get('iteration', 0)
         if iters < 1000:
             prog = extract_progress(bd)
@@ -470,7 +568,8 @@ def analyse_binaries():
                 method=meth, alpha=alpha, attack_prob=prob,
                 multiplier=mult, tampering=tam, conv_class='Converged',
                 final_prim=fp, final_dual=fd, final_SW=fsw,
-                slope_prim=sp, slope_dual=sd
+                slope_prim=sp, slope_dual=sd,
+                eq_class=trd_cls, eq_steps=trd_steps, eq_scale=trd_scale
             ))
             continue
         prog = extract_progress(bd)
@@ -481,7 +580,8 @@ def analyse_binaries():
             method=meth, alpha=alpha, attack_prob=prob,
             multiplier=mult, tampering=tam, conv_class=cls,
             final_prim=fp, final_dual=fd, final_SW=fsw,
-            slope_prim=sp, slope_dual=sd
+            slope_prim=sp, slope_dual=sd,
+            eq_class=trd_cls, eq_steps=trd_steps, eq_scale=trd_scale
         ))
     if not rows:
         print('No binary yielded history ≥1000 iterations.')
