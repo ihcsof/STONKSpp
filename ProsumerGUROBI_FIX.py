@@ -13,7 +13,7 @@ import numpy as np
 import logging
 
 # Setup logging with only the message (no time stamps)
-logging.basicConfig(filename="debug_log.txt", level=logging.DEBUG, format="%(message)s", filemode="a")
+#logging.basicConfig(filename="debug_log.txt", level=logging.DEBUG, format="%(message)s", filemode="a")
 
 class expando(object):
     pass
@@ -31,7 +31,7 @@ class Prosumer:
             else:
                 self.data.isByzantine = (self.data.id == 2)
             print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
-            logging.info(f"Prosumer {self.data.id}: Byzantine flag set to {self.data.isByzantine}")
+            #logging.info(f"Prosumer {self.data.id}: Byzantine flag set to {self.data.isByzantine}")
             self.data.tampered = 0
             self.data.max_tampering = self.config.get("tampering_count", 1)
             self.data.CM = (agent['Type'] == 'Manager')
@@ -77,10 +77,10 @@ class Prosumer:
             self.iter_update_method = self._iter_update_method2
         else:
             raise ValueError("Unknown iter_update_method in config: " + method)
-        logging.debug(f"Prosumer {self.data.id} initialized. Partners: {self.data.partners}")
+        #logging.debug(f"Prosumer {self.data.id} initialized. Partners: {self.data.partners}")
 
     def optimize(self, trade):
-        logging.debug(f"Prosumer {self.data.id} optimize: starting with trade vector shape {trade.shape}")
+        #logging.debug(f"Prosumer {self.data.id} optimize: starting with trade vector shape {trade.shape}")
         self.iter_update_method(trade)
         self._update_objective()
         self.model.optimize()
@@ -94,12 +94,13 @@ class Prosumer:
                 if random.random() < chance:
                     self.data.tampered += 1
                     multiplier = upper
-                    logging.debug(f"Prosumer {self.data.id} TAMPERING: old val {val}, multiplier {multiplier}")
+                    #logging.debug(f"Prosumer {self.data.id} TAMPERING: old val {val}, multiplier {multiplier}")
                     val *= multiplier
-            logging.debug(f"Prosumer {self.data.id} optimize: final trade val {val}")
+            #logging.debug(f"Prosumer {self.data.id} optimize: final trade val {val}")
             trade[self.data.partners] = val
         else:
-            logging.debug(f"Prosumer {self.data.id} optimize: model not optimal, status {self.model.Status}")
+            pass
+            #logging.debug(f"Prosumer {self.data.id} optimize: model not optimal, status {self.model.Status}")
         return trade
 
     def production_consumption(self):
@@ -110,7 +111,7 @@ class Prosumer:
             prod = 0
             cons = 0
             print("Cannot compute production and consumption because the model did not solve optimally.")
-            logging.warning(f"Prosumer {self.data.id} production_consumption: model not optimal.")
+            #logging.warning(f"Prosumer {self.data.id} production_consumption: model not optimal.")
         return prod, cons
 
     def _build_model(self):
@@ -151,7 +152,7 @@ class Prosumer:
     def _iter_update_method1(self, trade):
         self.t_average = (self.t_old - trade[self.data.partners]) / 2
         self.y -= self.data.rho * (self.t_old - self.t_average)
-        logging.debug(f"Prosumer {self.data.id} method1: t_old={self.t_old}, trade={trade[self.data.partners]}, t_avg={self.t_average}, y={self.y}")
+        #logging.debug(f"Prosumer {self.data.id} method1: t_old={self.t_old}, trade={trade[self.data.partners]}, t_avg={self.t_average}, y={self.y}")
 
     def _iter_update_method2(self, trade):
         self.t_average = (self.t_old - trade[self.data.partners]) / 2
@@ -162,7 +163,7 @@ class Prosumer:
         alpha = self.config.get("alpha", 0)
         t_relaxed = alpha * t_new + (1 - alpha) * self.t_old
         self.y -= self.data.rho * (t_relaxed - self.t_average)
-        logging.debug(f"Prosumer {self.data.id} method2: t_old={self.t_old}, t_new={t_new}, t_relaxed={t_relaxed}, t_avg={self.t_average}, y={self.y}")
+        #logging.debug(f"Prosumer {self.data.id} method2: t_old={self.t_old}, t_new={t_new}, t_relaxed={t_relaxed}, t_avg={self.t_average}, y={self.y}")
         self.t_old = t_new.copy()
 
     def _opti_status(self, trade):
@@ -172,7 +173,7 @@ class Prosumer:
         self.Res_primal = sum((self.t_new + trade[self.data.partners]) ** 2)
         self.Res_dual = sum((self.t_new - self.t_old) ** 2)
         self.t_old = np.copy(self.t_new)
-        logging.debug(f"Prosumer {self.data.id} status: SW={self.SW}, Res_primal={self.Res_primal}, Res_dual={self.Res_dual}")
+        #logging.debug(f"Prosumer {self.data.id} status: SW={self.SW}, Res_primal={self.Res_primal}, Res_dual={self.Res_dual}")
 
     def Who(self):
         self.who = 'Prosumer'

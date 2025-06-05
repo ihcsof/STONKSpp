@@ -11,3 +11,5 @@ myenv
 *.png
 *.log
 *.out
+venv/*
+logs/*

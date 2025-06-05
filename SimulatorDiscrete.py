@@ -18,12 +18,11 @@ from ProsumerGUROBI_FIX import Prosumer, Manager
 from discrete_event_sim import Simulation, Event
 import logging
 
-logging.basicConfig(filename="debug_log.txt", level=logging.DEBUG, format="%(message)s", filemode="w")
-
 class Simulator(Simulation):
     def __init__(self, config=None):
         super().__init__()
         self.config = config or {}
+        self.log_mitigation_file = self.config.get("log_mitigation_file", "debug_log.txt")
         self.simulation_on = False
         self.simulation_message = ""
         self.force_stop = False
@@ -52,7 +51,6 @@ class Simulator(Simulation):
         self.communications = 'Synchronous'
         self.isLatency = False
         self.latency_times = []
-        self.log_mitigation_file = "log_mitigation.txt"
         self.iter_update_method = "method2"
         self.players = {}
         self.Trades = 0
@@ -64,6 +62,13 @@ class Simulator(Simulation):
         self.n_optimized_partners = {}
         self.n_updated_partners = {}
         self.initialize_partners()
+
+        for h in logging.root.handlers[:]:
+            logging.root.removeHandler(h)
+        logging.basicConfig(filename=self.log_mitigation_file,
+                            level=logging.DEBUG,
+                            format="%(message)s",
+                            filemode="w")
 
         logging.info("Initialization complete: created %d agents.", self.nag)
         #plot(self.MGraph, "graph.png", layout=self.MGraph.layout("kk"))
@@ -399,8 +404,6 @@ class PlayerOptimizationMsg(Event):
             delay = max_delay - (ratio * (max_delay - 6))
             sim.latency_times.append(delay)
             sim.schedule(int(delay), PlayerUpdateMsg(p_j))
-        logging.debug(f"PlayerOptimizationMsg: Agent {self.i} processed optimization.")
-
 
 class PlayerUpdateMsg(Event):
     def __init__(self, player_i):
@@ -466,8 +469,6 @@ class PlayerUpdateMsg(Event):
             delay = max_delay - (ratio * (max_delay - 6))
             sim.latency_times.append(delay)
             sim.schedule(int(delay), PlayerOptimizationMsg(p_j))
-        logging.debug(f"PlayerUpdateMsg: Agent {self.i} updated and scheduled optimization for partners.")
-
 
 class CheckStateEvent(Event):
     def __init__(self):
