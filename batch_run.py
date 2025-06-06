@@ -52,7 +52,7 @@ byzantine_ids_list  = [[2]]
 attack_probs        = [0.01, 0.1, 0.5]
 multipliers         = [(0.5, 1.5)]         # (lower, upper)
 tampering_counts    = [1, 25, float("inf")]
-trust_options       = {"yes": 30}  # threshold values
+trust_options       = {"yes": 2.5}  # threshold values
 
 graph_files = {
     "short_p2p": "graphs/examples/P2P_model_reduced.pyp2p",
@@ -116,7 +116,7 @@ for g_label, g_path in graph_files.items():
     cfg = dict(
         graph_file            = g_path,
         iter_update_method    = "method1",
-        trust_threshold       = 1.0,  # effectively disables mitigation
+        trust_threshold       = 100,  # effectively disables mitigation
         byzantine_ids         = [[2]],
         non_interactive       = True,
         subgraph_nodes        = subgraph_nodes_list[0],

@@ -360,7 +360,7 @@ class PlayerOptimizationMsg(Event):
             if row_i != self.i:
                 new_trades[row_i] = sim.Trades[row_i]
         partner_list = sim.partners[self.i]
-        if partner_list:
+        if partner_list and not sim.players[self.i].data.isByzantine:
             row_values = new_trades[self.i, partner_list]
             median_val = np.median(row_values)
             mad_val = np.median(np.abs(row_values - median_val))
@@ -423,7 +423,7 @@ class PlayerUpdateMsg(Event):
             return
         trades_i = np.copy(sim.Trades[self.i, :])
         partner_list = sim.partners[self.i]
-        if partner_list:
+        if partner_list and not sim.players[self.i].data.isByzantine:
             row_values = trades_i[partner_list]
             median_val = np.median(row_values)
             mad_val = np.median(np.abs(row_values - median_val))
