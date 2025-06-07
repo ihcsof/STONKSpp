@@ -378,6 +378,8 @@ class PlayerOptimizationMsg(Event):
                     logging.debug(f"Agent {self.i} skipping already flagged partner {partner_j}.")
                     new_trades[self.i, partner_j] = 0.0
                     continue
+                if self.i == partner_j:
+                    continue
                 deviation = abs(row_values[idx] - median_val)
                 if deviation > dev_threshold:
                     if partner_j not in sim.byz_score[self.i]:
@@ -440,6 +442,8 @@ class PlayerUpdateMsg(Event):
                 if sim.trust_flags[partner_j]:
                     logging.debug(f"Agent {self.i} skipping flagged partner {partner_j} (update).")
                     trades_i[partner_j] = 0.0
+                    continue
+                if self.i == partner_j:
                     continue
                 deviation = abs(row_values[idx] - median_val)
                 if deviation > dev_threshold:
