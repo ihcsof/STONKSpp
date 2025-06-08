@@ -27,9 +27,9 @@ class Prosumer:
             self.data.type = agent['Type']
             self.data.id = agent['ID']
             if "byzantine_ids" in self.config:
-                self.data.isByzantine = (self.data.id in self.config["byzantine_ids"])
+                self.data.isByzantine = (agent.index in self.config["byzantine_ids"])
             else:
-                self.data.isByzantine = (self.data.id == 2)
+                self.data.isByzantine = (agent.index == 0)
             print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
             #logging.info(f"Prosumer {self.data.id}: Byzantine flag set to {self.data.isByzantine}")
             self.data.tampered = 0

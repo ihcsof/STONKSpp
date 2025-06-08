@@ -48,7 +48,7 @@ STAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 methods             = ["method1", "method2"]
 subgraph_nodes_list = [[0, 2, 3]]
 alphas              = [0.15, 0.5]          # Only for method2
-byzantine_ids_list  = [[2]]
+byzantine_ids_list  = [[0]]
 attack_probs        = [0.01, 0.1, 0.5]
 multipliers         = [(0.5, 1.5)]         # (lower, upper)
 tampering_counts    = [1, 25, float("inf")]
@@ -117,7 +117,7 @@ for g_label, g_path in graph_files.items():
         graph_file            = g_path,
         iter_update_method    = "method1",
         trust_threshold       = 100,  # effectively disables mitigation
-        byzantine_ids         = [[2]],
+        byzantine_ids         = [0],
         non_interactive       = True,
         subgraph_nodes        = subgraph_nodes_list[0],
         maximum_iteration     = 1000,
