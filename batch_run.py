@@ -19,9 +19,6 @@ Usage
 -----
 $ python batch_run_trust.py           # runs with default grid below
 $ python batch_run_trust.py 5         # runs 5 repetitions instead of N=10
-
-Feel free to trim the parameter lists (attack_probs, multipliers, …) to keep
-experiments short.
 """
 
 import os
