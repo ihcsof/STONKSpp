@@ -36,6 +36,22 @@ BIN_DIR  = "logs/binaries"
 # ────────── global plot-caption collector ──────────
 PLOT_INFO: list[tuple[str,str]] = []     # (filename, description)
 
+matplotlib.rcParams.update({
+    # Base font size for text (labels, legend, titles inherit relative to this)
+    "font.size":          16,
+    # Axes titles (“ttl”)
+    "axes.titlesize":     18,
+    # Axes labels (x/y)
+    "axes.labelsize":     16,
+    # Tick labels
+    "xtick.labelsize":    14,
+    "ytick.labelsize":    14,
+    # Legend text
+    "legend.fontsize":    12,
+    # Figure title if you ever use it
+    "figure.titlesize":   20,
+})
+
 def _add_caption(fname: str, desc: str | None):
     """Register a description for the just-saved figure."""
     if desc:
