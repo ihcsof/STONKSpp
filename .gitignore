@@ -13,3 +13,4 @@ myenv
 *.out
 venv/*
 logs/*
+eq_logs/*
