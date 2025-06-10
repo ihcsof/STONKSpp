@@ -30,6 +30,22 @@ ITER_DIR = "logs/iter_stats"
 LC_DIR   = "logs/local_conv"
 BIN_DIR  = "logs/binaries"
 
+matplotlib.rcParams.update({
+    # Base font size for text (labels, legend, titles inherit relative to this)
+    "font.size":          16,
+    # Axes titles (“ttl”)
+    "axes.titlesize":     18,
+    # Axes labels (x/y)
+    "axes.labelsize":     16,
+    # Tick labels
+    "xtick.labelsize":    14,
+    "ytick.labelsize":    14,
+    # Legend text
+    "legend.fontsize":    12,
+    # Figure title if you ever use it
+    "figure.titlesize":   20,
+})
+
 PLOT_INFO = []
 
 def _add_caption(fname, desc):
