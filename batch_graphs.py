@@ -10,7 +10,7 @@ batch_graphs.py  –  analytics + plotting + binary deep-dive
  • PDF figures → logs/plots/    + logs/plots/plot_explanations.txt  (captions)
 """
 
-import sys
+import sys, argparse
 import os, re, glob, gzip, pickle, warnings
 import numpy as np
 import pandas as pd
@@ -398,6 +398,60 @@ def _equilibrate_trades(mat: np.ndarray, *,
 
     return cls, steps, scale
 
+# Third offline evaluator
+def _gradient_descent_balance(mat: np.ndarray,
+                              *,
+                              lr: float = 0.05,
+                              max_iter: int = 500,
+                              tol: float = 1e-3
+                              ) -> tuple[str, int, float]:
+    """
+    Tiny gradient-descent routine that tries to zero-out every row-sum of a
+    Trades matrix *while keeping antisymmetry*.
+
+    Parameters
+    ----------
+    mat : np.ndarray
+        The Trades matrix (n x n).
+    lr : float
+        Learning-rate for GD updates.
+    max_iter : int
+        Maximum GD steps.
+    tol : float
+        Target tolerance for max |row-sum| in kW.
+
+    Returns
+    -------
+    cls  : str -> "GD-balanced", "GD-partial", "GD-failed", or "GD-no-matrix"
+    steps: int -> number of iterations executed
+    err  : float -> final max |row-sum|  (kW)
+    """
+    if mat is None:
+        return "GD-no-matrix", 0, np.nan
+
+    T = mat.astype(float, copy=True)
+    n = T.shape[0]
+
+    for it in range(max_iter):
+        row_sum = T.sum(axis=1, keepdims=True)
+        err = np.abs(row_sum).max()
+        if err <= tol:
+            return "GD-balanced", it, err
+
+        # Gradient of 1/2*‖row_sum‖^2 with antisymmetry projection
+        grad = np.broadcast_to(row_sum, T.shape) / n 
+        for i in range(n):
+            for j in range(i + 1, n):
+                delta = lr * (grad[i, j] - grad[j, i])
+                T[i, j] -= delta
+                T[j, i] += delta
+
+    # Did not reach tol
+    err = np.abs(T.sum(axis=1)).max()
+    cls = "GD-partial" if err <= 10 * tol else "GD-failed"
+    return cls, max_iter, err
+
+
 KEYS_TRY = ("prog_arr", "progress", "opti_progress", "history", "iter_list", "progress_array")
 
 def extract_progress(bd):
@@ -569,8 +623,11 @@ def analyse_binaries():
         alpha = float(a_s) if a_s else 0
         prob = float(pr_s); mult = float(mu_s)
         tam = np.inf if t_s == 'inf' else float(t_s)
+
         with gzip.open(bp, 'rb') as f:
             bd = pickle.load(f)
+
+        gd_cls, gd_steps, gd_err = _gradient_descent_balance(bd.get("Trades"))
 
         trd_cls, trd_steps, trd_scale = _equilibrate_trades(
             bd.get("Trades"),          # the matrix
@@ -591,9 +648,11 @@ def analyse_binaries():
                 multiplier=mult, tampering=tam, conv_class='Converged',
                 final_prim=fp, final_dual=fd, final_SW=fsw,
                 slope_prim=sp, slope_dual=sd,
+                gd_class=gd_cls, gd_steps=gd_steps, gd_err=gd_err,
                 eq_class=trd_cls, eq_steps=trd_steps, eq_scale=trd_scale
             ))
             continue
+
         prog = extract_progress(bd)
         if not prog:
             continue
@@ -603,11 +662,13 @@ def analyse_binaries():
             multiplier=mult, tampering=tam, conv_class=cls,
             final_prim=fp, final_dual=fd, final_SW=fsw,
             slope_prim=sp, slope_dual=sd,
+            gd_class=gd_cls, gd_steps=gd_steps, gd_err=gd_err,
             eq_class=trd_cls, eq_steps=trd_steps, eq_scale=trd_scale
         ))
     if not rows:
         print('No binary yielded history ≥1000 iterations.')
         return None
+    
     bdf = pd.DataFrame(rows)
     bdf.to_csv('binary_summary.csv', index=False)
     print('binary_summary.csv saved')
@@ -632,6 +693,13 @@ def analyse_binaries():
 # ═════════════════════════════════ main ══════════════════════════════
 
 def main():
+
+    ap = argparse.ArgumentParser(
+            description="Analyse mitigation/binary logs and plot summary figures")
+    ap.add_argument("--skip-plots", action="store_true",
+                    help="Only build the CSV tables - no PDF figures.")
+    args = ap.parse_args()
+
     df = build_sim_results()
     if df.empty:
         return
@@ -639,10 +707,9 @@ def main():
     # Remove rows where tampering is genuinely missing
     df = df[df["tampering"] != "unknown"]
 
-    # Convert tampering `"inf"` → np.inf  and make it numeric
+    # Convert tampering inf -> np.inf  and make it numeric
     df["tampering"] = df["tampering"].replace({"inf": np.inf}).astype(float)
 
-    # (same trick for multiplier / attack_prob if you filled them with "unknown")
     for col in ("multiplier", "attack_prob"):
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
@@ -650,7 +717,7 @@ def main():
     df2 = df[df.method == "method2"]   # Relaxed ADMM
     df1 = df[df.method == "method1"]   # Classical ADMM
 
-    # ─────────────── Baseline plots (already present) ───────────────
+    # ─────────────── Baseline plots ───────────────
     if not df2.empty:
         grouped_bar(df2, "tampering", "alpha", "iterations",
                     "Avg Iterations",
@@ -670,7 +737,7 @@ def main():
                    "iterations_vs_tamperingcount_classical.pdf",
                    desc="Impact of tampering intensity on convergence iterations for the Classical ADMM.")
 
-    # ─────────────── NEW comparative plots ───────────────
+    # ─────────────── Comparative plots ───────────────
     # Classic ADMM extra comparisons
     if not df1.empty:
         grouped_bar(df1, "multiplier", "tampering", "mitigation_count",
@@ -725,7 +792,7 @@ def main():
 
     # ─────────────── per-run iteration plots ───────────────
     csvs = glob.glob(f"{ITER_DIR}/iter_*.csv")
-    if csvs:
+    if csvs and not args.skip_plots:
         # 1) individual run curves
         for p in csvs:
             gen_iter_plots(p)
