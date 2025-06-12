@@ -4,7 +4,7 @@
 batch_graphs_trust.py  –  analytics + plotting + binary deep-dive
 """
 
-import sys
+import sys, argparse
 import os
 import re
 import glob
@@ -236,7 +236,34 @@ def _equilibrate_trades(mat, *, run_id=None, logdir=None, rel_tol=1e-3, scale_to
             pickle.dump({"T_orig":T_orig,"T_balanced":T}, fh, protocol=pickle.HIGHEST_PROTOCOL)
     return cls, steps, scale
 
+def _gradient_descent_balance(mat, *, lr=0.05, max_iter=500, tol=1e-3):
+    """
+    Try to zero each row‐sum of the antisymmetric Trades matrix via tiny
+    gradient steps, while keeping antisymmetry intact.
+    Returns (cls, steps, err):
+      cls  ∈ {"GD-balanced","GD-partial","GD-failed","GD-no-matrix"}
+      steps = iterations executed
+      err   = final max |row-sum|
+    """
+    if mat is None:
+        return "GD-no-matrix", 0, np.nan
+    T = mat.astype(float, copy=True); n = T.shape[0]
+    for k in range(max_iter):
+        r = T.sum(axis=1, keepdims=True)
+        err = abs(r).max()
+        if err <= tol:
+            return "GD-balanced", k, err
+        grad = np.broadcast_to(r, T.shape) / n
+        for i in range(n):
+            for j in range(i+1, n):
+                d = lr * (grad[i,j]-grad[j,i])
+                T[i,j] -= d; T[j,i] += d
+    err = abs(T.sum(axis=1)).max()
+    cls = "GD-partial" if err <= 10*tol else "GD-failed"
+    return cls, max_iter, err
+
 KEYS_TRY = ("prog_arr","progress","opti_progress","history","iter_list","progress_array")
+
 def extract_progress(bd):
     if isinstance(bd, dict):
         for k in KEYS_TRY:
@@ -340,16 +367,20 @@ def analyse_binaries():
         alpha = float(a_s) if a_s else 0
         prob  = float(pr_s); mult = float(mu_s)
         tam   = np.inf if t_s=='inf' else float(t_s)
+
         bd = pickle.load(gzip.open(bp,'rb'))
+        gd_cls, gd_steps, gd_err = _gradient_descent_balance(bd.get("Trades"))
         trd_cls, trd_steps, trd_scale = _equilibrate_trades(bd.get("Trades"), run_id=fn, logdir="eq_logs")
+
         prog = extract_progress(bd)
-        cls, fp, fd, fsw, sp, sd = ('Converged',)*6
+        cls, fp, fd, fsw, sp, sd = ("Converged", 0.0, 0.0, 0.0, 0.0, 0.0)
         if prog: cls, fp, fd, fsw, sp, sd = classify_run(prog)
         rows.append(dict(
             method=meth, alpha=alpha, attack_prob=prob,
             multiplier=mult, tampering=tam, conv_class=cls,
             final_prim=fp, final_dual=fd, final_SW=fsw,
             slope_prim=sp, slope_dual=sd,
+            gd_class=gd_cls, gd_steps=gd_steps, gd_err=gd_err,
             eq_class=trd_cls, eq_steps=trd_steps, eq_scale=trd_scale
         ))
     bdf = pd.DataFrame(rows)
@@ -358,6 +389,12 @@ def analyse_binaries():
     return bdf
 
 def main():
+
+    ap = argparse.ArgumentParser(description="Analyse mitigation/binary logs")
+    ap.add_argument("--skip-plots", action="store_true",
+                    help="only build the CSV tables (no PDFs)")
+    args = ap.parse_args()
+
     df = build_sim_results()
     df = df[df["tampering"]!="unknown"]
     df["tampering"] = df["tampering"].replace({"inf":np.inf}).astype(float)
@@ -378,7 +415,7 @@ def main():
     plt.tight_layout(); plt.savefig(f"{PLOT_DIR}/iterations_vs_mitigations.pdf"); plt.close(fig)
     _add_caption('iterations_vs_mitigations.pdf','Scatter of mitigation events vs convergence iterations.')
     csvs = glob.glob(f"{ITER_DIR}/iter_*.csv")
-    if csvs:
+    if csvs and not args.skip_plots:
         for p in csvs: gen_iter_plots(p)
         all_it = pd.concat([iter_df(p) for p in csvs], ignore_index=True)
         fig, ax = plt.subplots(figsize=(8,6))
@@ -402,9 +439,12 @@ def main():
     if lc_rows:
         lcd = pd.DataFrame(lc_rows)
         grouped_bar(lcd, "tampering", "method", "conv_iter", "Avg Local Iter", "Local Conv vs Tamper", "localconv_vs_tamper.pdf")
+
     bdf = analyse_binaries()
+    
     summ = df.groupby(["method","alpha","attack_prob","tampering"]).agg(iter_mean=("iterations","mean"), iter_std=("iterations","std")).reset_index()
     summ.to_csv("simulation_summary_table.csv", index=False)
+
     with open(f"{PLOT_DIR}/plot_explanations.txt","w") as f:
         for fn, desc in PLOT_INFO:
             f.write(f"{fn} : {desc}\n")
