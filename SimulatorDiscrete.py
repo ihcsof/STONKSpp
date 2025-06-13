@@ -216,6 +216,16 @@ class Simulator(Simulation):
             return
             
         self.iteration += 1
+
+        self.opti_progress.append(
+            (self.iteration,
+             sum(p.SW for p in self.players.values()),
+             self.Prices[self.Prices != 0].mean()
+                 if self.Prices[self.Prices != 0].size else 0.0,
+             self.prim,
+             self.dual)
+        )
+        
         if self.Prices[self.Prices != 0].size != 0:
             self.Price_avg = self.Prices[self.Prices != 0].mean()
         else:
@@ -480,6 +490,8 @@ class CheckStateEvent(Event):
 
     def process(self, sim: Simulator):
         if sim.prim <= sim.residual_primal and sim.dual <= sim.residual_dual:
+            it, sw, price, _, _ = sim.opti_progress[-1]
+            sim.opti_progress[-1] = (it, sw, price, sim.prim, sim.dual)
             sim.simulation_message = 1
         elif sim.iteration >= sim.maximum_iteration:
             sim.simulation_message = -1

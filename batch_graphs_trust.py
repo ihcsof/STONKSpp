@@ -357,24 +357,38 @@ def local_conv_items(path):
     return out
 
 def analyse_binaries():
-    pat = r"state_.*?(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)_mult([\d\.]+)_t([^_]+)"
     rows = []
     for bp in glob.glob(f"{BIN_DIR}/state_*.pkl.gz"):
-        fn = os.path.basename(bp)
-        m = re.match(pat, fn)
-        if not m: continue
-        meth, a_s, pr_s, mu_s, t_s = m.groups()
-        alpha = float(a_s) if a_s else 0
-        prob  = float(pr_s); mult = float(mu_s)
-        tam   = np.inf if t_s=='inf' else float(t_s)
+        fn = os.path.basename(bp)          # ① needed for run_id
+        with gzip.open(bp, "rb") as fh:
+            bd = pickle.load(fh)
 
-        bd = pickle.load(gzip.open(bp,'rb'))
+        cfg   = bd.get("config", {})
+        meth  = cfg.get("iter_update_method", "unknown")
+        alpha = float(cfg.get("alpha", 0))
+        prob  = float(cfg.get("byzantine_attack_probability", 0))
+        mult  = float(cfg.get("byzantine_multiplier_upper", 0))
+
+        tam = cfg.get("tampering_count", 0)
+        # ② robust conversion to float / np.inf
+        if isinstance(tam, str) and tam.lower() == "inf":
+            tam = np.inf
+        elif tam == float("inf"):
+            tam = np.inf
+        else:
+            tam = float(tam)
+
+        # ───────────────────────────────────────────────
         gd_cls, gd_steps, gd_err = _gradient_descent_balance(bd.get("Trades"))
-        trd_cls, trd_steps, trd_scale = _equilibrate_trades(bd.get("Trades"), run_id=fn, logdir="eq_logs")
+        trd_cls, trd_steps, trd_scale = _equilibrate_trades(
+            bd.get("Trades"), run_id=fn, logdir="eq_logs"
+        )
 
         prog = extract_progress(bd)
         cls, fp, fd, fsw, sp, sd = ("Converged", 0.0, 0.0, 0.0, 0.0, 0.0)
-        if prog: cls, fp, fd, fsw, sp, sd = classify_run(prog)
+        if prog:
+            cls, fp, fd, fsw, sp, sd = classify_run(prog)
+
         rows.append(dict(
             method=meth, alpha=alpha, attack_prob=prob,
             multiplier=mult, tampering=tam, conv_class=cls,
@@ -383,9 +397,10 @@ def analyse_binaries():
             gd_class=gd_cls, gd_steps=gd_steps, gd_err=gd_err,
             eq_class=trd_cls, eq_steps=trd_steps, eq_scale=trd_scale
         ))
+
     bdf = pd.DataFrame(rows)
     if not bdf.empty:
-        bdf.to_csv('binary_summary.csv', index=False)
+        bdf.to_csv("binary_summary.csv", index=False)
     return bdf
 
 def main():
