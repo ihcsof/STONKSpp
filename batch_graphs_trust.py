@@ -207,13 +207,13 @@ def _norm_progress(obj):
     rows = []
     if isinstance(obj, (list,tuple)) and obj and isinstance(obj[0], (list,tuple,np.ndarray)):
         for i, r in enumerate(obj):
-            r = list(r); rows.append(tuple([i] + r[:4]))
+            r = list(r); rows.append(tuple([i] + r[:5]))
     elif isinstance(obj, np.ndarray) and obj.ndim==2:
         for i, r in enumerate(obj):
-            r = r.tolist(); rows.append(tuple([i] + r[:4]))
+            r = r.tolist(); rows.append(tuple([i] + r[:5]))
     elif hasattr(obj, "iterrows"):
         for i, (_, r) in enumerate(obj.iterrows()):
-            r = r.values.tolist(); rows.append(tuple([i] + r[:4]))
+            r = r.values.tolist(); rows.append(tuple([i] + r[:5]))
     return rows
 
 def _equilibrate_trades(mat, *, run_id=None, logdir=None, rel_tol=1e-3, scale_to_zero=1e-3):
@@ -273,8 +273,8 @@ def extract_progress(bd):
     return []
 
 def classify_run(prog, eps=1e-3):
-    prim = np.asarray([p[3] for p in prog], float)
-    dual = np.asarray([p[4] for p in prog], float)
+    prim = np.asarray([p[4] for p in prog], float)
+    dual = np.asarray([p[5] for p in prog], float)
     fp, fd, fsw = prim[-1], dual[-1], prog[-1][1]
     sp = sd = np.nan
     if len(prog) >= 3:
@@ -338,6 +338,12 @@ def build_sim_results():
             avg_deviation=d_tot/cnt if cnt else np.nan
         ))
     mit_df = pd.DataFrame(mit_rows)
+    if mit_df.empty:
+        mit_df = pd.DataFrame(columns=[
+            "tag", "run",
+            "method", "alpha", "attack_prob", "multiplier", "tampering",
+            "mitigation_count", "avg_weight", "avg_deviation"
+        ])
     merged = iter_df.merge(mit_df, on=["tag","run"], how="left")
     merged['mitigation_count'] = merged['mitigation_count'].fillna(0).astype(int)
     for col in ['method','alpha','attack_prob','multiplier','tampering']:
