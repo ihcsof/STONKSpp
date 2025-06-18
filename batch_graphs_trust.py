@@ -216,7 +216,7 @@ def _norm_progress(obj):
             r = r.values.tolist(); rows.append(tuple([i] + r[:5]))
     return rows
 
-def _equilibrate_trades(mat, *, run_id=None, logdir=None, rel_tol=1e-3, scale_to_zero=1e-3):
+def _equilibrate_trades(mat, *, run_id=None, logdir=None, rel_tol=1e-3, scale_to_zero=5e-4):
     T_orig = mat.astype(float, copy=False); T = T_orig.copy()
     for i in range(T.shape[0]):
         for j in range(i+1, T.shape[1]):
