@@ -224,7 +224,7 @@ def _equilibrate_trades(mat, *, run_id=None, logdir=None, rel_tol=1e-3, scale_to
     steps = 1
     row_err = abs(T.sum(axis=1)).max()
     max_trade = abs(T_orig).max() if T_orig.size else 0.0
-    tol = max(rel_tol*max_trade,1e-3)
+    tol = max(rel_tol*max_trade,1e-3) #5e-4 
     if row_err > tol:
         scale = tol/row_err if row_err else 0.0; T*=scale; steps+=1
         cls = "Scaled-balanced" if scale>=scale_to_zero else "Forced-zero"

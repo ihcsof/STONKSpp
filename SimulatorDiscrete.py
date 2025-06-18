@@ -365,10 +365,7 @@ class PlayerOptimizationMsg(Event):
         if random.random() < self.wait_more:
             return
         sim.n_optimized_partners[self.i] = 0
-        new_trades = np.copy(sim.temps)
-        for row_i in range(sim.nag):
-            if row_i != self.i:
-                new_trades[row_i] = sim.Trades[row_i]
+        new_trades = np.copy(sim.Trades)
         partner_list = sim.partners[self.i]
         if partner_list and not sim.players[self.i].data.isByzantine:
             row_values = new_trades[self.i, partner_list]
@@ -401,10 +398,12 @@ class PlayerOptimizationMsg(Event):
                         old_val = row_values[idx]
                         new_val = old_val - (smoothing_factor * factor) * (old_val - median_val)
                         new_trades[self.i, partner_j] = new_val
+                        new_trades[partner_j, self.i] = -new_val
                         logging.info(f"Agent {self.i} partially corrects partner {partner_j}: {old_val:.2f}->{new_val:.2f} (score={score:.2f})")
                     else:
                         sim.trust_flags[partner_j] = True
                         new_trades[self.i, partner_j] = 0.0
+                        new_trades[partner_j, self.i] = 0.0
                         logging.info(f"[Flag] Agent {self.i} flags partner {partner_j} (score={score}>=threshold)")
         sim.Trades = new_trades
         sim.prim = sum([sim.players[p].Res_primal for p in sim.partners[self.i]])
@@ -466,6 +465,7 @@ class PlayerUpdateMsg(Event):
                         old_val = row_values[idx]
                         new_val = old_val - (smoothing_factor * factor) * (old_val - median_val)
                         trades_i[partner_j] = new_val
+                        sim.Trades[partner_j, self.i] = -new_val
                         logging.info(f"Agent {self.i} partially corrects partner {partner_j} (update): {old_val:.2f}->{new_val:.2f} (score={score:.2f})")
                     else:
                         sim.trust_flags[partner_j] = True
@@ -473,6 +473,8 @@ class PlayerUpdateMsg(Event):
                         logging.info(f"[Flag] Agent {self.i} flags partner {partner_j} as Byzantine (update) (score={score}>=threshold)")
         sim.temps[:, self.i] = sim.players[self.i].optimize(trades_i)
         for p_j in sim.partners[self.i]:
+            sim.Trades[self.i, p_j] = trades_i[p_j]
+            sim.Trades[p_j,  self.i] = -trades_i[p_j]
             partner_array = sim.players[self.i].data.partners
             loc_idx = np.where(partner_array == p_j)[0][0]
             sim.Prices[p_j, self.i] = sim.players[self.i].y[loc_idx]
