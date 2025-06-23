@@ -68,10 +68,10 @@ class Simulator(Simulation):
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 200
+        self.maximum_iteration = 1000
         self.penaltyfactor = 0.01
-        self.residual_primal = 1e-2
-        self.residual_dual = 1e-2
+        self.residual_primal = 1e-3
+        self.residual_dual = 1e-3
         self.communications = 'Synchronous'
 
         # Latency
@@ -480,31 +480,42 @@ def main():
         beta = pd.read_csv("beta_gamma_log.csv")
         alpha = pd.read_csv("alpha_log.csv")
 
-        def analyse(alpha_df, beta_df, label):
-            rows=[]
-            beta_star = beta_df['beta_star'].iloc[0]
-            gamma_star = int(beta_df['gamma_star'].iloc[0])
+        def analyse(alpha_df: pd.DataFrame, beta_df: pd.DataFrame, label: str) -> None:
+            beta_star = beta_df["beta_star"].iloc[0]
+            gamma_star = int(beta_df["gamma_star"].iloc[0])
 
-            for t,grp in alpha_df.groupby('iter'):
-                vec = grp.groupby('j')['alpha_ij'].sum()
+            rows = []
+            for t, grp in alpha_df.groupby("iter"):
+                vec = grp.groupby("j")["alpha_ij"].sum()
                 gamma_emp = (vec >= beta_star).sum()
                 min_alpha = vec.min() if not vec.empty else np.nan
                 rows.append([t, gamma_emp, min_alpha])
 
-            emp = pd.DataFrame(rows, columns=['iter','gamma_emp','min_alpha'])
-            pct_ok = (emp['gamma_emp'] >= gamma_star).mean()*100
-            print(f"\n=== β‑γ check for {label} ===")
-            print(f"Theoretical  γ*= {gamma_star}   β*= {beta_star:.4f}")
-            print(emp[['gamma_emp','min_alpha']].describe())
-            print(f"% iterations with γ_emp ≥ γ*: {pct_ok:.1f}%\n")
+            emp = pd.DataFrame(rows, columns=["iter", "gamma_emp", "min_alpha"])
+            pct_ok = (emp["gamma_emp"] >= gamma_star).mean() * 100
+
+            summary_lines = [
+                f"=== β-γ check for {label} ===",
+                f"Theoretical  γ*= {gamma_star}   β*= {beta_star:.4f}",
+                emp[["gamma_emp", "min_alpha"]].describe().to_string(),
+                f"% iterations with γ_emp ≥ γ*: {pct_ok:.1f}%",
+            ]
+            summary_str = "\n".join(summary_lines)
+
+            print("\n" + summary_str + "\n")
+
+            emp.to_csv("beta_gamma_emp.csv", index=False)
+            print("Empirical β-γ table saved to beta_gamma_emp.csv")
+
+            with open("beta_gamma_summary.txt", "w", encoding="utf-8") as fh:
+                fh.write(summary_str + "\n")
+            print("Summary report saved to beta_gamma_summary.txt")
 
         analyse(alpha, beta, "current run")
 
     except Exception as e:
         print("β‑γ analysis skipped:", e)
     # ----------------------------------------------------------------
-
-
 
 if __name__ == "__main__":
     main()

@@ -113,7 +113,7 @@ class Prosumer:
             if self.data.isByzantine and (self.data.tampered < self.data.max_tampering):
                 chance = self.config.get("byzantine_attack_probability", 0.05)
                 lower = self.config.get("byzantine_multiplier_lower", 0.5)
-                upper = self.config.get("byzantine_multiplier_upper", 1.2)
+                upper = self.config.get("byzantine_multiplier_upper", 1.5)
 
                 # Only tamper with some probability each iteration
                 if random.random() < chance:
