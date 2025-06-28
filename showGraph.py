@@ -55,7 +55,7 @@ def save_graph(graph, file_path):
     graph.write_picklez(file_path)
 
 def main():
-    input_file = 'graphs/examples/biggest4.pyp2p'
+    input_file = 'graphs/examples/P2P_model_3.pyp2p'
     output_file = 'graphs/examples/biggest5.pyp2p'
     
     # Load the graph

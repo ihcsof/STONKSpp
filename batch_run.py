@@ -13,6 +13,7 @@ This script:
 """
 
 import os
+import numpy as np
 import pandas as pd
 
 import local_conv
@@ -99,6 +100,9 @@ def run_simulation(config):
 def main():
     # Number of executions per configuration
     N = 10
+
+    random.seed(42)
+    np.random.seed(42)
 
     # Parameter sweeps
     methods             = ["method1", "method2"]
