@@ -27,6 +27,12 @@ from pathlib import Path
 from datetime import datetime
 import pandas as pd
 
+import random
+import numpy as np
+
+random.seed(42)
+np.random.seed(42)
+
 # ----------------------------- 0. CLI ---------------------------------------
 N_REPS = int(sys.argv[1]) if len(sys.argv) > 1 else 10  # repetitions per cfg
 
