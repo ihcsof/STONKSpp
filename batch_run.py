@@ -18,6 +18,12 @@ import pandas as pd
 import local_conv
 from local_conv import Simulator
 
+import random
+import numpy as np
+
+random.seed(42)
+np.random.seed(42)
+
 # Ensure log directories exist once, up front
 os.makedirs("logs/mitigation", exist_ok=True)
 os.makedirs("logs/local_conv",  exist_ok=True)
