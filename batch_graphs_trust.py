@@ -32,18 +32,20 @@ BIN_DIR  = "logs/binaries"
 
 matplotlib.rcParams.update({
     # Base font size for text (labels, legend, titles inherit relative to this)
-    "font.size":          16,
+    "font.size":          18,
     # Axes titles (“ttl”)
-    "axes.titlesize":     18,
+    "axes.titlesize":     20,
     # Axes labels (x/y)
-    "axes.labelsize":     16,
+    "axes.labelsize":     18,
     # Tick labels
-    "xtick.labelsize":    14,
-    "ytick.labelsize":    14,
+    "xtick.labelsize":    16,
+    "ytick.labelsize":    16,
     # Legend text
-    "legend.fontsize":    12,
+    "legend.fontsize":    14,
     # Figure title if you ever use it
-    "figure.titlesize":   20,
+    "figure.titlesize":   22,
+    "axes.grid":            True,
+    "grid.linestyle":       "--"
 })
 
 PLOT_INFO = []
