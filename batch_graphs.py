@@ -38,18 +38,20 @@ PLOT_INFO: list[tuple[str,str]] = []     # (filename, description)
 
 matplotlib.rcParams.update({
     # Base font size for text (labels, legend, titles inherit relative to this)
-    "font.size":          16,
+    "font.size":          18,
     # Axes titles (“ttl”)
-    "axes.titlesize":     18,
+    "axes.titlesize":     20,
     # Axes labels (x/y)
-    "axes.labelsize":     16,
+    "axes.labelsize":     18,
     # Tick labels
-    "xtick.labelsize":    14,
-    "ytick.labelsize":    14,
+    "xtick.labelsize":    16,
+    "ytick.labelsize":    16,
     # Legend text
-    "legend.fontsize":    12,
+    "legend.fontsize":    14,
     # Figure title if you ever use it
-    "figure.titlesize":   20,
+    "figure.titlesize":   22,
+    "axes.grid":            True,
+    "grid.linestyle":       "--"
 })
 
 def _add_caption(fname: str, desc: str | None):
@@ -721,7 +723,7 @@ def main():
     if not df2.empty:
         grouped_bar(df2, "tampering", "alpha", "iterations",
                     "Avg Iterations",
-                    "Iterations vs Tampering (Relaxed ADMM, varying alpha)",
+                    "Iterations vs Tampering (Relaxed)",
                     "iterations_vs_tamperingcount_relaxed.pdf",
                     desc="Average iterations required for convergence for the Relaxed ADMM across different tampering intensities and relaxation parameters (alpha).")
 
@@ -733,7 +735,7 @@ def main():
     if not df1.empty:
         simple_bar(df1, "tampering", "iterations",
                    "Avg Iterations",
-                   "Iterations vs Tampering Count (Classical ADMM)",
+                   "Iterations vs Tampering Count (Classical)",
                    "iterations_vs_tamperingcount_classical.pdf",
                    desc="Impact of tampering intensity on convergence iterations for the Classical ADMM.")
 
@@ -742,25 +744,25 @@ def main():
     if not df1.empty:
         grouped_bar(df1, "multiplier", "tampering", "mitigation_count",
                     "Average Mitigation Events",
-                    "Mitigations vs. Multiplier (Classical ADMM)",
+                    "Mitigations vs. Multiplier (Classical)",
                     "mitigations_vs_multiplier_classical.pdf",
                     desc="Classical ADMM: how the upper bound on Byzantine multiplier influences the average mitigation count under different tamper settings.")
 
         grouped_bar(df1, "multiplier", "tampering", "iterations",
                     "Average Iterations",
-                    "Iterations vs. Multiplier (Classical ADMM)",
+                    "Iterations vs. Multiplier (Classical)",
                     "iterations_vs_multiplier_classical.pdf",
                     desc="Classical ADMM: convergence iterations as a function of multiplier upper bound, stratified by tampering count.")
 
         grouped_bar(df1, "attack_prob", "tampering", "mitigation_count",
                     "Average Mitigation Events",
-                    "Mitigations vs. Attack Probability (Classical ADMM)",
+                    "Mitigations vs. Attack Probability (Classical)",
                     "mitigations_vs_attackprob_classical.pdf",
                     desc="Classical ADMM: sensitivity of mitigation frequency to the probability of a Byzantine attack, for different tamper levels.")
 
         grouped_bar(df1, "attack_prob", "tampering", "iterations",
                     "Average Iterations",
-                    "Iterations vs. Attack Probability (Classical ADMM)",
+                    "Iterations vs. Attack Probability (Classical)",
                     "iterations_vs_attackprob_classical.pdf",
                     desc="Classical ADMM: how convergence iterations grow with increasing likelihood of a Byzantine attack across tampering counts.")
 
@@ -768,25 +770,25 @@ def main():
     if not df2.empty:
         grouped_bar(df2, "multiplier", "tampering", "iterations",
                     "Average Iterations",
-                    "Iterations vs. Multiplier (Relaxed ADMM)",
+                    "Iterations vs. Multiplier (Relaxed)",
                     "iterations_vs_multiplier_relaxed.pdf",
                     desc="Relaxed ADMM: convergence cost in iterations against the Byzantine multiplier bound, coloured by tampering intensity.")
 
         grouped_bar(df2, "multiplier", "tampering", "mitigation_count",
                     "Average Mitigation Events",
-                    "Mitigations vs. Multiplier (Relaxed ADMM)",
+                    "Mitigations vs. Multiplier (Relaxed)",
                     "mitigations_vs_multiplier_relaxed.pdf",
                     desc="Relaxed ADMM: mitigation event frequency under varying multiplier bounds and tampering counts.")
 
         grouped_bar(df2, "attack_prob", "tampering", "iterations",
                     "Average Iterations",
-                    "Iterations vs. Attack Probability (Relaxed ADMM)",
+                    "Iterations vs. Attack Probability (Relaxed)",
                     "iterations_vs_attackprob_relaxed.pdf",
                     desc="Relaxed ADMM: how convergence iterations respond to increasing attack probabilities across tamper settings.")
 
         grouped_bar(df2, "attack_prob", "tampering", "mitigation_count",
                     "Average Mitigation Events",
-                    "Mitigations vs. Attack Probability (Relaxed ADMM)",
+                    "Mitigations vs. Attack Probability (Relaxed)",
                     "mitigations_vs_attackprob_relaxed.pdf",
                     desc="Relaxed ADMM: mitigation frequency vs attack probability for each tamper level.")
 
