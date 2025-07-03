@@ -157,8 +157,10 @@ def plot_series(dfs: List[pd.DataFrame], ycol: str, labels: List[str], title: st
     fig, ax = plt.subplots(figsize=(7, 5))
     for df, lbl in zip(dfs, labels):
         ax.plot(df["iter_shift"], df[ycol], label=lbl)
-    ax.set_xscale("log"); ax.set_xlabel("Iteration")
-    ax.set_yscale("log"); ax.set_ylabel(ycol); ax.set_title(title); ax.legend(ncol=1)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel(ycol); ax.set_title(title); ax.legend(ncol=1)
     plt.tight_layout(); fig.savefig(out_p); plt.close(fig)
 
 
@@ -167,8 +169,10 @@ def plot_residuals(dfs: List[pd.DataFrame], labels: List[str], title: str, out_p
     for df, lbl in zip(dfs, labels):
         ax.plot(df["iter_shift"], df["prim"], label=f"prim • {lbl}")
         ax.plot(df["iter_shift"], df["dual"], linestyle="--", label=f"dual • {lbl}")
-    ax.set_xscale("log"); ax.set_xlabel("Iteration")
-    ax.set_yscale("log"); ax.set_ylabel("Residual"); ax.set_yscale("log"); ax.set_title(title)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel("Residual"); ax.set_title(title)
     ax.legend(ncol=2, fontsize="x-small")
     plt.tight_layout(); fig.savefig(out_p); plt.close(fig)
 
