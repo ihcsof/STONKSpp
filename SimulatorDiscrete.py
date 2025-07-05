@@ -335,7 +335,7 @@ class PlayerOptimizationMsg(Event):
             row_mad = np.median(np.abs(row_values - row_median))
             scale_factor = 15.0
             min_threshold = 0.01
-            if row_mad < 4.1:
+            if row_mad < 1e12:
                 adaptive_threshold = float('inf')
             else:
                 adaptive_threshold = max(scale_factor * row_mad, min_threshold)
@@ -383,7 +383,7 @@ class PlayerUpdateMsg(Event):
             mad = np.median(np.abs(np.array(partner_trades) - median_trade))
             min_threshold = 0.01
             scale_factor = sim.config.get("scale_factor", 15.0)
-            mad_threshold = sim.config.get("mad_threshold", 4.1)
+            mad_threshold = sim.config.get("mad_threshold", 1e12)
             if mad < mad_threshold:
                 adaptive_threshold = float('inf')
             else:
