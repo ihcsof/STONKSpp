@@ -91,7 +91,7 @@ class Prosumer:
         self.y0 = np.zeros(self.data.num_partners)
         
         # Decide iteration update method
-        method = self.config.get("iter_update_method", "method2")
+        method = self.config.get("iter_update_method", "method1")
         if method == "method1":
             self.iter_update_method = self._iter_update_method1
         elif method == "method2":
