@@ -406,7 +406,6 @@ class PlayerUpdateMsg(Event):
 
             # --- alpha logging : keep k survivors ----------------------
             b = sim.bg_observer.b_max
-            k = sim.config.get("k_survivors", 5)
             k = (sim.nag + 9) // 10
             
             grads = []
