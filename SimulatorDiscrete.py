@@ -54,7 +54,7 @@ class Simulator(Simulation):
         self.force_stop = False
 
         # Load graph
-        self.MGraph = Graph.Load('graphs/examples/P2P_model_reduced.pyp2p', format='picklez')
+        self.MGraph = Graph.Load('graphs/examples/P2P_model.pyp2p', format='picklez')
 
         self.timeout = 3600  # UNUSED
         self.Interval = 3  # in s
@@ -70,8 +70,8 @@ class Simulator(Simulation):
         self.Registered_Token()
         self.maximum_iteration = 1000
         self.penaltyfactor = 0.01
-        self.residual_primal = 1e-3
-        self.residual_dual = 1e-3
+        self.residual_primal = 1e-2
+        self.residual_dual = 1e-2
         self.communications = 'Synchronous'
 
         # Latency
@@ -404,25 +404,31 @@ class PlayerUpdateMsg(Event):
                     with open(sim.log_mitigation_file, "a") as f:
                         f.write(log_line)
 
-            # --- alpha logging -----------------------------------------
-            grad_vals = []
+            # --- alpha logging : keep k survivors ----------------------
+            b = sim.bg_observer.b_max
+            k = sim.config.get("k_survivors", 5)
+            k = (sim.nag + 9) // 10
+            
+            grads = []
             for j in partner_indices:
-                # j’s local list of partners (an array of agent‑IDs)
-                partners_of_j = sim.players[j].data.partners
-                # find the position where j sees i
-                idx = list(partners_of_j).index(self.i)
-                grad_vals.append(sim.players[j].y[idx])
+                idx = list(sim.players[j].data.partners).index(self.i)
+                grads.append(sim.players[j].y[idx])
+            grads = np.asarray(grads)
 
-            max_idx = int(np.argmax(grad_vals))
-            min_idx = int(np.argmin(grad_vals))
-            agent_max = partner_indices[max_idx]
-            agent_min = partner_indices[min_idx]
-            alpha_coeff = {}
-            if agent_max == agent_min:
-                alpha_coeff[agent_max] = 1.0
-            else:
-                alpha_coeff[agent_max] = 0.5
-                alpha_coeff[agent_min] = 0.5
+            if grads.size == 0:
+                return
+
+            # (1) trim the b highest & b lowest
+            order = np.argsort(grads)
+            core  = order[b:len(order)-b] if grads.size > 2*b else order
+
+            # (2) pick up to k lowest + k highest survivors
+            sel = np.unique(np.concatenate([core[:k], core[-k:]]))
+            survivors = [partner_indices[idx] for idx in sel] or [partner_indices[int(order[len(order)//2])]]
+
+            # (3) split the row weight equally
+            alpha_coeff = {j: 1.0/len(survivors) for j in survivors}
+
             if not os.path.exists("alpha_log.csv"):
                 with open("alpha_log.csv", "w", newline="") as f:
                     csv.writer(f).writerow(["iter","i","j","alpha_ij"])
