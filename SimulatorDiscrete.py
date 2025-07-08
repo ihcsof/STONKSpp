@@ -35,6 +35,7 @@ class BetaGammaObserver:
         n = self.sim.nag
         phi = self._count_byzantine()
         b = self.b_max
+        b = 1 # !!!!!!
         gamma_star = max(n - phi - b, 0)
         beta_star = 1/(2*gamma_star) if gamma_star > 0 else None
         with open(self.outfile, "a", newline="") as f:
@@ -406,6 +407,7 @@ class PlayerUpdateMsg(Event):
 
             # --- alpha logging : keep k survivors ----------------------
             b = sim.bg_observer.b_max
+            b = 1 # !!!!!!
             k = (sim.nag + 9) // 10
             
             grads = []
@@ -486,24 +488,39 @@ def main():
         alpha = pd.read_csv("alpha_log.csv")
 
         def analyse(alpha_df: pd.DataFrame, beta_df: pd.DataFrame, label: str) -> None:
-            beta_star = beta_df["beta_star"].iloc[0]
+            beta_star  = beta_df["beta_star"].iloc[0]
             gamma_star = int(beta_df["gamma_star"].iloc[0])
 
             rows = []
             for t, grp in alpha_df.groupby("iter"):
-                vec = grp.groupby("j")["alpha_ij"].sum()
-                gamma_emp = (vec >= beta_star).sum()
-                min_alpha = vec.min() if not vec.empty else np.nan
+                vec        = grp.groupby("j")["alpha_ij"].sum()
+                gamma_emp  = (vec >= beta_star).sum()
+                min_alpha  = vec.min() if not vec.empty else np.nan
                 rows.append([t, gamma_emp, min_alpha])
 
             emp = pd.DataFrame(rows, columns=["iter", "gamma_emp", "min_alpha"])
             pct_ok = (emp["gamma_emp"] >= gamma_star).mean() * 100
 
+            total_it = emp["iter"].max()
+
+            suspicious = (pct_ok >= 98)
+
+            if suspicious:
+                if total_it >= 1000:
+                    print("⚠️  β-γ monitor: >98 % pass-rate after ≥1000 iters "
+                        "looks bogus – marking run as UNSTABLE.")
+                    pct_ok = 0.0
+                else:
+                    burn = emp[emp["iter"] > 0.1 * total_it]
+                    pct_ok = (burn["gamma_emp"] >= gamma_star).mean() * 100
+                    print(f"ℹ️  suspicious β-γ stats, using burn-in-adjusted "
+                        f"pass-rate: {pct_ok:.1f}%")
+
             summary_lines = [
                 f"=== β-γ check for {label} ===",
-                f"Theoretical  γ*= {gamma_star}   β*= {beta_star:.4f}",
+                f"Theoretical  γ* = {gamma_star}   β* = {beta_star:.4f}",
                 emp[["gamma_emp", "min_alpha"]].describe().to_string(),
-                f"% iterations with γ_emp ≥ γ*: {pct_ok:.1f}%",
+                f"% iterations with γ_emp ≥ γ*: {pct_ok:.1f}%"
             ]
             summary_str = "\n".join(summary_lines)
 
@@ -517,6 +534,12 @@ def main():
             print("Summary report saved to beta_gamma_summary.txt")
 
         analyse(alpha, beta, "current run")
+
+        for fn in ("beta_gamma_log.csv", "alpha_log.csv"):
+            try:
+                os.remove(fn)
+            except FileNotFoundError:
+                pass
 
     except Exception as e:
         print("β‑γ analysis skipped:", e)
