@@ -513,6 +513,12 @@ def main():
 
         analyse(alpha, beta, "current run")
 
+        for fn in ("beta_gamma_log.csv", "alpha_log.csv"):
+            try:
+                os.remove(fn)
+            except FileNotFoundError:
+                pass
+
     except Exception as e:
         print("β‑γ analysis skipped:", e)
     # ----------------------------------------------------------------
