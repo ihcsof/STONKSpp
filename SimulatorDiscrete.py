@@ -488,50 +488,49 @@ def main():
         alpha = pd.read_csv("alpha_log.csv")
 
         def analyse(alpha_df: pd.DataFrame, beta_df: pd.DataFrame, label: str) -> None:
+            # --- theory ----------------------------------------------------------
             beta_star  = beta_df["beta_star"].iloc[0]
             gamma_star = int(beta_df["gamma_star"].iloc[0])
 
+            # --- rebuild per-iteration γ_emp ------------------------------------
             rows = []
             for t, grp in alpha_df.groupby("iter"):
-                vec        = grp.groupby("j")["alpha_ij"].sum()
-                gamma_emp  = (vec >= beta_star).sum()
-                min_alpha  = vec.min() if not vec.empty else np.nan
-                rows.append([t, gamma_emp, min_alpha])
-
+                vec = grp.groupby("j")["alpha_ij"].sum()
+                rows.append(
+                    (t,
+                    (vec >= beta_star).sum(),                # γ_emp(t)
+                    vec.min() if not vec.empty else np.nan)  # α_min(t)
+                )
             emp = pd.DataFrame(rows, columns=["iter", "gamma_emp", "min_alpha"])
-            pct_ok = (emp["gamma_emp"] >= gamma_star).mean() * 100
 
+            # ---------- quality score -------------------------------------------
+            rel_gap  = (emp["gamma_emp"] - gamma_star).abs() / gamma_star
+            q_iter   = np.exp(-rel_gap)          # per-iteration quality ∈(0,1]
+            q_score  = 100 * q_iter.mean()       # 0–100 scale
+
+            # ---------- “99 % after 1000 iters’’ guard-rail ----------------------
+            pct_ok   = (emp["gamma_emp"] >= gamma_star).mean() * 100
             total_it = emp["iter"].max()
+            if pct_ok >= 98 and total_it >= 1000:
+                print("⚠️  β-γ monitor: ≥98 % pass-rate after ≥1000 iters "
+                    "looks bogus – marking run as UNSTABLE.")
+                q_score = 0.0
+            # --------------------------------------------------------------------
 
-            suspicious = (pct_ok >= 98)
-
-            if suspicious:
-                if total_it >= 1000:
-                    print("⚠️  β-γ monitor: >98 % pass-rate after ≥1000 iters "
-                        "looks bogus – marking run as UNSTABLE.")
-                    pct_ok = 0.0
-                else:
-                    burn = emp[emp["iter"] > 0.1 * total_it]
-                    pct_ok = (burn["gamma_emp"] >= gamma_star).mean() * 100
-                    print(f"ℹ️  suspicious β-γ stats, using burn-in-adjusted "
-                        f"pass-rate: {pct_ok:.1f}%")
-
+            # ---------- summary --------------------------------------------------
             summary_lines = [
                 f"=== β-γ check for {label} ===",
                 f"Theoretical  γ* = {gamma_star}   β* = {beta_star:.4f}",
                 emp[["gamma_emp", "min_alpha"]].describe().to_string(),
-                f"% iterations with γ_emp ≥ γ*: {pct_ok:.1f}%"
+                f"Average quality score q̄ : {q_score:5.1f} / 100"
             ]
             summary_str = "\n".join(summary_lines)
 
             print("\n" + summary_str + "\n")
 
             emp.to_csv("beta_gamma_emp.csv", index=False)
-            print("Empirical β-γ table saved to beta_gamma_emp.csv")
-
             with open("beta_gamma_summary.txt", "w", encoding="utf-8") as fh:
                 fh.write(summary_str + "\n")
-            print("Summary report saved to beta_gamma_summary.txt")
 
         analyse(alpha, beta, "current run")
 
