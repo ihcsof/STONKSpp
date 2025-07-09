@@ -504,9 +504,10 @@ def main():
             emp = pd.DataFrame(rows, columns=["iter", "gamma_emp", "min_alpha"])
 
             # ---------- quality score -------------------------------------------
+            k = 5.0
             rel_gap  = (emp["gamma_emp"] - gamma_star).abs() / gamma_star
-            q_iter   = np.exp(-rel_gap)          # per-iteration quality ∈(0,1]
-            q_score  = 100 * q_iter.mean()       # 0–100 scale
+            q_iter   = np.exp(-k * rel_gap)
+            q_score  = 100 * q_iter.mean()
 
             # ---------- “99 % after 1000 iters’’ guard-rail ----------------------
             pct_ok   = (emp["gamma_emp"] >= gamma_star).mean() * 100
