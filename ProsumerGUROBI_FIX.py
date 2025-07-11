@@ -33,7 +33,7 @@ class Prosumer:
                 print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
             else:
                 # Default fallback if no byzantine list provided
-                self.data.isByzantine = (True if agent.index in range(15) else False)
+                self.data.isByzantine = (True if agent.index in range(23) else False)
                 print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
             
             # Track how many times we tampered for repeated tampering

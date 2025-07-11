@@ -488,50 +488,42 @@ def main():
         alpha = pd.read_csv("alpha_log.csv")
 
         def analyse(alpha_df: pd.DataFrame, beta_df: pd.DataFrame, label: str) -> None:
-            # --- theory ----------------------------------------------------------
             beta_star  = beta_df["beta_star"].iloc[0]
             gamma_star = int(beta_df["gamma_star"].iloc[0])
+            n_agents   = int(beta_df["n"].iloc[0])
 
-            # --- rebuild per-iteration γ_emp ------------------------------------
             rows = []
-            for t, grp in alpha_df.groupby("iter"):
-                vec = grp.groupby("j")["alpha_ij"].sum()
-                rows.append(
-                    (t,
-                    (vec >= beta_star).sum(),                # γ_emp(t)
-                    vec.min() if not vec.empty else np.nan)  # α_min(t)
-                )
-            emp = pd.DataFrame(rows, columns=["iter", "gamma_emp", "min_alpha"])
+            for t, g in alpha_df.groupby("iter"):
+                col_weight = g.groupby("j")["alpha_ij"].sum()
+                rows.append((
+                    t,
+                    (col_weight >= beta_star).sum(),
+                    col_weight.min() if not col_weight.empty else np.nan
+                ))
+            emp = pd.DataFrame(rows, columns=["iter","gamma_emp","min_alpha"])
 
-            # ---------- quality score -------------------------------------------
-            k = 5.0
-            rel_gap  = (emp["gamma_emp"] - gamma_star).abs() / gamma_star
-            q_iter   = np.exp(-k * rel_gap)
-            q_score  = 100 * q_iter.mean()
+            dist     = (emp["gamma_emp"] - gamma_star).abs()
+            max_dist = n_agents - gamma_star
+            q_iter   = (1 - dist / max_dist).clip(lower=0)
+            q_score  = q_iter.mean() * 100
 
-            # ---------- “99 % after 1000 iters’’ guard-rail ----------------------
-            pct_ok   = (emp["gamma_emp"] >= gamma_star).mean() * 100
-            total_it = emp["iter"].max()
-            if pct_ok >= 98 and total_it >= 1000:
-                print("⚠️  β-γ monitor: ≥98 % pass-rate after ≥1000 iters "
-                    "looks bogus – marking run as UNSTABLE.")
+            if (emp["gamma_emp"] >= gamma_star).mean()*100 >= 98 and emp["iter"].max() >= 1000:
+                print("⚠️  ≥98% naive pass after ≥1000 iters looks bogus → marking UNSTABLE")
                 q_score = 0.0
-            # --------------------------------------------------------------------
 
-            # ---------- summary --------------------------------------------------
             summary_lines = [
                 f"=== β-γ check for {label} ===",
-                f"Theoretical  γ* = {gamma_star}   β* = {beta_star:.4f}",
-                emp[["gamma_emp", "min_alpha"]].describe().to_string(),
+                f"Theoretical γ* = {gamma_star}   β* = {beta_star:.4f}",
+                emp[["gamma_emp","min_alpha"]].describe().to_string(),
                 f"Average quality score q̄ : {q_score:5.1f} / 100"
             ]
             summary_str = "\n".join(summary_lines)
-
             print("\n" + summary_str + "\n")
 
             emp.to_csv("beta_gamma_emp.csv", index=False)
             with open("beta_gamma_summary.txt", "w", encoding="utf-8") as fh:
                 fh.write(summary_str + "\n")
+
 
         analyse(alpha, beta, "current run")
 
