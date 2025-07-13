@@ -138,8 +138,8 @@ def main():
             # convergence / solver settings
             "maximum_iteration":  1000,
             "penaltyfactor":      0.01,
-            "residual_primal":    1e-3,
-            "residual_dual":      1e-3,
+            "residual_primal":    1e-2,
+            "residual_dual":      1e-2,
 
             # log / dump filenames
             "log_mitigation_file": f"logs/mitigation/log_{default_tag}.txt",
@@ -191,8 +191,8 @@ def main():
                                             "non_interactive":              True,
                                             "maximum_iteration":            1000,
                                             "penaltyfactor":                0.01,
-                                            "residual_primal":              1e-3,
-                                            "residual_dual":                1e-3
+                                            "residual_primal":              1e-2,
+                                            "residual_dual":                1e-2
                                         }
                                         base.update(extra)
                                         return base
