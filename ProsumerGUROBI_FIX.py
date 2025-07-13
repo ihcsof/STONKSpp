@@ -26,15 +26,13 @@ class Prosumer:
         if agent is not None:
             self.data.type = agent['Type']
             self.data.id = agent['ID']
-            
-            # Check config for byzantine ids
-            if "byzantine_ids" in self.config:
-                self.data.isByzantine = (self.data.id in self.config["byzantine_ids"])
-                print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
-            else:
-                # Default fallback if no byzantine list provided
-                self.data.isByzantine = (True if agent.index in range(23) else False)
-                print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
+
+            #if "byzantine_ids" in self.config:
+            #    self.data.isByzantine = (self.data.id in self.config["byzantine_ids"])
+            #    print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
+            #else:
+            self.data.isByzantine = (True if agent.index in range(23) else False)
+            print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
             
             # Track how many times we tampered for repeated tampering
             self.data.tampered = 0
