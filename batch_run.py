@@ -108,14 +108,14 @@ def main():
     methods             = ["method1", "method2"]
     subgraph_nodes_list = [[0, 2, 3]]
     alphas              = [0.15, 0.5]  # only for method2
-    byzantine_ids_list  = [[2]]
+    byzantine_ids_list  = [[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22]]
     attack_probs        = [0.01, 0.1, 0.5]
     multipliers         = [(0.5, 1.5)]  # (0.5, 1.1)
     tampering_counts    = [1, 25, float('inf')]
     mad_options         = {"yes": 4.1,
                             "no":  1e12}
     graph_files = {
-        "short_p2p":  "graphs/examples/P2P_model_reduced.pyp2p",
+        "short_p2p":  "graphs/examples/P2P_model.pyp2p",
     }
 
     results = []

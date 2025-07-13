@@ -42,10 +42,10 @@ class Simulator(Simulation):
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 500
+        self.maximum_iteration = 1000
         self.penaltyfactor = 0.01
-        self.residual_primal = 1e-3
-        self.residual_dual = 1e-3
+        self.residual_primal = 1e-2
+        self.residual_dual = 1e-2
         self.communications = 'Synchronous'
 
         # Latency
