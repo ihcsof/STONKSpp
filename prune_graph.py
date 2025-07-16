@@ -71,18 +71,38 @@ def _save_graph(g: Graph, out_path: str) -> None:
 # ---------------------------------------------------------------------------
 # Core pruning logic
 # ---------------------------------------------------------------------------
-def _random_delete_edges(g: Graph, n: int) -> Tuple[Graph, int]:
-    removed = 0
-    ids = list(range(g.ecount())); random.shuffle(ids)
-    for eid in ids:
-        if removed >= n: break
-        if eid >= g.ecount(): continue
-        v1, v2 = g.es[eid].tuple
-        if g.degree(v1) > 1 and g.degree(v2) > 1:
-            g.delete_edges([eid]); removed += 1
-    if removed < n:
-        print(f"⚠️  Only removed {removed}/{n} without isolating nodes.")
-    return g, removed
+def _random_delete_edges(g: Graph, n_pairs: int) -> Tuple[Graph, int]:
+    """
+    Remove n_pairs bidirectional links (two directed edges each) without
+    isolating any vertex. Returns the graph and the total number of edges
+    actually deleted (2 * n_pairs, unless degree constraints prevent full removal).
+    """
+    removed_pairs = 0
+
+    # Build a list of unique undirected links
+    undirected = list({tuple(sorted(e.tuple)) for e in g.es})
+    random.shuffle(undirected)
+
+    for v1, v2 in undirected:
+        if removed_pairs >= n_pairs:
+            break
+
+        # Both directions must exist
+        if not (g.are_connected(v1, v2) and g.are_connected(v2, v1)):
+            continue
+
+        # Ensure neither endpoint would become isolated (needs degree > 2)
+        if g.degree(v1) > 2 and g.degree(v2) > 2:
+            eid1 = g.get_eid(v1, v2, directed=True)
+            eid2 = g.get_eid(v2, v1, directed=True)
+            g.delete_edges([eid1, eid2])
+            removed_pairs += 1
+
+    if removed_pairs < n_pairs:
+        print(f"⚠️  Only removed {removed_pairs}/{n_pairs} edge pairs without isolating nodes.")
+
+    # Return the modified graph and the number of edges removed
+    return g, removed_pairs * 2
 
 # ---------------------------------------------------------------------------
 # CLI entry point
