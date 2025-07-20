@@ -31,7 +31,7 @@ class Prosumer:
             #    self.data.isByzantine = (self.data.id in self.config["byzantine_ids"])
             #    print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
             #else:
-            self.data.isByzantine = (True if agent.index in range(23) else False)
+            self.data.isByzantine = (True if agent.index in range(20) else False)
             print("Byzantine flag set to", self.data.isByzantine, "for agent", self.data.id)
             
             # Track how many times we tampered for repeated tampering
