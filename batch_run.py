@@ -48,16 +48,16 @@ STAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 # ----------------------------- 3. parameter grid ----------------------------
 methods             = ["method1", "method2"]
-subgraph_nodes_list = [[0, 2, 3]]
+subgraph_nodes_list = [[list(range(i, i+3)) for i in range(0, 51, 3)]]
 alphas              = [0.15, 0.5]          # Only for method2
-byzantine_ids_list  = [[0]]
+byzantine_ids_list  = [[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]]
 attack_probs        = [0.01, 0.1, 0.5]
 multipliers         = [(0.5, 1.5)]         # (lower, upper)
 tampering_counts    = [1, 25, float("inf")]
 trust_options       = {"yes": 2.5}  # threshold values
 
 graph_files = {
-    "short_p2p": "graphs/examples/P2P_model_reduced.pyp2p",
+    "short_p2p": "graphs/examples/P2P_model.pyp2p",
 }
 
 # ----------------------------- 4. helper: log parsing -----------------------
@@ -176,8 +176,8 @@ for g_label, g_path in graph_files.items():
         subgraph_nodes        = subgraph_nodes_list[0],
         maximum_iteration     = 1000,
         penaltyfactor         = 0.01,
-        residual_primal       = 1e-3,
-        residual_dual         = 1e-3,
+        residual_primal       = 1e-2,
+        residual_dual         = 1e-2,
         # log files
         log_mitigation_file   = f"logs/mitigation/log_{tag}.txt",
         local_conv_log_file   = f"logs/local_conv/local_conv_{tag}.log",
@@ -221,8 +221,8 @@ for g_label, g_path in graph_files.items():
                                         non_interactive                   = True,
                                         maximum_iteration                 = 1000,
                                         penaltyfactor                     = 0.01,
-                                        residual_primal                   = 1e-3,
-                                        residual_dual                     = 1e-3,
+                                        residual_primal                   = 1e-2,
+                                        residual_dual                     = 1e-2,
                                     )
                                     base.update(extra)
                                     return base

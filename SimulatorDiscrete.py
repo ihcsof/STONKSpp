@@ -28,7 +28,7 @@ class Simulator(Simulation):
         self.force_stop = False
         
         # Load graph
-        default_graph = "graphs/examples/P2P_model_reduced.pyp2p"
+        default_graph = "graphs/examples/P2P_model.pyp2p"
         graph_path    = self.config.get("graph_file", default_graph)
         self.MGraph = Graph.Load(graph_path, format='picklez')
         
@@ -44,10 +44,10 @@ class Simulator(Simulation):
         self.account = 'AWS'
         self.account_token = ''
         self.Registered_Token()
-        self.maximum_iteration = 500
+        self.maximum_iteration = 1000
         self.penaltyfactor = 0.01
-        self.residual_primal = 1e-3
-        self.residual_dual = 1e-3
+        self.residual_primal = 1e-2
+        self.residual_dual = 1e-2
         self.communications = 'Synchronous'
         self.isLatency = False
         self.latency_times = []
