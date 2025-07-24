@@ -26,7 +26,7 @@ class Simulator(Simulation):
         self.force_stop = False
 
         # Load graph
-        default_graph = "graphs/examples/P2P_model.pyp2p"
+        default_graph = "graphs/examples/P2P_model_pruned.pyp2p"
         graph_path    = self.config.get("graph_file", default_graph)
         self.MGraph = Graph.Load(graph_path, format='picklez')
 
@@ -394,12 +394,12 @@ class PlayerOptimizationMsg(Event):
                     weight = min((deviation - adaptive_threshold) / deviation, 0.83)
                     new_value = (1 - weight) * row_values[idx] + weight * central_mean
                     row_values[idx] = new_value
-                    with open("log_mitigation.txt", "a") as f:
+                    '''with open("log_mitigation.txt", "a") as f:
                         f.write((
                             f"[Mitigation in PlayerOptimizationMsgMitigated] Agent {self.i} -> Partner {j}"
                             f": deviation={deviation:.2f}, median={central_mean:.2f}, "
                             f"threshold={adaptive_threshold:.2f}, corrected={new_value:.2f}\n"
-                        ))
+                        ))'''
 
             proposed_trades[self.i, sim.partners[self.i]] = row_values
 
@@ -472,8 +472,8 @@ class PlayerUpdateMsg(Event):
                         f"threshold={adaptive_threshold:.2f}, original={sim.Trades[self.i, j]:.2f}, "
                         f"new={new_value:.2f}\n"
                     )
-                    with open(sim.log_mitigation_file, "a") as f:
-                        f.write(log_line)
+                    '''with open(sim.log_mitigation_file, "a") as f:
+                        f.write(log_line)'''
 
         sim.temps[:, self.i] = sim.players[self.i].optimize(robust_trade)
         sim.Prices[:, self.i][sim.partners[self.i]] = sim.players[self.i].y
