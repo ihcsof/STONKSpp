@@ -48,9 +48,19 @@ STAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 # ----------------------------- 3. parameter grid ----------------------------
 methods             = ["method1", "method2"]
-subgraph_nodes_list = [[list(range(i, i+3)) for i in range(0, 51, 3)]]
+#subgraph_nodes_list = [[list(range(i, i+3)) for i in range(0, 51, 3)]]
+subgraph_nodes_list = [
+    [
+        [0, 5, 8, 39, 44, 49],                              # Community 0
+        [1, 17, 20, 35, 48],                                # Community 1
+        [2, 3, 7, 10, 18, 19, 25, 32, 34, 40, 43, 46, 47],  # Community 2
+        [4, 9, 12, 21, 22, 28, 30, 31, 36, 37, 42, 50],     # Community 3
+        [6, 15, 16, 26, 29, 41],                            # Community 4
+        [11, 13, 14, 23, 24, 27, 33, 38, 45]                # Community 5
+    ]
+]
 alphas              = [0.15, 0.5]          # Only for method2
-byzantine_ids_list  = [[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]]
+byzantine_ids_list  = [[0,5,1,17,2,3,4,9,6,15,11,13]]
 attack_probs        = [0.01, 0.1, 0.5]
 multipliers         = [(0.5, 1.5)]         # (lower, upper)
 tampering_counts    = [1, 25, float("inf")]
