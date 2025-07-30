@@ -125,7 +125,7 @@ def main():
     mad_options         = {"yes": 4.1,
                             "no":  1e12}
     graph_files = {
-        "short_p2p":  "graphs/examples/P2P_model.pyp2p",
+        "short_p2p":  "graphs/examples/P2P_model_pruned.pyp2p",
     }
 
     results = []
