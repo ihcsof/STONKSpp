@@ -67,7 +67,7 @@ tampering_counts    = [1, 25, float("inf")]
 trust_options       = {"yes": 2.5}  # threshold values
 
 graph_files = {
-    "short_p2p": "graphs/examples/P2P_model.pyp2p",
+    "short_p2p": "graphs/examples/P2P_model_pruned.pyp2p",
 }
 
 # ----------------------------- 4. helper: log parsing -----------------------
