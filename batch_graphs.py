@@ -610,72 +610,92 @@ def local_conv_items(path: str):
 # ═════════════ binaries → binary_summary.csv ═════════════════════════
 
 def analyse_binaries():
+    import gzip, pickle, re, glob, os
+    # Pattern for state files with optional run index
     pat = (
         r"state_.*?(method\d)(?:_alpha([\d\.]+))?_prob([\d\.]+)"
         r"_mult([\d\.]+)_t([^_]+)(?:_run\d+)?\.pkl\.gz"
     )
     rows = []
+
     for bp in glob.glob(f"{BIN_DIR}/state_*.pkl.gz"):
         fn = os.path.basename(bp)
-        run_id = os.path.splitext(fn)[0]
+        # Strip the .pkl.gz extension to get the tag
+        tag = re.sub(r"\.pkl\.gz$", "", fn)
+        # Extract run index if present
+        if "_run" in tag:
+            try:
+                run = int(tag.rsplit("_run", 1)[1])
+            except ValueError:
+                run = 0
+        else:
+            run = 0
+
         m = re.match(pat, fn)
         if not m:
             continue
+        # parse parameters from filename
         meth, a_s, pr_s, mu_s, t_s = m.groups()
-        alpha = float(a_s) if a_s else 0
-        prob = float(pr_s); mult = float(mu_s)
-        tam = np.inf if t_s == 'inf' else float(t_s)
+        alpha = float(a_s) if a_s else 0.0
+        prob = float(pr_s)
+        mult = float(mu_s)
+        tam = float('inf') if t_s == 'inf' else float(t_s)
 
+        # load binary state
         with gzip.open(bp, 'rb') as f:
             bd = pickle.load(f)
 
+        # compute GD and Sinkhorn repairs
         gd_cls, gd_steps, gd_err = _gradient_descent_balance(bd.get("Trades"))
-
         trd_cls, trd_steps, trd_scale = _equilibrate_trades(
-            bd.get("Trades"),          # the matrix
-            run_id=run_id,             # so the log is eq_logs/<run_id>.pkl.gz
-            logdir="eq_logs"           # pick any folder you like
+            bd.get("Trades"), run_id=tag, logdir="eq_logs"
         )
 
+        # decide classification based on iteration count
         iters = bd.get('iteration', 0)
         if iters < 1000:
             prog = extract_progress(bd)
             if prog:
                 _, fsw, _, fp, fd = prog[-1]
-                sp = sd = np.nan
+                sp = sd = float('nan')
             else:
-                fp = fd = fsw = sp = sd = np.nan
-            rows.append(dict(
-                method=meth, alpha=alpha, attack_prob=prob,
-                multiplier=mult, tampering=tam, conv_class='Converged',
-                final_prim=fp, final_dual=fd, final_SW=fsw,
-                slope_prim=sp, slope_dual=sd,
-                gd_class=gd_cls, gd_steps=gd_steps, gd_err=gd_err,
-                eq_class=trd_cls, eq_steps=trd_steps, eq_scale=trd_scale
-            ))
+                fp = fd = fsw = sp = float('nan')
+            rows.append({
+                'tag': tag, 'run': run,
+                'method': meth, 'alpha': alpha, 'attack_prob': prob,
+                'multiplier': mult, 'tampering': tam,
+                'conv_class': 'Converged',
+                'final_prim': fp, 'final_dual': fd, 'final_SW': fsw,
+                'slope_prim': sp, 'slope_dual': sd,
+                'gd_class': gd_cls, 'gd_steps': gd_steps, 'gd_err': gd_err,
+                'eq_class': trd_cls, 'eq_steps': trd_steps, 'eq_scale': trd_scale
+            })
             continue
 
         prog = extract_progress(bd)
         if not prog:
             continue
         cls, fp, fd, fsw, sp, sd = classify_run(prog)
-        rows.append(dict(
-            method=meth, alpha=alpha, attack_prob=prob,
-            multiplier=mult, tampering=tam, conv_class=cls,
-            final_prim=fp, final_dual=fd, final_SW=fsw,
-            slope_prim=sp, slope_dual=sd,
-            gd_class=gd_cls, gd_steps=gd_steps, gd_err=gd_err,
-            eq_class=trd_cls, eq_steps=trd_steps, eq_scale=trd_scale
-        ))
+        rows.append({
+            'tag': tag, 'run': run,
+            'method': meth, 'alpha': alpha, 'attack_prob': prob,
+            'multiplier': mult, 'tampering': tam,
+            'conv_class': cls,
+            'final_prim': fp, 'final_dual': fd, 'final_SW': fsw,
+            'slope_prim': sp, 'slope_dual': sd,
+            'gd_class': gd_cls, 'gd_steps': gd_steps, 'gd_err': gd_err,
+            'eq_class': trd_cls, 'eq_steps': trd_steps, 'eq_scale': trd_scale
+        })
+
     if not rows:
-        print('No binary yielded history ≥1000 iterations.')
+        print('No binary histories found (≥1 iteration).')
         return None
-    
+
     bdf = pd.DataFrame(rows)
     bdf.to_csv('binary_summary.csv', index=False)
     print('binary_summary.csv saved')
 
-    # ── additional visuals ─────────────────────────────────────────
+    # ── additional visuals ─────────────────────────────────────────────
     overlaid_hists(bdf, "final_prim", "conv_class", bins=30,
                    ttl="Prim residual distribution by class",
                    fname="prim_hist_by_class.pdf",
@@ -690,7 +710,9 @@ def analyse_binaries():
              ttl="Final SW by Convergence Class",
              fname="finalSW_box_class.pdf",
              desc="Box-plot of final social-welfare for each detected convergence class.")
+
     return bdf
+
 
 # ═════════════════════════════════ main ══════════════════════════════
 

@@ -13,6 +13,7 @@ This script:
 """
 
 import os
+import re
 import numpy as np
 import pandas as pd
 
@@ -96,15 +97,10 @@ def run_simulation(config):
 
     return result
 
-############################################
 def main():
     # Number of executions per configuration
     N = 10
 
-    random.seed(42)
-    np.random.seed(42)
-
-    # Parameter sweeps
     methods = ["method1", "method2"]
     #subgraph_nodes_list = [[list(range(i, i+3)) for i in range(0, 51, 3)]]
     subgraph_nodes_list = [
@@ -128,65 +124,114 @@ def main():
         "short_p2p":  "graphs/examples/P2P_model_pruned.pyp2p",
     }
 
-    results = []
+    # --------------------------------------------------
+    # Resume logic: scan logs/mitigation for completed runs
+    # --------------------------------------------------
+    resume_dir = "logs/mitigation"
+    completed = set()
+    nodes_str = str(subgraph_nodes_list[0])
 
-    # ------------------------------------------------------------------
-    # DEFAULT (baseline) RUNS
-    # ------------------------------------------------------------------
+    if os.path.isdir(resume_dir):
+        for fname in os.listdir(resume_dir):
+            if not fname.startswith("log_") or not fname.endswith(".txt"):
+                continue
+            tag_part = fname[len("log_"):-4]  # strip 'log_' and '.txt'
+
+            # Default (baseline) run
+            if tag_part.startswith("default_"):
+                g_label = tag_part[len("default_"):]
+                completed.add((g_label, "no", "method1", 0, 0, 0, 0, "[]", 0))
+                continue
+
+            # Other runs have '_run' suffix
+            if "_run" not in tag_part:
+                continue
+            tag, run_str = tag_part.rsplit("_run", 1)
+            try:
+                run_idx = int(run_str)
+            except ValueError:
+                continue
+
+            # Extract fields via regex
+            pattern = (
+                r"(?P<g_label>[^_]+_[^_]+)(?P<mad>_MAD)?_"
+                r"(?P<method>method1|method2)"
+                r"(?:_alpha(?P<alpha>[\d\.]+))?_"
+                r"prob(?P<prob>[\d\.]+)_mult(?P<mult>[\d\.]+)_t(?P<t>inf|\d+)"
+            )
+            m = re.match(pattern, tag)
+            if not m:
+                continue
+
+            g_label    = m.group("g_label")
+            mad_label  = "yes" if m.group("mad") else "no"
+            method     = m.group("method")
+            alpha      = float(m.group("alpha")) if m.group("alpha") else 0
+            prob       = float(m.group("prob"))
+            mult_upper = float(m.group("mult"))
+            t_str      = m.group("t")
+            tamplimit  = float('inf') if t_str == 'inf' else int(t_str)
+
+            completed.add((
+                g_label, mad_label, method, alpha,
+                prob, mult_upper, tamplimit, nodes_str, run_idx
+            ))
+
+    print(f"Found {len(completed)} completed runs in {resume_dir}")
+
+    # --------------------------------------------------
+    # Execute sweeps, skipping completed
+    # --------------------------------------------------
+    new_results = []
+
+    # Baseline defaults
     for g_label, g_path in graph_files.items():
+        meta = (g_label, 'no', 'method1', 0, 0, 0, 0, '[]', 0)
+        if meta in completed:
+            print(f"Skipping default_{g_label}, already done")
+        else:
+            tag = f"default_{g_label}"
+            cfg = {
+                "graph_file":           g_path,
+                "iter_update_method":   "method1",
+                "byzantine_ids":        [],
+                "mad_threshold":        1e12,
+                "non_interactive":      True,
+                "subgraph_nodes":       subgraph_nodes_list[0],
+                "maximum_iteration":    1000,
+                "penaltyfactor":        0.01,
+                "residual_primal":      1e-2,
+                "residual_dual":        1e-2,
+                "log_mitigation_file":  f"logs/mitigation/log_{tag}.txt",
+                "local_conv_log_file":  f"logs/local_conv/local_conv_{tag}.log",
+                "iter_log_file":        f"logs/iter_stats/iter_{tag}.csv",
+                "binary_state_file":    f"logs/binaries/state_{tag}.pkl.gz",
+            }
+            print(f"Running default simulation {tag}")
+            res = run_simulation(cfg)
+            res.update({
+                "graph":           g_label,
+                "MAD":             "no",
+                "method":          "method1",
+                "alpha":           0,
+                "attack_prob":     0,
+                "multiplier_upper":0,
+                "tampering_count": 0,
+                "nodes":           "[]",
+                "run":             0
+            })
+            new_results.append(res)
 
-        default_tag = f"default_{g_label}"
-
-        default_cfg = {
-            "graph_file":        g_path,
-            "iter_update_method": "method1",
-            "byzantine_ids":      [],
-            "mad_threshold":      1e12,
-            "non_interactive":    True,
-            "subgraph_nodes":     subgraph_nodes_list[0],
-
-            # convergence / solver settings
-            "maximum_iteration":  1000,
-            "penaltyfactor":      0.01,
-            "residual_primal":    1e-2,
-            "residual_dual":      1e-2,
-
-            # log / dump filenames
-            "log_mitigation_file": f"logs/mitigation/log_{default_tag}.txt",
-            "local_conv_log_file": f"logs/local_conv/local_conv_{default_tag}.log",
-            "iter_log_file":       f"logs/iter_stats/iter_{default_tag}.csv",
-            "binary_state_file":   f"logs/binaries/state_{default_tag}.pkl.gz",
-        }
-
-        print(f"Running default simulation {default_tag}")
-        res = run_simulation(default_cfg)
-
-        # annotate result
-        res.update({
-            "graph":             g_label,
-            "MAD":               "no",
-            "method":            "method1",
-            "alpha":             0,
-            "byzantine_ids":     "[]",
-            "attack_prob":       0,
-            "multiplier_upper":  0,
-            "tampering_count":   0,
-            "nodes":             "[]",
-            "run":               0,
-        })
-        results.append(res)
-    # ------------------------------------------------------------------
-
+    # Full parameter sweeps
     for g_label, g_path in graph_files.items():
         for method in methods:
             for byz_ids in byzantine_ids_list:
                 for prob in attack_probs:
                     for lower, upper in multipliers:
                         for tamplimit in tampering_counts:
-                            for mad_label, mad_thr in mad_options.items(): 
+                            for mad_label, mad_thr in mad_options.items():
                                 for nodes in subgraph_nodes_list:
-
-                                    def build_common_config(**extra):
+                                    def build_config(**extra):
                                         base = {
                                             "graph_file":                   g_path,
                                             "iter_update_method":           method,
@@ -207,7 +252,7 @@ def main():
                                         base.update(extra)
                                         return base
 
-                                    def tags(alpha_tag=""):  
+                                    def make_tag(alpha_tag=""):
                                         mad_tag = "_MAD" if mad_label == "yes" else ""
                                         return (
                                             f"{g_label}{mad_tag}_{method}{alpha_tag}"
@@ -217,95 +262,80 @@ def main():
                                     if method == "method2":
                                         for alpha in alphas:
                                             for run in range(N):
-                                                tag = tags(f"_alpha{alpha}")
-                                                # include run index in filenames
-                                                mit_log = os.path.join(
-                                                    "logs", "mitigation",
-                                                    f"log_{tag}_run{run}.txt"
+                                                tag = make_tag(f"_alpha{alpha}")
+                                                meta = (
+                                                    g_label, mad_label, method,
+                                                    alpha, prob, upper,
+                                                    tamplimit, nodes_str, run
                                                 )
-                                                lc_log  = os.path.join(
-                                                    "logs", "local_conv",
-                                                    f"local_conv_{tag}_run{run}.log"
-                                                )
-                                                iter_csv = os.path.join(
-                                                    "logs", "iter_stats",
-                                                    f"iter_{tag}_run{run}.csv"
-                                                )
-                                                bin_file = os.path.join(
-                                                    "logs", "binaries",
-                                                    f"state_{tag}_run{run}.pkl.gz"
-                                                )
-                                                cfg = build_common_config(
+                                                if meta in completed:
+                                                    print(f"Skipping {tag}_run{run}, done")
+                                                    continue
+                                                cfg = build_config(
                                                     alpha=alpha,
-                                                    local_conv_log_file=lc_log,
-                                                    log_mitigation_file=mit_log,
-                                                    iter_log_file=iter_csv,
-                                                    binary_state_file=bin_file
+                                                    local_conv_log_file=f"logs/local_conv/local_conv_{tag}_run{run}.log",
+                                                    log_mitigation_file=f"logs/mitigation/log_{tag}_run{run}.txt",
+                                                    iter_log_file    =f"logs/iter_stats/iter_{tag}_run{run}.csv",
+                                                    binary_state_file=f"logs/binaries/state_{tag}_run{run}.pkl.gz"
                                                 )
-                                                print(f"Running simulation {tag} (run {run})")
+                                                print(f"Running {tag} (run {run})")
                                                 res = run_simulation(cfg)
                                                 res.update({
-                                                    "graph":             g_label,
-                                                    "MAD":               mad_label,
-                                                    "method":            method,
-                                                    "alpha":             alpha,
-                                                    "byzantine_ids":     str(byz_ids),
-                                                    "attack_prob":       prob,
-                                                    "multiplier_upper":  upper,
-                                                    "tampering_count":   tamplimit,
-                                                    "nodes":             str(nodes),
-                                                    "run":               run
+                                                    "graph":           g_label,
+                                                    "MAD":             mad_label,
+                                                    "method":          method,
+                                                    "alpha":           alpha,
+                                                    "attack_prob":     prob,
+                                                    "multiplier_upper":upper,
+                                                    "tampering_count": tamplimit,
+                                                    "nodes":           nodes_str,
+                                                    "run":             run
                                                 })
-                                                results.append(res)
-                                    else:  # method1
+                                                new_results.append(res)
+                                    else:
                                         for run in range(N):
-                                            tag = tags()
-                                            # include run index in filenames
-                                            mit_log = os.path.join(
-                                                "logs", "mitigation",
-                                                f"log_{tag}_run{run}.txt"
+                                            tag = make_tag()
+                                            meta = (
+                                                g_label, mad_label, method,
+                                                0, prob, upper,
+                                                tamplimit, nodes_str, run
                                             )
-                                            lc_log  = os.path.join(
-                                                "logs", "local_conv",
-                                                f"local_conv_{tag}_run{run}.log"
+                                            if meta in completed:
+                                                print(f"Skipping {tag}_run{run}, done")
+                                                continue
+                                            cfg = build_config(
+                                                local_conv_log_file=f"logs/local_conv/local_conv_{tag}_run{run}.log",
+                                                log_mitigation_file=f"logs/mitigation/log_{tag}_run{run}.txt",
+                                                iter_log_file    =f"logs/iter_stats/iter_{tag}_run{run}.csv",
+                                                binary_state_file=f"logs/binaries/state_{tag}_run{run}.pkl.gz"
                                             )
-                                            iter_csv = os.path.join(
-                                                "logs", "iter_stats",
-                                                f"iter_{tag}_run{run}.csv"
-                                            )
-                                            bin_file = os.path.join(
-                                                "logs", "binaries",
-                                                f"state_{tag}_run{run}.pkl.gz"
-                                            )
-                                            cfg = build_common_config(
-                                                local_conv_log_file=lc_log,
-                                                log_mitigation_file=mit_log,
-                                                iter_log_file=iter_csv,
-                                                binary_state_file=bin_file
-                                            )
-                                            print(f"Running simulation {tag} (run {run})")
+                                            print(f"Running {tag} (run {run})")
                                             res = run_simulation(cfg)
                                             res.update({
-                                                "graph":             g_label,
-                                                "MAD":               mad_label,
-                                                "method":            method,
-                                                "alpha":             0,
-                                                "byzantine_ids":     str(byz_ids),
-                                                "attack_prob":       prob,
-                                                "multiplier_upper":  upper,
-                                                "tampering_count":   tamplimit,
-                                                "nodes":             str(nodes),
-                                                "run":               run
+                                                "graph":           g_label,
+                                                "MAD":             mad_label,
+                                                "method":          method,
+                                                "alpha":           0,
+                                                "attack_prob":     prob,
+                                                "multiplier_upper":upper,
+                                                "tampering_count": tamplimit,
+                                                "nodes":           nodes_str,
+                                                "run":             run
                                             })
-                                            results.append(res)
+                                            new_results.append(res)
 
-    # Save raw results
-    df = pd.DataFrame(results)
-    df.to_csv("simulation_results.csv", index=False)
-    print("Results saved to simulation_results.csv")
-    print(df)
+    # Merge with existing results and save
+    results_file = "simulation_results.csv"
+    if os.path.exists(results_file):
+        old_df = pd.read_csv(results_file)
+        df = pd.concat([old_df, pd.DataFrame(new_results)], ignore_index=True)
+    else:
+        df = pd.DataFrame(new_results)
 
-    # ----- Summary Table -----
+    df.to_csv(results_file, index=False)
+    print(f"Results saved to {results_file}")
+
+    # Summary table
     pivot_cols = ["graph", "MAD", "method", "alpha", "attack_prob", "tampering_count"]
     summary_table = (
         df.groupby(pivot_cols)
@@ -317,7 +347,6 @@ def main():
     )
     summary_table.to_csv("simulation_summary_table.csv", index=False)
     print("Summary table saved to simulation_summary_table.csv")
-    print(summary_table)
 
 if __name__ == "__main__":
     main()
